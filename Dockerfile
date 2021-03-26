@@ -1,3 +1,5 @@
 FROM httpd:2.4
-COPY ./www/ /usr/local/apache2/htdocs/
+COPY ./www/QAQC_dashboard /usr/local/apache2/htdocs/QAQC_dashboard
+COPY ./www/index.html /usr/local/apache2/htdocs/index.html
+COPY ./www/cgi-bin /usr/local/apache2/cgi-bin
 COPY ./QAQCplots /usr/local/apache2/QAQCplots
