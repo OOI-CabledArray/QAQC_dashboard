@@ -588,8 +588,8 @@ def plotScatter(
         xMin = startDate - timedelta(days=int(span) * 0.002)
         xMax = endDate + timedelta(days=int(span) * 0.002)
         baseDS = paramData.sel(time=slice(startDate, endDate))
-        scatterX = baseDS.time.data
-        scatterY = baseDS.data
+        scatterX = baseDS.time.values
+        scatterY = baseDS.values
         fig, ax = setPlot()
         emptySlice = 'no'
         if 'large' in plotMarkerSize:
@@ -924,13 +924,16 @@ def parse_args():
         help=f"Choices {str(list(selection_mapping.keys()))}",
     )
     arg_parser.add_argument(
-        '--workers', type=int, default=2, help=f"The number of workers"
+        '--workers',
+        type=int,
+        default=2,
+        help=f"The number of workers",
     )
 
     arg_parser.add_argument(
         '--dworkers',
         type=int,
-        default=3,
+        default=2,
         help=f"The number of depths to process at a time",
     )
 
@@ -975,7 +978,7 @@ if __name__ == "__main__":
     creation_times = map_concurrency(
         run_dashboard_creation,
         dataList,
-        func_args=(paramList, timeRef, args.dworkers),
+        func_args=(paramList, timeRef, args.dworkers,),
         max_workers=args.workers,
     )
     end = datetime.utcnow()
