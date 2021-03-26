@@ -7,20 +7,26 @@ import os
 import re
 import sys
 import cgi, cgitb
+from pathlib import Path
 
 form = cgi.FieldStorage()
 
 keyWord = form.getvalue('keyWord')
 
+here = Path(__file__).parent.absolute()
+root_path = here.parent.absolute()
+
 ### directory for all QAQC plots on server:
-plotDir = '/usr/local/var/www/QAQC_dashboard/QAQC_plots'
+# plotDir = '/usr/local/var/www/QAQC_dashboard/QAQC_plots'
+plotDir = str(root_path.joinpath('QAQC_dashboard/QAQC_plots').absolute())
 
 ### filter plots for default view: 1 week time period, no overlays, full range
 ### filter keyword should be either refDes or sensor
 ###CE02SHBP-LJ01D-06-CTDBPN106_CTDtemperature_week_none_full
 
 plotFilter = re.compile('.*(%s).*_week_none_full.png'%keyWord)
-dirExtra = '/usr/local/var/www/QAQC_dashboard/'
+# dirExtra = '/usr/local/var/www/QAQC_dashboard/'
+dirExtra = str(root_path.joinpath('QAQC_dashboard/').absolute())
 
 fileList = []
 for rootdir, dirs, files in os.walk(plotDir):
