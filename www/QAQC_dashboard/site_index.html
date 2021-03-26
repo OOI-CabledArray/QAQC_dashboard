@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <title>Data, Stage 1</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Custom styles for this template -->
+  <link href="css/simple-sidebar.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+  <div class="d-flex" id="wrapper">
+
+   <!-- Sidebar -->
+    <div class="bg-light border-right" id="sidebar-wrapper">
+      <div class="sidebar-heading"><a href="index.html">Data QA/QC Home</a></div>
+      <div class="list-group list-group-flush">
+        <a href="#" onclick="loadPlots('CE02SHBP');" class="list-group-item list-group-item-action bg-light">CE02SHBP</a>
+        <a href="#" onclick="loadPlots('CE04OSBP');" class="list-group-item list-group-item-action bg-light">CE04OSBP</a>
+        <a href="#" onclick="loadPlots('CE04OSPD')" class="list-group-item list-group-item-action bg-light">CE04OSPD</a>
+        <a href="#" onclick="loadPlots('CE04OSPS')" class="list-group-item list-group-item-action bg-light">CE04OSPS</a>
+        <a href="#" onclick="loadPlots('RS01SBPD')" class="list-group-item list-group-item-action bg-light">RS01SBPD</a>
+        <a href="#" onclick="loadPlots('RS01SBPS')" class="list-group-item list-group-item-action bg-light">RS01SBPS</a>
+        <a href="#" onclick="loadPlots('RS01SLBS')" class="list-group-item list-group-item-action bg-light">RS01SLBS</a>
+        <a href="#" onclick="loadPlots('RS01SUM1')" class="list-group-item list-group-item-action bg-light">RS01SUM1</a>
+        <a href="#" onclick="loadPlots('RS01SUM2')" class="list-group-item list-group-item-action bg-light">RS01SUM2</a>
+        <a href="#" onclick="loadPlots('RS03AXBS')" class="list-group-item list-group-item-action bg-light">RS03AXBS</a>
+        <a href="#" onclick="loadPlots('RS03AXPD')" class="list-group-item list-group-item-action bg-light">RS03AXPD</a>
+        <a href="#" onclick="loadPlots('RS03AXPS')" class="list-group-item list-group-item-action bg-light">RS03AXPS</a>
+        <a href="#" onclick="loadPlots('RS03INT1')" class="list-group-item list-group-item-action bg-light">RS03INT1</a>
+        <a href="#" onclick="loadPlots('RS03INT2" class="list-group-item list-group-item-action bg-light">RS03INT2</a>
+        <a href="#" onclick="loadPlots('RS03CCAL')" class="list-group-item list-group-item-action bg-light">RS03CCAL</a>
+        <a href="#" onclick="loadPlots('RS03ECAL')" class="list-group-item list-group-item-action bg-light">RS03ECAL</a>
+        <a href="#" onclick="loadPlots('RS03ASHS')" class="list-group-item list-group-item-action bg-light">RS03ASHS</a>  
+      </div>
+    </div>
+    <!-- /#sidebar-wrapper -->
+
+    <!-- Page Content -->
+    <div id="page-content-wrapper">
+
+      <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+      
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav ml-auto mt-2 mt-lg-0">
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Data Range
+              </a>
+              <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+                <a class="dropdown-item" href="#" onclick="togglePlots('full');">full range</a>
+                <a class="dropdown-item" href="#" onclick="togglePlots('local');">local range</a>
+              </div>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Time Spans
+              </a>
+              <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+                <a class="dropdown-item" href="#" onclick="togglePlots('day');">1 day</a>
+                <a class="dropdown-item" href="#" onclick="togglePlots('week');">1 week</a>
+                <a class="dropdown-item" href="#" onclick="togglePlots('month');">1 month</a>
+                <a class="dropdown-item" href="#" onclick="togglePlots('year');">1 year</a>
+              </div>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Overlays
+              </a>
+              <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+                <a class="dropdown-item" href="#" onclick="togglePlots('clim');">Climatology</a>
+                <a class="dropdown-item" href="#" onclick="togglePlots('near');">Nearest Neighbor</a>
+                <a class="dropdown-item" href="#" onclick="togglePlots('time');">Time Machine</a>
+                <a class="dropdown-item" href="#" onclick="togglePlots('none');">None</a>
+              </div>
+            </li>
+            
+          </ul>
+        </div>
+    
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav ml-auto mt-2 mt-lg-0">
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Status Dashboards
+              </a>
+              <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+                <a class="dropdown-item" href="http://blue.ooirsn.uw.edu:4000/dashboard" target="_blank">Blue</a>
+                <a class="dropdown-item" href="http://eng.ooirsn.uw.edu/" target="_blank">APL Eng dashboard</a>
+                <a class="dropdown-item" href="http://rtime.ooirsn.uw.edu/" target="_blank">APL RealTime Dashboard</a>
+                <a class="dropdown-item" href="http://sea.ooirsn.uw.edu/power/graphs.html" target="_blank">APL PP-Up</a>
+                <a class="dropdown-item" href="http://dstill.ooirsn.uw.edu/" target="_blank">APL Camera Videos by Day</a>
+                <a class="dropdown-item" href="https://io.ocean.washington.edu/oms_data/" target="_blank">OMS</a>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <div class="dataDiv">
+        <div id="HITLstatus"><img alt="" src="HITL_plot1.png" /></div>
+        <div id="plots"></div> 
+      </div>
+    </div>
+    <!-- /#page-content-wrapper -->
+
+  </div>
+  <!-- /#wrapper -->
+
+  <!-- Bootstrap core JavaScript -->
+  <script src="vendor/jquery/jquery.min.js"></script>
+  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- Menu Toggle Script -->
+  
+  <script type="text/javascript">
+  <!--
+  var siteImages = {}
+  var imagePosition = {}
+
+	function syncCallAjax(keyWord){
+ 	  
+ 		var remote = '__Unset__';
+ 		var request = new XMLHttpRequest();
+ 		var remote_url;
+ 
+ 		remote_url = '/cgi-bin/plotList.py?keyWord=' + encodeURIComponent(keyWord);
+ 		request.open('GET', remote_url, false);  // false makes the request synchronous
+ 		request.send(null);
+ 
+ 		if (request.status === 200)
+ 		{
+ 			remote = request.responseText;
+ 		}
+ 		return(remote);
+ 	}
+
+function slide(siteID){
+    console.log(siteID)
+    var imageList = siteImages[siteID]
+    var image_current = imagePosition[siteID]
+    var image_length = imageList.length;
+
+    if (image_current == image_length){
+     image_current = 0;
+    }
+     var slideshowImage = document.getElementById(siteID + '-slideshow')
+     slideshowImage.src = imageList[image_current];
+     image_current++;
+     imagePosition[siteID] = image_current;
+   }
+
+
+    function loadPlots(stream) {
+       document.getElementById('plots').innerHTML = "";
+       if (stream.includes('HITL')){
+         document.getElementById('HITLstatus').style.display = 'block';
+       } else {
+         document.getElementById('HITLstatus').style.display = 'none';
+         console.log(stream)
+         var fileList = JSON.parse(syncCallAjax(stream));
+         console.log(fileList);
+         var sliderPlots = [];
+		for (let i = 0; i < fileList.length; i++) {
+  		  if (fileList[i].includes('meters_')) {
+    		sliderPlots.push(fileList[i]);
+    		var site = fileList[i].substring(11, 19);
+    		fileList[i] = site
+  		  }
+		}
+		
+		fileList = [...new Set(fileList)];
+         var arrayLength = fileList.length;
+         for(var i=1; i<=arrayLength; i++) {
+           var imageFile = fileList[i-1];
+           if (imageFile.length == 8) {
+             var subPlots = sliderPlots.filter(function(str) { return str.includes(imageFile); } );   
+			
+             var subSubPlots = [];
+             for(var k=1; k<=subPlots.length; k++){
+               var plotString = subPlots[k-1]
+               subSubPlots.push(plotString);
+             }   
+             siteImages[imageFile] = subSubPlots;
+             imagePosition[imageFile] = 0;
+             var sliderDiv = document.createElement("div");
+             sliderDiv.setAttribute("id",imageFile)
+             var innerHTMLstr = '<img id="' + imageFile + '-slideshow" /><button onclick="slide(this.parentNode.id)">Click me</button>';
+             sliderDiv.innerHTML = innerHTMLstr;
+             var src = document.getElementById('plots');
+             src.appendChild(sliderDiv);
+             slide(imageFile)
+
+ 
+           }else{
+             var img = document.createElement("img");
+             img.src = imageFile
+             var src = document.getElementById('plots');
+             src.appendChild(img);
+           }
+         }
+         
+       }
+
+    }
+
+    function togglePlots(toggle) {
+      var timespans = ['day','week','month','year'];
+      var overlays = ['none','clim','near','time'];
+      var ranges = ['full','local'];
+      var imgStr = document.getElementById('plots').innerHTML;
+      var m = imgStr.includes("HITL");
+      if(m == false){
+        if (timespans.includes(toggle)){
+          for (var i=0; i<=timespans.length; i++) {
+            if (imgStr.includes(timespans[i])) {
+              var imgStrReplace = imgStr.replace(new RegExp(timespans[i],"g"), toggle);
+              for (let key in siteImages){
+                var toggleArray = []
+                for (index = 0; index < siteImages[key].length; index++ ){
+                var plotString = siteImages[key][index]
+                  toggleArray.push(plotString.replace(new RegExp(timespans[i],"g"), toggle));
+                }
+            	siteImages[key]=toggleArray;
+              }
+              break;
+            }
+          }
+        }else if (overlays.includes(toggle)){
+          for (var j=0; j<=overlays.length; j++) {
+            if (imgStr.includes(overlays[j])) {
+              var imgStrReplace = imgStr.replace(new RegExp(overlays[j],"g"), toggle);
+              for (let key in siteImages){
+                var toggleArray = []
+                for (index = 0; index < siteImages[key].length; index++ ){
+                var plotString = siteImages[key][index]
+                  toggleArray.push(plotString.replace(new RegExp(overlays[j],"g"), toggle));
+                }
+            	siteImages[key]=toggleArray;
+              }
+              break;
+            }
+          }
+        }else if (ranges.includes(toggle)){
+          for (var k=0; k<=ranges.length; k++) {
+            if (imgStr.includes(ranges[k])) {
+              var imgStrReplace = imgStr.replace(new RegExp(ranges[k],"g"), toggle);
+              for (let key in siteImages){
+                var toggleArray = []
+                for (index = 0; index < siteImages[key].length; index++ ){
+                var plotString = siteImages[key][index]
+                  toggleArray.push(plotString.replace(new RegExp(ranges[k],"g"), toggle));
+                }
+            	siteImages[key]=toggleArray;
+              }
+              break;
+            }
+          }
+        }
+        document.getElementById('plots').innerHTML = imgStrReplace;
+      }
+    }
+//-->
+</script>
+
+
+</body>
+
+</html>
