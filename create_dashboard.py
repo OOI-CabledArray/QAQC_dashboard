@@ -74,6 +74,16 @@ lineColors = [
 balanceBig = plt.get_cmap('cmo.balance', 512)
 balanceBlue = ListedColormap(balanceBig(np.linspace(0, 0.5, 256)))
 
+# Timespans
+spans = ['1', '7', '30', '365']
+spanString = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
+
+# Plot Overlays
+overlays = ['clim', 'near', 'time', 'none']
+
+# Data Ranges
+ranges = ['full', 'local']
+
 
 def map_concurrency(
     func, iterator, func_args=(), func_kwargs={}, max_workers=10
@@ -775,7 +785,9 @@ def create_plot_for_depth(
     plotTitle_depth = plotTitle + ': ' + profileDepth + ' meters'
     imageName_base_depth = imageName_base + '_' + profileDepth + 'meters'
     if overlayData_clim:
-        overlayData_clim_extract = extractClim(profileDepth, overlayData_clim)
+        overlayData_clim_extract = extractClim(
+            profileDepth, overlayData_clim, timeRef
+        )
     else:
         overlayData_clim_extract = pd.DataFrame()
     plotScatter(
@@ -792,7 +804,7 @@ def create_plot_for_depth(
     )
 
 
-def run_dashboard_creation(site, paramList, timeRef, depth_workers=3):
+def run_dashboard_creation(site, paramList, timeRef):
     now = datetime.utcnow()
     print('site: ', site)
     # load data for site
@@ -863,10 +875,9 @@ def run_dashboard_creation(site, paramList, timeRef, depth_workers=3):
                     )
                     depths = sites_dict[site]['depths'].strip('"').split(',')
                     if 'Single' not in depths:
-                        map_concurrency(
-                            create_plot_for_depth,
-                            depths,
-                            func_args=(
+                        for depth in depths:
+                            create_plot_for_depth(
+                                depth,
                                 paramData,
                                 Yparam,
                                 pressParam,
@@ -877,9 +888,8 @@ def run_dashboard_creation(site, paramList, timeRef, depth_workers=3):
                                 profile_paramMin,
                                 profile_paramMax,
                                 overlayData_near,
-                            ),
-                            max_workers=depth_workers,
-                        )
+                                timeRef,
+                            )
             else:
                 paramData = siteData[Yparam]
                 if overlayData_clim:
@@ -924,17 +934,7 @@ def parse_args():
         help=f"Choices {str(list(selection_mapping.keys()))}",
     )
     arg_parser.add_argument(
-        '--workers',
-        type=int,
-        default=2,
-        help=f"The number of workers",
-    )
-
-    arg_parser.add_argument(
-        '--dworkers',
-        type=int,
-        default=2,
-        help=f"The number of depths to process at a time",
+        '--workers', type=int, default=3, help=f"The number of workers"
     )
 
     return arg_parser.parse_args()
@@ -958,16 +958,6 @@ if __name__ == "__main__":
     ):
         paramList.append(param)
 
-    # Timespans
-    spans = ['1', '7', '30', '365']
-    spanString = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
-
-    # Plot Overlays
-    overlays = ['clim', 'near', 'time', 'none']
-
-    # Data Ranges
-    ranges = ['full', 'local']
-
     dataList = []
     for key, values in sites_dict.items():
         if plotInstrument in sites_dict[key]['instrument']:
@@ -978,7 +968,7 @@ if __name__ == "__main__":
     creation_times = map_concurrency(
         run_dashboard_creation,
         dataList,
-        func_args=(paramList, timeRef, args.dworkers,),
+        func_args=(paramList, timeRef,),
         max_workers=args.workers,
     )
     end = datetime.utcnow()
