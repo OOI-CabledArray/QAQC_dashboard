@@ -922,6 +922,23 @@ def run_dashboard_creation(site, paramList, timeRef):
     return (site, elapsed)
 
 
+def organize_pngs():
+    for i in PLOT_DIR.iterdir():
+        if i.is_file():
+            fname = i.name
+            subsite = fname.split('-')[0]
+
+            subsite_dir = PLOT_DIR / subsite
+            if not subsite_dir.exists():
+                subsite_dir.mkdir()
+
+            destination = subsite_dir / fname
+            if not destination.exists():
+                i.replace(destination)
+        else:
+            print(f"{i} is not a file ... skipping ...")
+
+
 def parse_args():
     arg_parser = argparse.ArgumentParser(
         description='QAQC Dashboard Plot Creator'
@@ -968,9 +985,11 @@ if __name__ == "__main__":
     creation_times = map_concurrency(
         run_dashboard_creation,
         dataList,
-        func_args=(paramList, timeRef,),
+        func_args=(paramList, timeRef),
         max_workers=args.workers,
     )
+    # Organize pngs into folders
+    organize_pngs()
     end = datetime.utcnow()
     print(
         f"======= Creation finished at: {end.isoformat()}. Time elapsed ({end - now}) ======"
