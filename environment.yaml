@@ -1,0 +1,12 @@
+name: qaqc-env
+channels:
+- conda-forge
+dependencies:
+- python=3.8
+- xarray
+- zarr
+- scipy
+- matplotlib
+- fsspec
+- cmocean
+- s3fs
