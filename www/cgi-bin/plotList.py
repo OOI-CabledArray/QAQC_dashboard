@@ -36,7 +36,6 @@ for rootdir, dirs, files in os.walk(plotDir):
             imageName = os.path.relpath(imageName_full, dirExtra)
             fileList.append(imageName)
 
-# fileList = [x for x in os.listdir('/usr/local/var/www/QAQC_dashboard/QAQC_plots') if plotFilter.search(x)]
 fileList.sort()
 fileList_json = json.dumps(fileList)
 

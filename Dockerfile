@@ -8,3 +8,4 @@ COPY ./www/index.html /usr/local/apache2/htdocs/index.html
 COPY ./www/cgi-bin /usr/local/apache2/htdocs/cgi-bin
 COPY ./www/httpd.conf /usr/local/apache2/conf/httpd.conf
 COPY ./QAQCplots /usr/local/apache2/QAQCplots
+COPY ./HITL_notes /usr/local/apache2/HITL_notes

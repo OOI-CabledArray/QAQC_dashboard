@@ -26,26 +26,26 @@
     <div class="bg-light border-right" id="sidebar-wrapper">
       <div class="sidebar-heading"><a href="index.html">Data QA/QC Home</a></div>
       <div class="list-group list-group-flush">
-        <a href="#" onclick="loadPlots('HITL',1);" class="list-group-item list-group-item-action bg-light">HITL Status</a>
-        <a href="#" onclick="loadPlots('ADCP',4);" class="list-group-item list-group-item-action bg-light">ADCP</a>
-        <a href="#" onclick="loadPlots('BOTPT',2);" class="list-group-item list-group-item-action bg-light">BOTPT</a>
+        <a href="#" onclick="loadTables('HITL_Stage1')" class="list-group-item list-group-item-action bg-light">HITL Status</a>
+        <a href="#" onclick="loadPlots('ADCP')" class="list-group-item list-group-item-action bg-light">ADCP</a>
+        <a href="#" onclick="loadPlots('BOTPT')" class="list-group-item list-group-item-action bg-light">BOTPT</a>
         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 CTD
               </a>
               <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
                 <a class="dropdown-item" href="#" onclick="loadPlots('temperature')">Temperature</a>
-                <a class="dropdown-item" href="#" onclick="loadPlots('salinity');">Salinity</a>
-                <a class="dropdown-item" href="#" onclick="loadPlots('density');">Density</a>
-                <a class="dropdown-item" href="#" onclick="loadPlots('oxygen');">Oxygen</a>
+                <a class="dropdown-item" href="#" onclick="loadPlots('salinity')">Salinity</a>
+                <a class="dropdown-item" href="#" onclick="loadPlots('density')">Density</a>
+                <a class="dropdown-item" href="#" onclick="loadPlots('oxygen')">Oxygen</a>
               </div>
-        <a href="#" onclick="loadPlots('DO2',3)" class="list-group-item list-group-item-action bg-light">DOSTA/DOFSTA</a>
-        <a href="#" onclick="loadPlots('FL',3)" class="list-group-item list-group-item-action bg-light">FLORT/FLORD</a>
-        <a href="#" onclick="loadPlots('NUTNR',3)" class="list-group-item list-group-item-action bg-light">NUTNR</a>
-        <a href="#" onclick="loadPlots('PARAD',3)" class="list-group-item list-group-item-action bg-light">PARAD</a>
-        <a href="#" onclick="loadPlots('PHSEN',3)" class="list-group-item list-group-item-action bg-light">PHSEN</a>
-        <a href="#" onclick="loadPlots('PCO2W',3)" class="list-group-item list-group-item-action bg-light">PCO2W</a>
-        <a href="#" onclick="loadPlots('SPKIR',3)" class="list-group-item list-group-item-action bg-light">SPKIR</a>
-        <a href="#" onclick="loadPlots('VELPT',3)" class="list-group-item list-group-item-action bg-light">VELPT</a>
+        <a href="#" onclick="loadPlots('DO2')" class="list-group-item list-group-item-action bg-light">OXYGEN</a>
+        <a href="#" onclick="loadPlots('FL')" class="list-group-item list-group-item-action bg-light">FLUOROMETER</a>
+        <a href="#" onclick="loadPlots('NUTNR')" class="list-group-item list-group-item-action bg-light">NUTNR</a>
+        <a href="#" onclick="loadPlots('PARAD')" class="list-group-item list-group-item-action bg-light">PARAD</a>
+        <a href="#" onclick="loadPlots('PHSEN')" class="list-group-item list-group-item-action bg-light">PHSEN</a>
+        <a href="#" onclick="loadPlots('PCO2W')" class="list-group-item list-group-item-action bg-light">PCO2W</a>
+        <a href="#" onclick="loadPlots('SPKIR')" class="list-group-item list-group-item-action bg-light">SPKIR</a>
+        <a href="#" onclick="loadPlots('VELPT')" class="list-group-item list-group-item-action bg-light">VELPT</a>
       </div>
     </div>
     <!-- /#sidebar-wrapper -->
@@ -97,15 +97,16 @@
           <ul class="navbar-nav ml-auto mt-2 mt-lg-0">
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                Status Dashboards
+                Site Navigation
               </a>
               <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
-                <a class="dropdown-item" href="http://blue.ooirsn.uw.edu:4000/dashboard" target="_blank">Blue</a>
-                <a class="dropdown-item" href="http://eng.ooirsn.uw.edu/" target="_blank">APL Eng dashboard</a>
-                <a class="dropdown-item" href="http://rtime.ooirsn.uw.edu/" target="_blank">APL RealTime Dashboard</a>
-                <a class="dropdown-item" href="http://sea.ooirsn.uw.edu/power/graphs.html" target="_blank">APL PP-Up</a>
-                <a class="dropdown-item" href="http://dstill.ooirsn.uw.edu/" target="_blank">APL Camera Videos by Day</a>
-                <a class="dropdown-item" href="https://io.ocean.washington.edu/oms_data/" target="_blank">OMS</a>
+                <a class="dropdown-item" href="site_index.html">Data: by Site</a>
+                <a class="dropdown-item" href="platform_index.html">Data: by Platform Type</a>
+                <a class="dropdown-item" href="data_stage1_index.html">Data: Stage 1</a>
+                <a class="dropdown-item" href="data_stage2_index.html">Data: Stage 2</a>
+                <a class="dropdown-item" href="data_stage3_index.html">Data: Stage 3</a>
+                <a class="dropdown-item" href="data_stage4_index.html">Data: Stage 4</a>
+                <a class="dropdown-item" href="http://status.ooirsn.uw.edu:8000/alarms" target="_blank">Alerts and Issues</a>
               </div>
             </li>
           </ul>
@@ -139,7 +140,11 @@
  		var request = new XMLHttpRequest();
  		var remote_url;
  
- 		remote_url = '/cgi-bin/plotList.py?keyWord=' + encodeURIComponent(keyWord);
+    if (keyWord.includes('HITL')){
+         remote_url = '/cgi-bin/csvList.py?keyWord=' + encodeURIComponent(keyWord);
+    } else {
+ 		     remote_url = '/cgi-bin/plotList.py?keyWord=' + encodeURIComponent(keyWord);
+    }
  		request.open('GET', remote_url, false);  // false makes the request synchronous
  		request.send(null);
  
@@ -165,10 +170,63 @@ function slide(siteID){
      imagePosition[siteID] = image_current;
    }
 
+    function loadTables(stream) {
+      document.getElementById('HITLstatus').innerHTML = "";
+      document.getElementById('HITLstatus').style.display = 'block';
+      document.getElementById('plots').innerHTML = "";
+      console.log(stream)
+      var csv_files = JSON.parse(syncCallAjax(stream));
+      console.log(csv_files);
+      csv_files.sort()
+        $(document).ready(function(){
+            //$('#btn_load').click(function(){
+                for(var i=0; i<csv_files.length; i++)
+                    $.ajax({
+                        url: csv_files[i],
+                        dataType:'text',
+                        success:function(data){
+                            var rows = data.split(/\r?\n|\r/);
+                            var table = '<table border=5px outset grey; padding: 10px; width="90%"><col style="width:25%"><col style="width:75%">';
+                            //row - iteration
+
+                            //print table header
+                            var re = new RegExp (/HITL_notes\/HITL_\S*_(\S*)\.csv/gm);
+                            var header = re.exec(this.url)[1];
+                            var headings = rows[0].split(",");
+                            table += '<thead><tr>';
+                            table += '<th>' + header + '</th>';
+                            table += '</tr></thead>';
+
+                            //print table body
+                            table += '<tbody>';
+                            for(var j=0; j<rows.length; j++){
+                                var data_cell = rows[j].split(",");
+                                table += '<tr>';
+                                for(var k=0; k<headings.length; k++)
+                                  if (data_cell[k] != null){
+                                    table += '<td>' + data_cell[k] + '</td>';
+                                  }
+                                table += '</tr>';
+                            }
+                            table += '</tbody>';
+
+                            //closing table, add line break, appending result to div
+                            table += '</table><br>';
+                            $('#HITLstatus').append(table);
+                        }
+                    });   
+           // }); 
+        });
+      }
+
+
+
+
+
 
     function loadPlots(stream) {
        document.getElementById('plots').innerHTML = "";
-       if (stream.includes('HITL')){
+       if (stream.includes('default')){
          document.getElementById('HITLstatus').style.display = 'block';
        } else {
          document.getElementById('HITLstatus').style.display = 'none';
