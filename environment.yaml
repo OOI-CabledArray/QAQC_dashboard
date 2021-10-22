@@ -3,10 +3,16 @@ channels:
 - conda-forge
 dependencies:
 - python=3.8
+- cmocean
+- fsspec
+- loguru
+- matplotlib
+- numpy
+- pandas
+- pathlib
+- requests
+- s3fs
+- scipy
 - xarray
 - zarr
-- scipy
-- matplotlib
-- fsspec
-- cmocean
-- s3fs
+

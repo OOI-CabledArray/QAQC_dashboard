@@ -1,18 +1,26 @@
-#!/usr/bin/env python
-# coding: utf-8
+#!/usr/local/bin/python3
 
-# In[1]:
+# -*- coding: utf-8 -*-
 
 
-import xarray as xr
-import pandas as pd
+
+# import packages
+
+import ast
 from datetime import datetime, date, timedelta
+import gc
+import glob
+import io
+import json
 import numpy as np
 import os
-import glob
-import gc
-import statistics as st
+import pandas as pd
 import re
+import requests
+import s3fs
+import statistics as st
+import xarray as xr
+
 
 import matplotlib.pyplot as plt
 import matplotlib.font_manager 
@@ -24,67 +32,56 @@ from matplotlib.colors import ListedColormap
 import cmocean
 from scipy.interpolate import griddata
 
-import s3fs
 
+def pressureBracket(pressure,clim_dict):
+    bracketList = []
+    pressBracket = 'notFound'
 
-# In[2]:
-
-
-### create dictionary of sites key for filePrefix, nearestNeighbors
-sites_dict = pd.read_csv('params/sitesDictionaryPanel.csv').set_index('refDes').T.to_dict('series')
-
-### create dictionary of parameter vs variable Name
-variable_dict = pd.read_csv('params/variableMap.csv', index_col=0, squeeze=True).to_dict()
-
-### create dictionary of instrumet key for plot parameters
-instrument_dict = pd.read_csv('params/plotParameters.csv').set_index('instrument').T.to_dict('series')
-
-### create dictionary of variable parameters for plotting
-variable_paramDict = pd.read_csv('params/variableParameters.csv').set_index('variable').T.to_dict('series')
-
-#plotDir = '/Users/rsn/Desktop/FileCabinet/RCA_tools/QAQC_dashboard/QAQCplots/'
-plotDir = 'QAQCplots/'
-
-
-# In[3]:
-
-
-lineColors = ['#1f78b4','#a6cee3','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00']
-balanceBig = plt.get_cmap('cmo.balance',512)
-balanceBlue = ListedColormap(balanceBig(np.linspace(0, 0.5, 256)))
-
-
-# In[4]:
-
-
-def extractClim(profileDepth,overlayData_clim):
+    for bracket in clim_dict['1'].keys():
+        bracketList.append(ast.literal_eval(bracket))
+    if pressure < bracketList[0][0]:
+        pressBracket = bracketList[0]
+    elif pressure > bracketList[-1][1] - 1:
+        pressBracket = bracketList[-1]
+    else:
+        for bracket in bracketList:
+            if (pressure >= bracket[0]) & (pressure < bracket[1]):
+                pressBracket = bracket
+                break
     
+    return pressBracket
+
+
+def extractClim(timeRef,profileDepth,overlayData_clim):
+
     depth = float(profileDepth)
-    bracketList = [x for x in overlayData_clim.keys() if x <= depth]
-    if bracketList:
-        bracket = min(bracketList, key=lambda x:abs(x-depth))
+    climBracket = pressureBracket(depth,overlayData_clim)
+    climTime = []
+    climMinus3std = []
+    climPlus3std = []
+    climData = []
     
-        climTime = []
-        climMinus3std = []
-        climPlus3std = []
-        climData = []
+    if 'notFound' in climBracket:
+        climInterpolated_hour = pd.DataFrame()
+    else:
         for i in range(1,13):
             climMonth = i
+            climatology = ast.literal_eval(overlayData_clim[str(climMonth)][str(climBracket)])
             # current year
             climTime.append(datetime(timeRef.year,i,15))
-            climMinus3std.append(overlayData_clim[bracket][i]['climMinus3std'])
-            climPlus3std.append(overlayData_clim[bracket][i]['climPlus3std'])
-            climData.append(overlayData_clim[bracket][i]['clim'])
+            climMinus3std.append(climatology[0])
+            climPlus3std.append(climatology[1])
+            climData.append(st.mean([climatology[0],climatology[1]]))
             # extend climatology to previous year
             climTime.append(datetime(timeRef.year-1,i,15))
-            climMinus3std.append(overlayData_clim[bracket][i]['climMinus3std'])
-            climPlus3std.append(overlayData_clim[bracket][i]['climPlus3std'])
-            climData.append(overlayData_clim[bracket][i]['clim'])
+            climMinus3std.append(climatology[0])
+            climPlus3std.append(climatology[1])
+            climData.append(st.mean([climatology[0],climatology[1]]))
             # extend climatology to next year
             climTime.append(datetime(timeRef.year+1,i,15))
-            climMinus3std.append(overlayData_clim[bracket][i]['climMinus3std'])
-            climPlus3std.append(overlayData_clim[bracket][i]['climPlus3std'])
-            climData.append(overlayData_clim[bracket][i]['clim'])
+            climMinus3std.append(climatology[0])
+            climPlus3std.append(climatology[1])
+            climData.append(st.mean([climatology[0],climatology[1]]))
         
         zipped = zip(climTime,climMinus3std,climPlus3std,climData)
         zipped = list(zipped)
@@ -93,69 +90,55 @@ def extractClim(profileDepth,overlayData_clim):
         climSeries = pd.DataFrame(sortClim, columns=['climTime','climMinus3std','climPlus3std','climData'])
         climSeries.set_index(['climTime'], inplace = True) 
     
-        #upsampled_day = climSeries.resample('D')
-        #climInterpolated_day = upsampled_day.interpolate(method='linear')
-
         upsampled_hour = climSeries.resample('H')
         climInterpolated_hour = upsampled_hour.interpolate(method='linear')
         
-    else:
-        climInterpolated_hour = pd.DataFrame()
-    
     return climInterpolated_hour
-
-
-# In[5]:
-
-
-def loadClim(site):
     
-    def cleanDataframe(dfString):
-        m = re.match('\[(.*\d),.*\d\]',dfString)
-        if m:
-            cleanString = m.group(1)
-            return cleanString
-        else:
-            return dfString
+def loadQARTOD(refDes,param,sensorType):
+    
+    (site,node,sensor1,sensor2) = refDes.split('-')
+    sensor = sensor1 + '-' + sensor2
         
+    ### Load climatology and gross range values
 
-    climatologyDir = 'climatologyTables/'
-    param = 'seawater_temperature'
-    clim_dict = {}
+    githubBaseURL = 'https://raw.githubusercontent.com/oceanobservatories/qc-lookup/master/qartod/'
+    clim_URL = githubBaseURL + sensorType + '/climatology_tables/' + refDes + '-' + param + '.csv'
+    grossRange_URL = githubBaseURL + sensorType + '/' + sensorType + '_qartod_gross_range_test_values.csv'
+    
+    download = requests.get(grossRange_URL).content
+    df_grossRange = pd.read_csv(io.StringIO(download.decode('utf-8')))
 
-    climFiles = []
-    for rootdir, dirs, files in os.walk(climatologyDir):
-        for climFile in files:
-            if (site in climFile) and (param in climFile):
-                climFile_full = os.path.join(rootdir, climFile)
-                climFiles.append(climFile_full)
-
-    if len(climFiles) != 1:
-        print('error finding climatology file!')
-    else:
-        param_clim = pd.read_csv(climFiles[0])
-        param_clim.rename(columns={'Unnamed: 0':'depth'}, inplace=True)
-        param_clim['depth'] = param_clim['depth'].apply(cleanDataframe) 
-        param_clim = param_clim.rename(columns=lambda x: cleanDataframe(x))
+    download = requests.get(clim_URL).content
+    df_clim = pd.read_csv(io.StringIO(download.decode('utf-8')))
+                                      
+    qcConfig = df_grossRange.qcConfig[(df_grossRange.subsite == site) & (df_grossRange.node == node) & (df_grossRange.sensor == sensor)]
+    qcConfig_json = qcConfig.values[0].replace("'", "\"")
+    grossRange_dict = json.loads(qcConfig_json)
+    
+    climRename = {
+            'Unnamed: 0':'depth',
+            '[1, 1]':'1',
+            '[2, 2]':'2',
+            '[3, 3]':'3',
+            '[4, 4]':'4',
+            '[5, 5]':'5',
+            '[6, 6]':'6',
+            '[7, 7]':'7',
+            '[8, 8]':'8',
+            '[9, 9]':'9',
+            '[10, 10]':'10',
+            '[11, 11]':'11',
+            '[12, 12]':'12'           
+        } 
         
-        for index,row in param_clim.iterrows():
-            depthKey = int(row.depth)
-            clim_dict[depthKey] = {}
-            for i in range(1,13):
-                clim_dict[depthKey][i] = {}
-                climRange = row[i].replace('[','').replace(']','').split(',')
-                clim_dict[depthKey][i]['climMinus3std'] = float(climRange[0])
-                clim_dict[depthKey][i]['climPlus3std'] = float(climRange[1])
-                clim = st.mean([float(climRange[0]),float(climRange[1])])
-                clim_dict[depthKey][i]['clim'] = clim
-            
-    return clim_dict
-
-
-# In[6]:
-
-
-def loadData(site):
+    df_clim.rename(columns=climRename, inplace=True)
+    clim_dict = df_clim.set_index('depth').to_dict()
+    
+    return(grossRange_dict,clim_dict)
+    
+    
+def loadData(site,sites_dict):
     fs = s3fs.S3FileSystem(anon=True)
     zarrDir = 'ooi-data/' + sites_dict[site]['zarrFile']
     zarr_store = fs.get_mapper(zarrDir)
@@ -164,12 +147,39 @@ def loadData(site):
     ds = xr.open_zarr(zarr_store, consolidated=True)
     
     return ds
+    
+    
+    
+def plotProfilesGrid(
+    Yparam,
+    paramData,
+    plotTitle,
+    zLabel,
+    timeRef,
+    yMin,
+    yMax,
+    zMin,
+    zMax,
+    colorMap,
+    fileName_base,
+    overlayData_clim,
+    overlayData_near
+):
+    # Initiate fileName list
+    fileNameList = []
+    # Timespans
+    spans = ['1', '7', '30', '365']
+    spanString = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
 
+    # Plot Overlays
+    overlays = ['clim','near','time','none']
 
-# In[7]:
+    # Data Ranges
+    ranges = ['full','local']
 
-
-def plotProfilesGrid(paramData,plotTitle,zLabel,timeRef,yMin,yMax,zMin,zMax,colorMap,fileName_base,overlayData_clim,overlayData_near):
+    lineColors = ['#1f78b4','#a6cee3','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00']
+    balanceBig = plt.get_cmap('cmo.balance',512)
+    balanceBlue = ListedColormap(balanceBig(np.linspace(0, 0.5, 256)))
     
     def setPlot():
            
@@ -264,6 +274,7 @@ def plotProfilesGrid(paramData,plotTitle,zLabel,timeRef,yMin,yMax,zMin,zMax,colo
             
         fileName = fileName_base + '_' + spanString[span] + '_' + 'none'
         fig.savefig(fileName + '_full.png', dpi=300)
+        fileNameList.append(fileName + '_full.png')
         cbar.remove()
         plt.clim(zMin,zMax)
         m = ScalarMappable(cmap=profilePlot.get_cmap())
@@ -275,6 +286,7 @@ def plotProfilesGrid(paramData,plotTitle,zLabel,timeRef,yMin,yMax,zMin,zMax,colo
         cbar.ax.set_ylabel(zLabel,fontsize=4)
         cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
         fig.savefig(fileName + '_local.png', dpi=300)
+        fileNameList.append(fileName + '_local.png')
         
         if 'no' in emptySlice:
             for overlay in overlays:
@@ -286,17 +298,18 @@ def plotProfilesGrid(paramData,plotTitle,zLabel,timeRef,yMin,yMax,zMin,zMax,colo
                         climList = []
                         for key in overlayData_clim:
                             for subKey in overlayData_clim[key]:
-                                climList.append(overlayData_clim[key][subKey]['clim'])
-                                depthList.append(key)
-                                timeList.append(np.datetime64("{0}-{1}-{2}".format(str(timeRef.year),str(subKey).zfill(2),15),'D'))
+                                climatology = ast.literal_eval(overlayData_clim[key][subKey])
+                                climList.append(st.mean([climatology[0],climatology[1]]))
+                                depthList.append(ast.literal_eval(subKey)[0])
+                                timeList.append(np.datetime64("{0}-{1}-{2}".format(str(timeRef.year),str(key).zfill(2),15),'D'))
                                 # extend climatology to previous year
-                                climList.append(overlayData_clim[key][subKey]['clim'])
-                                depthList.append(key)
-                                timeList.append(np.datetime64("{0}-{1}-{2}".format(str(timeRef.year-1),str(subKey).zfill(2),15),'D'))
+                                climList.append(st.mean([climatology[0],climatology[1]]))
+                                depthList.append(ast.literal_eval(subKey)[0])
+                                timeList.append(np.datetime64("{0}-{1}-{2}".format(str(timeRef.year-1),str(key).zfill(2),15),'D'))
                                 # extend climatology to next year
-                                climList.append(overlayData_clim[key][subKey]['clim'])
-                                depthList.append(key)
-                                timeList.append(np.datetime64("{0}-{1}-{2}".format(str(timeRef.year+1),str(subKey).zfill(2),15),'D'))
+                                climList.append(st.mean([climatology[0],climatology[1]]))
+                                depthList.append(ast.literal_eval(subKey)[0])
+                                timeList.append(np.datetime64("{0}-{1}-{2}".format(str(timeRef.year+1),str(key).zfill(2),15),'D'))
                                 
                         climTime_TS = [((dt64-unix_epoch) / one_second) for dt64 in timeList]
                         # interpolate climatology data
@@ -318,6 +331,7 @@ def plotProfilesGrid(paramData,plotTitle,zLabel,timeRef,yMin,yMax,zMin,zMax,colo
                         
                         fileName = fileName_base + '_' + spanString[span] + '_' + 'clim'
                         fig.savefig(fileName + '_full.png', dpi=300)
+                        fileNameList.append(fileName + '_full.png')
                         
                         climDiffMin = np.nanmin(climDiff)
                         climDiffMax = np.nanmax(climDiff)
@@ -354,6 +368,7 @@ def plotProfilesGrid(paramData,plotTitle,zLabel,timeRef,yMin,yMax,zMin,zMax,colo
                         plt.xlim(xMin,xMax)
                     
                         fig.savefig(fileName + '_local.png', dpi=300)
+                        fileNameList.append(fileName + '_local.png')
             
                     else:
                         print('climatology is empty!')
@@ -369,7 +384,9 @@ def plotProfilesGrid(paramData,plotTitle,zLabel,timeRef,yMin,yMax,zMin,zMax,colo
                         
                         fileName = fileName_base + '_' + spanString[span] + '_' + 'clim'
                         fig.savefig(fileName + '_full.png', dpi=300)
+                        fileNameList.append(fileName + '_full.png')
                         fig.savefig(fileName + '_local.png', dpi=300)
+                        fileNameList.append(fileName + '_local.png')
             
         else:
             profilePlot = plt.scatter(scatterX, scatterY, c=scatterZ, marker = '.', cmap = 'cmo.balance')
@@ -382,15 +399,43 @@ def plotProfilesGrid(paramData,plotTitle,zLabel,timeRef,yMin,yMax,zMin,zMax,colo
             cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
             fileName = fileName_base + '_' + spanString[span] + '_' + 'clim'
             fig.savefig(fileName + '_full.png', dpi=300)
+            fileNameList.append(fileName + '_full.png')
             fig.savefig(fileName + '_local.png', dpi=300)
+            fileNameList.append(fileName + '_local.png')
+
+    return fileNameList        
             
                 
+                
+                
+def plotScatter(
+    Yparam,
+    paramData,
+    plotTitle,
+    yLabel,
+    timeRef,
+    yMin,
+    yMax,
+    fileName_base,
+    overlayData_clim,
+    overlayData_near,
+    plotMarkerSize
+):
+    # Initiate fileName list
+    fileNameList = []
+    # Timespans
+    spans = ['1', '7', '30', '365']
+    spanString = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
 
+    # Plot Overlays
+    overlays = ['clim','near','time','none']
 
-# In[8]:
+    # Data Ranges
+    ranges = ['full','local']
 
-
-def plotScatter(paramData,plotTitle,yLabel,timeRef,yMin,yMax,fileName_base,overlayData_clim,overlayData_near,plotMarkerSize):
+    lineColors = ['#1f78b4','#a6cee3','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00']
+    balanceBig = plt.get_cmap('cmo.balance',512)
+    balanceBlue = ListedColormap(balanceBig(np.linspace(0, 0.5, 256)))
     
     def setPlot():
            
@@ -456,8 +501,10 @@ def plotScatter(paramData,plotTitle,yLabel,timeRef,yMin,yMax,fileName_base,overl
             emptySlice = 'yes'
         fileName = fileName_base + '_' + spanString[span] + '_' + 'none'
         fig.savefig(fileName + '_full.png', dpi=300)
+        fileNameList.append(fileName + '_full.png')
         plt.ylim(yMin,yMax)
         fig.savefig(fileName + '_local.png', dpi=300)
+        fileNameList.append(fileName + '_local.png')
         
         for overlay in overlays:
             if 'time' in overlay:
@@ -497,8 +544,10 @@ def plotScatter(paramData,plotTitle,yLabel,timeRef,yMin,yMax,fileName_base,overl
                 legend = ax.legend(handles=patches,loc="upper right", fontsize=3)
                 fileName = fileName_base + '_' + spanString[span] + '_' + overlay
                 fig.savefig(fileName + '_full.png', dpi=300)
+                fileNameList.append(fileName + '_full.png')
                 plt.ylim(yMin,yMax)
                 fig.savefig(fileName + '_local.png', dpi=300)
+                fileNameList.append(fileName + '_local.png')
                 
                 
             if 'clim' in overlay:
@@ -523,138 +572,16 @@ def plotScatter(paramData,plotTitle,yLabel,timeRef,yMin,yMax,fileName_base,overl
                     
                     fileName = fileName_base + '_' + spanString[span] + '_' + 'clim'
                     fig.savefig(fileName + '_full.png', dpi=300)
+                    fileNameList.append(fileName + '_full.png')
                     plt.ylim(yMin,yMax)
                     fig.savefig(fileName + '_local.png', dpi=300)
+                    fileNameList.append(fileName + '_local.png')
                 
             if 'near' in overlay:
                 # add nearest neighbor data traces
                 print('adding nearest neighbor data to plot')
+    return fileNameList
             
-
-
-# In[9]:
-
-
-timeString = '2020-06-30'
-timeRef = datetime.strptime(timeString, '%Y-%m-%d')
-plotInstrument = 'CTD-PROFILER'
-#plotInstrument = 'CTD-FIXED'
-#timeRef = date.today()
-
-### options...instrument, timeReference, range
-
-
-# In[10]:
-
-
-### For each param in instrument, append to list of params in checkbox
-paramList=[]
-for param in instrument_dict[plotInstrument]['plotParameters'].replace('"','').split(','):
-    paramList.append(param)
-
-# Timespans
-spans = ['1', '7', '30', '365']
-spanString = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
-
-# Plot Overlays
-overlays = ['clim','near','time','none']
-
-# Data Ranges
-ranges = ['full','local']
-
-
-# In[11]:
-
-
-dataList = []
-for key,values in sites_dict.items():
-    if plotInstrument in sites_dict[key]['instrument']:
-        dataList.append(key)
-    
-print(dataList)
-
-
-# In[ ]:
-
-
-dataListTest = dataList[1:2]
-paramListTest = paramList[0:1]
-
-for site in dataListTest:
-    print('site: ', site)
-    # load data for site
-    siteData = loadData(site)
-    fileParams = sites_dict[site]['dataParameters'].strip('"').split(',')
-    for param in paramList:
-        print('paramater: ', param)
-        variableParams = variable_dict[param].strip('"').split(',')
-        parameterList = [value for value in variableParams if value in fileParams] 
-        if len(parameterList) != 1:
-            print('Error retrieving parameter name...')
-        else:
-            Yparam = parameterList[0]
-            # set up plotting parameters
-            imageName_base = plotDir + site + '_' + param  
-            plotTitle = site + ' ' + param
-            paramMin = variable_paramDict[param]['min']
-            paramMax = variable_paramDict[param]['max']
-            profile_paramMin = variable_paramDict[param]['profileMin']
-            profile_paramMax = variable_paramDict[param]['profileMax']
-            yLabel = variable_paramDict[param]['label']
-        
-            # Load overlayData
-            overlayData_clim = {}
-            overlayData_clim = loadClim(site)
-            overlayData_near = {}
-            #overlayData_near = loadNear(site)
-        
-            if 'PROFILER' in plotInstrument:
-                #TODO extract profiles???
-                profile_paramMin = variable_paramDict[param]['profileMin']
-                profile_paramMax = variable_paramDict[param]['profileMax']
-                pressureParams = variable_dict['pressure'].strip('"').split(',')
-                pressureParamList = [value for value in pressureParams if value in fileParams]
-                if len(pressureParamList) != 1:
-                    print('Error retrieving pressure parameter!')
-                else:
-                    pressParam = pressureParamList[0]
-                    paramData = siteData[[Yparam,pressParam]]
-                    colorMap = 'cmo.' + variable_paramDict[param]['colorMap']
-                    #plotProfiles(paramData,plotTitle,yLabel,timeRef,paramMin,paramMax,colorMap,imageName_base,overlayData)
-                    depthMinMax = sites_dict[site]['depthMinMax'].strip('"').split(',')
-                    if 'None' not in depthMinMax:
-                        yMin = int(depthMinMax[0])
-                        yMax = int(depthMinMax[1])
-                    plotProfilesGrid(paramData,plotTitle,yLabel,timeRef,yMin,yMax,profile_paramMin,profile_paramMax,colorMap,imageName_base,overlayData_clim,overlayData_near)
-                    depths = sites_dict[site]['depths'].strip('"').split(',')
-                    if 'Single' not in depths:
-                        for profileDepth in depths:
-                            paramData_depth = paramData[Yparam].where((int(profileDepth) < paramData[pressParam]) & (paramData[pressParam] < (int(profileDepth)+0.5)))
-                            plotTitle_depth = plotTitle + ': ' + profileDepth + ' meters'
-                            imageName_base_depth = imageName_base + '_' + profileDepth + 'meters'
-                            if overlayData_clim:
-                                overlayData_clim_extract = extractClim(profileDepth,overlayData_clim)
-                            else:
-                                overlayData_clim_extract = pd.DataFrame()
-                            plotScatter(paramData_depth,plotTitle_depth,yLabel,timeRef,profile_paramMin,profile_paramMax,imageName_base_depth,overlayData_clim_extract,overlayData_near,'medium')
-            else:
-                paramData = siteData[Yparam]
-                if overlayData_clim:
-                    overlayData_clim_extract = extractClim('0',overlayData_clim)
-                else:
-                    overlayData_clim_extract = pd.DataFrame()
-                # PLOT
-                plotScatter(paramData,plotTitle,yLabel,timeRef,paramMin,paramMax,imageName_base,overlayData_clim_extract,overlayData_near,'small')
-        
-            del paramData
-            gc.collect()
-    del siteData
-    gc.collect()
-                 
-
-
-# In[ ]:
-
-
-
+            
+            
 
