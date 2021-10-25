@@ -10,6 +10,7 @@ dependencies:
 - numpy
 - pandas
 - pathlib
+- pydrive2
 - requests
 - s3fs
 - scipy
