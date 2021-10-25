@@ -106,22 +106,19 @@ def loadQARTOD(refDes,param,sensorType):
     clim_URL = githubBaseURL + sensorType + '/climatology_tables/' + refDes + '-' + param + '.csv'
     grossRange_URL = githubBaseURL + sensorType + '/' + sensorType + '_qartod_gross_range_test_values.csv'
     
-    download = requests.get(grossRange_URL).content
-    if download.status_code == 404:
-        print('no gross range data found...')
-        grossRange_dict = {}
-    else:
-        df_grossRange = pd.read_csv(io.StringIO(download.decode('utf-8')))
+    download = requests.get(grossRange_URL)
+    if download.status_code == 200:
+        df_grossRange = pd.read_csv(io.StringIO(download.content.decode('utf-8')))
         qcConfig = df_grossRange.qcConfig[(df_grossRange.subsite == site) & (df_grossRange.node == node) & (df_grossRange.sensor == sensor)]
         qcConfig_json = qcConfig.values[0].replace("'", "\"")
         grossRange_dict = json.loads(qcConfig_json)
-
-    download = requests.get(clim_URL).content
-    if download.status_code == 404:
-        print('no climatology data found...')
-        clim_dict = {}
     else:
-        df_clim = pd.read_csv(io.StringIO(download.decode('utf-8')))
+        print('error retriving gross range data')
+        grossRange_dict = {}
+
+    download = requests.get(clim_URL)
+    if download.status_code == 200:
+        df_clim = pd.read_csv(io.StringIO(download.content.decode('utf-8')))
         climRename = {
                 'Unnamed: 0':'depth',
                 '[1, 1]':'1',
@@ -140,6 +137,9 @@ def loadQARTOD(refDes,param,sensorType):
         
         df_clim.rename(columns=climRename, inplace=True)
         clim_dict = df_clim.set_index('depth').to_dict()
+    else:
+        print('error retriving climatology data')
+        clim_dict = {}
     
     return(grossRange_dict,clim_dict)
     
