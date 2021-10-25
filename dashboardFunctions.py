@@ -107,33 +107,39 @@ def loadQARTOD(refDes,param,sensorType):
     grossRange_URL = githubBaseURL + sensorType + '/' + sensorType + '_qartod_gross_range_test_values.csv'
     
     download = requests.get(grossRange_URL).content
-    df_grossRange = pd.read_csv(io.StringIO(download.decode('utf-8')))
+    if download.status_code == 404:
+        print('no gross range data found...')
+        grossRange_dict = {}
+    else:
+        df_grossRange = pd.read_csv(io.StringIO(download.decode('utf-8')))
+        qcConfig = df_grossRange.qcConfig[(df_grossRange.subsite == site) & (df_grossRange.node == node) & (df_grossRange.sensor == sensor)]
+        qcConfig_json = qcConfig.values[0].replace("'", "\"")
+        grossRange_dict = json.loads(qcConfig_json)
 
     download = requests.get(clim_URL).content
-    df_clim = pd.read_csv(io.StringIO(download.decode('utf-8')))
-                                      
-    qcConfig = df_grossRange.qcConfig[(df_grossRange.subsite == site) & (df_grossRange.node == node) & (df_grossRange.sensor == sensor)]
-    qcConfig_json = qcConfig.values[0].replace("'", "\"")
-    grossRange_dict = json.loads(qcConfig_json)
-    
-    climRename = {
-            'Unnamed: 0':'depth',
-            '[1, 1]':'1',
-            '[2, 2]':'2',
-            '[3, 3]':'3',
-            '[4, 4]':'4',
-            '[5, 5]':'5',
-            '[6, 6]':'6',
-            '[7, 7]':'7',
-            '[8, 8]':'8',
-            '[9, 9]':'9',
-            '[10, 10]':'10',
-            '[11, 11]':'11',
-            '[12, 12]':'12'           
-        } 
+    if download.status_code == 404:
+        print('no climatology data found...')
+        clim_dict = {}
+    else:
+        df_clim = pd.read_csv(io.StringIO(download.decode('utf-8')))
+        climRename = {
+                'Unnamed: 0':'depth',
+                '[1, 1]':'1',
+                '[2, 2]':'2',
+                '[3, 3]':'3',
+                '[4, 4]':'4',
+                '[5, 5]':'5',
+                '[6, 6]':'6',
+                '[7, 7]':'7',
+                '[8, 8]':'8',
+                '[9, 9]':'9',
+                '[10, 10]':'10',
+                '[11, 11]':'11',
+                '[12, 12]':'12'           
+            } 
         
-    df_clim.rename(columns=climRename, inplace=True)
-    clim_dict = df_clim.set_index('depth').to_dict()
+        df_clim.rename(columns=climRename, inplace=True)
+        clim_dict = df_clim.set_index('depth').to_dict()
     
     return(grossRange_dict,clim_dict)
     
