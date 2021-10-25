@@ -372,15 +372,20 @@ def plotProfilesGrid(
             
                     else:
                         print('climatology is empty!')
+                        #cb.remove()
+                        #plt.draw()
                         #profilePlot = plt.scatter(scatterX, scatterY, c=scatterZ, marker = '.', cmap = 'cmo.balance')
+                        #profilePlot = plt.scatter(scatterX, scatterY, c=scatterZ, marker = '.')
                         plt.annotate('No climatology data available', xy=(0.3, 0.5), xycoords='axes fraction')
-                        plt.xlim(xMin,xMax)
+                        #plt.xlim(xMin,xMax)
                     
-                        cbar = fig.colorbar(profilePlot, ax=ax)
-                        cbar.update_ticks()
-                        cbar.formatter.set_useOffset(False)
-                        cbar.ax.set_ylabel(zLabel,fontsize=4)
-                        cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
+                        #cbar = fig.colorbar(profilePlot, ax=ax)
+                        #cbar.update_ticks()
+                        #cbar.formatter.set_useOffset(False)
+                        #cbar.ax.set_ylabel(zLabel,fontsize=4)
+                        #cbar.ax.tick_params(length=2, width=0.5, labelsize=4)
+                        #cb.remove()
+                        #plt.draw() #update plot
                         
                         fileName = fileName_base + '_' + spanString[span] + '_' + 'clim'
                         fig.savefig(fileName + '_full.png', dpi=300)
@@ -389,6 +394,7 @@ def plotProfilesGrid(
                         fileNameList.append(fileName + '_local.png')
             
         else:
+            fig,ax = setPlot()
             profilePlot = plt.scatter(scatterX, scatterY, c=scatterZ, marker = '.', cmap = 'cmo.balance')
             plt.annotate('No data available', xy=(0.3, 0.5), xycoords='axes fraction')
             plt.xlim(xMin,xMax)
