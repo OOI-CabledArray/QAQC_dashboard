@@ -3,14 +3,17 @@
 # import packages
 
 import argparse
+import create_index
 import concurrent.futures
 import dashboardFunctions as dashFunc
+import decimateFunctions as decimate
 from datetime import datetime
 from dateutil import parser
 import gc
 from loguru import logger
 import pandas as pd
 from pathlib import Path 
+import xarray as xr
 
 
 PARAMS_DIR = Path('params')
@@ -96,7 +99,7 @@ def create_plot_for_depth(
         )
     else:
         overlayData_clim_extract = pd.DataFrame()
-    plotScatter(
+    dashFunc.plotScatter(
         paramData_depth,
         plotTitle_depth,
         yLabel,
@@ -107,16 +110,36 @@ def create_plot_for_depth(
         overlayData_clim_extract,
         overlayData_near,
         'medium',
+        span,
+        spanString
     )
 
 
-def run_dashboard_creation(site, paramList, timeRef):
+def run_dashboard_creation(site, paramList, timeRef, span):
     now = datetime.utcnow()
     plotList = []
     logger.info("site: {}", site)
+    logger.info("span: {}", span)
+    span_dict = {'1': 'day', '7': 'week', '30': 'month', '365': 'year'}
+    spanString = span_dict[span]
     # load data for site
     siteData = dashFunc.loadData(site,sites_dict)
     fileParams = sites_dict[site]['dataParameters'].strip('"').split(',')
+    # drop un-used variables from dataset
+    allVar = list(siteData.keys())
+    dropList = [item for item in allVar if item not in fileParams]
+    siteData = siteData.drop(dropList)
+    if int(span) == 365:
+        ### TODO: only decimate if length is > decimation threshold...
+        ### decimate data
+        siteData_df = decimate.downsample(siteData)
+        ### turn dataframe into dataset
+        del siteData
+        gc.collect()
+        siteData = xr.Dataset.from_dataframe(siteData_df,sparse=False)
+        siteData = siteData.swap_dims({'index': 'time'})
+        siteData = siteData.reset_coords()
+        
     for param in paramList:
         logger.info("paramter: {}", param)
         variableParams = variable_dict[param].strip('"').split(',')
@@ -158,7 +181,7 @@ def run_dashboard_creation(site, paramList, timeRef):
                     if 'None' not in depthMinMax:
                         yMin = int(depthMinMax[0])
                         yMax = int(depthMinMax[1])
-                    plots = dashFunc.plotProfilesGrid(Yparam,paramData,plotTitle,yLabel,timeRef,yMin,yMax,profile_paramMin,profile_paramMax,colorMap,imageName_base,overlayData_clim,overlayData_near)
+                    plots = dashFunc.plotProfilesGrid(Yparam,paramData,plotTitle,yLabel,timeRef,yMin,yMax,profile_paramMin,profile_paramMax,colorMap,imageName_base,overlayData_clim,overlayData_near,span,spanString)
                     plotList.append(plots)
                     depths = sites_dict[site]['depths'].strip('"').split(',')
                     if 'Single' not in depths:
@@ -170,7 +193,7 @@ def run_dashboard_creation(site, paramList, timeRef):
                                 overlayData_clim_extract = dashFunc.extractClim(timeRef,profileDepth,overlayData_clim)
                             else:
                                 overlayData_clim_extract = pd.DataFrame()
-                            plots = dashFunc.plotScatter(Yparam,paramData_depth,plotTitle_depth,yLabel,timeRef,profile_paramMin,profile_paramMax,imageName_base_depth,overlayData_clim_extract,overlayData_near,'medium')
+                            plots = dashFunc.plotScatter(Yparam,paramData_depth,plotTitle_depth,yLabel,timeRef,profile_paramMin,profile_paramMax,imageName_base_depth,overlayData_clim_extract,overlayData_near,'medium',span,spanString)
                             plotList.append(plots)
             else:
                 paramData = siteData[Yparam]
@@ -179,7 +202,7 @@ def run_dashboard_creation(site, paramList, timeRef):
                 else:
                     overlayData_clim_extract = pd.DataFrame()
                 # PLOT
-                plots = dashFunc.plotScatter(Yparam,paramData,plotTitle,yLabel,timeRef,paramMin,paramMax,imageName_base,overlayData_clim_extract,overlayData_near,'small')
+                plots = dashFunc.plotScatter(Yparam,paramData,plotTitle,yLabel,timeRef,paramMin,paramMax,imageName_base,overlayData_clim_extract,overlayData_near,'small',span,spanString)
                 plotList.append(plots)
 
             del paramData
@@ -189,22 +212,24 @@ def run_dashboard_creation(site, paramList, timeRef):
     end = datetime.utcnow()
     elapsed = end - now
     logger.info("{} finished plotting: Time elapsed ({})",site,str(elapsed))
-    return (plotList)
+    return plotList
 
 
 def organize_pngs():
     for i in PLOT_DIR.iterdir():
         if i.is_file():
-            fname = i.name
-            subsite = fname.split('-')[0]
+            if '.png' in str(i):
+                fname = i.name
+                subsite = fname.split('-')[0]
 
-            subsite_dir = PLOT_DIR / subsite
-            if not subsite_dir.exists():
-                subsite_dir.mkdir()
+                subsite_dir = PLOT_DIR / subsite
+                if not subsite_dir.exists():
+                    subsite_dir.mkdir()
 
-            destination = subsite_dir / fname
-            if not destination.exists():
+                destination = subsite_dir / fname
                 i.replace(destination)
+            else:
+                print(f"{i} is not an image file ... skipping ...")
         else:
             print(f"{i} is not a file ... skipping ...")
 
@@ -223,6 +248,7 @@ def parse_args():
     arg_parser.add_argument(
         '--workers', type=int, default=3, help=f"The number of workers"
     )
+    arg_parser.add_argument('--span', type=str, default='7')
 
     return arg_parser.parse_args()
 
@@ -256,10 +282,11 @@ if __name__ == "__main__":
     logger.info("======= Creation started at: {} ======",now.isoformat())
    
     for site in dataList:
-        sitePlotList = run_dashboard_creation(site, paramList, timeRef)
+        sitePlotList = run_dashboard_creation(site, paramList, timeRef, args.span)
+        # Organize pngs into folders after each site
+        organize_pngs()
+        create_index.main()
 
-    # Organize pngs into folders
-    organize_pngs()
     end = datetime.utcnow()
     logger.info("======= Creation finished at: {}. Time elapsed ({}) ======",end.isoformat(),(end-now))
     
