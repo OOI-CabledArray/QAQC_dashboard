@@ -141,11 +141,10 @@ def perform_decimation(ds, threshold):
     gc.collect()
     return pd.DataFrame(decdata, columns=cols)
 
-def downsample(raw_ds):
+def downsample(raw_ds, threshold):
     print(f"{datetime.datetime.now().strftime('%H:%M:%S')}:    Get list of data arrays")
     da_list = (raw_ds[var] for var in raw_ds)
 
-    threshold = 5000000
     df_list = []
     for da in da_list:
         print(

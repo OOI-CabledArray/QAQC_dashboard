@@ -115,7 +115,7 @@ def create_plot_for_depth(
     )
 
 
-def run_dashboard_creation(site, paramList, timeRef, span):
+def run_dashboard_creation(site, paramList, timeRef, span, decimationThreshold):
     now = datetime.utcnow()
     plotList = []
     logger.info("site: {}", site)
@@ -130,15 +130,15 @@ def run_dashboard_creation(site, paramList, timeRef, span):
     dropList = [item for item in allVar if item not in fileParams]
     siteData = siteData.drop(dropList)
     if int(span) == 365:
-        ### TODO: only decimate if length is > decimation threshold...
-        ### decimate data
-        siteData_df = decimate.downsample(siteData)
-        ### turn dataframe into dataset
-        del siteData
-        gc.collect()
-        siteData = xr.Dataset.from_dataframe(siteData_df,sparse=False)
-        siteData = siteData.swap_dims({'index': 'time'})
-        siteData = siteData.reset_coords()
+        if len(siteData['time']) > decimationThreshold:
+            ### decimate data
+            siteData_df = decimate.downsample(siteData, decimationThreshold)
+            ### turn dataframe into dataset
+            del siteData
+            gc.collect()
+            siteData = xr.Dataset.from_dataframe(siteData_df,sparse=False)
+            siteData = siteData.swap_dims({'index': 'time'})
+            siteData = siteData.reset_coords()
         
     for param in paramList:
         logger.info("paramter: {}", param)
@@ -249,6 +249,7 @@ def parse_args():
         '--workers', type=int, default=3, help=f"The number of workers"
     )
     arg_parser.add_argument('--span', type=str, default='7')
+    arg_parser.add_argument('--threshold', type=int, default='1000000')
 
     return arg_parser.parse_args()
 
@@ -282,7 +283,7 @@ if __name__ == "__main__":
     logger.info("======= Creation started at: {} ======",now.isoformat())
    
     for site in dataList:
-        sitePlotList = run_dashboard_creation(site, paramList, timeRef, args.span)
+        sitePlotList = run_dashboard_creation(site, paramList, timeRef, args.span, args.threshold)
         # Organize pngs into folders after each site
         organize_pngs()
         create_index.main()
