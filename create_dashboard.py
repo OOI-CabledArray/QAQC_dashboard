@@ -286,7 +286,8 @@ if __name__ == "__main__":
         sitePlotList = run_dashboard_creation(site, paramList, timeRef, args.span, args.threshold)
         # Organize pngs into folders after each site
         organize_pngs()
-        create_index.main()
+    
+    create_index.main()
 
     end = datetime.utcnow()
     logger.info("======= Creation finished at: {}. Time elapsed ({}) ======",end.isoformat(),(end-now))
