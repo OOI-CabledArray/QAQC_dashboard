@@ -40,7 +40,7 @@ jobs:
           conda info
           conda list
       - name: Install package
-        run: pip install -e .
+        run: pip install git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
       - name: Run login and registration
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
