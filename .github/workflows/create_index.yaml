@@ -38,7 +38,7 @@ jobs:
       - name: Index update
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
-          AWS_KEY: ${{ secrets.AWS_KEY }}
-          AWK_TOKEN: ${{ secrets.AWS_TOKEN }}
+          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_TOKEN: ${{ secrets.AWS_SECRET }}
         run: |
           qaqc_index --cloud
