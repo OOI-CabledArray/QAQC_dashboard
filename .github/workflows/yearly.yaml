@@ -44,8 +44,6 @@ jobs:
       - name: Run login and registration
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
-          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_TOKEN: ${{ secrets.AWS_SECRET }}
           TASK_ROLE_ARN: ${{ secrets.TASK_ROLE_ARN }}
           EXECUTION_ROLE_ARN: ${{ secrets.EXECUTION_ROLE_ARN }}
         run: |
