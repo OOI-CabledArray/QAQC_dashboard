@@ -1,0 +1,44 @@
+name: Update QAQC Index
+
+on:
+  schedule:
+  - cron: "0 2 * * *" 
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: 3.8
+
+jobs:
+  qaqc-index:
+    name: Run QAQC Index Update
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GH_PAT }}
+      - name: Setup python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Setup miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          auto-activate-base: false
+          use-only-tar-bz2: true
+      - name: Print conda env
+        run: |
+          conda info
+          conda list
+      - name: Install package
+        run: pip install git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
+      - name: Index update
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          AWS_KEY: ${{ secrets.AWS_KEY }}
+          AWK_TOKEN: ${{ secrets.AWS_TOKEN }}
+        run: |
+          qaqc_index --cloud
