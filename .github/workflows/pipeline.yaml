@@ -53,7 +53,7 @@ jobs:
           conda list
       - name: Install package
         run: pip install git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
-      - name: Run login and registration
+      - name: Run pipeline plot creation
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
           TASK_ROLE_ARN: ${{ secrets.TASK_ROLE_ARN }}
