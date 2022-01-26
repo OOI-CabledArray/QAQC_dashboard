@@ -1,4 +1,4 @@
-name: Daily QAQC Pipeline
+name: QAQC Pipeline
 
 on:
   schedule:
@@ -7,12 +7,24 @@ on:
 
 env:
   PYTHON_VERSION: 3.8
-  SPAN: '1'
+  THRESHOLD: 5000000
 
 jobs:
   run-pipeline:
-    name: Run QAQC Pipeline
+    name: ${{ matrix.name }} Plots
     runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - span: '1'
+            name: 'daily'
+          - span: '7'
+            name: 'weekly'
+          - span: '30'
+            name: 'monthly'
+          - span: '365'
+            name: 'yearly'
     defaults:
       run:
         shell: bash -l {0}
@@ -54,4 +66,4 @@ jobs:
           prefect auth login --key ${{ secrets.PREFECT_TOKEN }}
 
           # Run flow
-          qaqc_pipeline --all --cloud --s3-sync --span ${{ env.SPAN }} --run --threshold 5000000
+          qaqc_pipeline --all --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }}
