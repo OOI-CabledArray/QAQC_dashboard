@@ -1,4 +1,4 @@
-name: QAQC Pipeline
+name: QAQC Plots
 
 on:
   schedule:

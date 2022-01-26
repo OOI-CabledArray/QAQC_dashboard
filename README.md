@@ -1,5 +1,7 @@
 # QAQC Dashboard
 
+[![QAQC Pipeline](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/pipeline.yaml)
+
 Wendi's awesome QAQC Dashboard that will display all the information you need for RCA QAQC Data!
 
 ## Running the png creation script
