@@ -18,13 +18,13 @@ jobs:
       matrix:
         include:
           - span: '1'
-            name: 'daily'
+            name: 'Daily'
           - span: '7'
-            name: 'weekly'
+            name: 'Weekly'
           - span: '30'
-            name: 'monthly'
+            name: 'Monthly'
           - span: '365'
-            name: 'yearly'
+            name: 'Yearly'
     defaults:
       run:
         shell: bash -l {0}
