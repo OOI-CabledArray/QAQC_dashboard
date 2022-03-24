@@ -138,14 +138,19 @@ export default new Vuex.Store({
       },
       {
         title: 'Alerts and Issues',
-        route: 'http://status.ooirsn.uw.edu:8000/alarms',
+        route: 'https://nereus.ooirsn.uw.edu/alarms',
         external: true,
       },
     ],
     aplSites: [
       {
         title: 'Nereus',
-        route: 'http://status.ooirsn.uw.edu:8000/dashboard',
+        route: 'https://nereus.ooirsn.uw.edu/',
+        external: true,
+      },
+      {
+        title: 'Nereus M2M Plots',
+        route: 'https://nereus.ooirsn.uw.edu/m2m-data-plots',
         external: true,
       },
       {
