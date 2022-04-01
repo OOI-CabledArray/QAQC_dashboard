@@ -27,6 +27,7 @@
         v-for="site in aplSites"
         :key="site.route"
         :href="site.route"
+        target="_blank"
       >
         {{ site.title }}
         <i class="fas fa-external-link-alt" v-if="site.external"></i>
