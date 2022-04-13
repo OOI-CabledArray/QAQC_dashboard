@@ -87,8 +87,28 @@ export default new Vuex.Store({
           { key: '_par_', value: 'PARAD' },
           { key: '_ph_', value: 'PHSEN' },
           { key: '_pco2_', value: 'PCO2W' },
-          { key: '_spkir_', value: 'SPKIR' },
-          { key: '_velpt_', value: 'VELPT' },
+          {
+            key: '_spectral_irradiance_',
+            value: 'SPKIR',
+            groups: [
+              { key: 'spectral_irradiance_412nm', value: 'Spectral Irradiance, 412nm' },
+              { key: 'spectral_irradiance_443nm', value: 'Spectral Irradiance, 443nm' },
+              { key: 'spectral_irradiance_490nm', value: 'Spectral Irradiance, 490nm' },
+              { key: 'spectral_irradiance_510nm', value: 'Spectral Irradiance, 510nm' },
+              { key: 'spectral_irradiance_555nm', value: 'Spectral Irradiance, 555nm' },
+              { key: 'spectral_irradiance_620nm', value: 'Spectral Irradiance, 620nm' },
+              { key: 'spectral_irradiance_683nm', value: 'Spectral Irradiance, 683nm' },
+            ],
+          },
+          {
+            key: '_velocity_',
+            value: 'VELPT',
+            groups: [
+              { key: '_velocity_east', value: 'Velocity, East' },
+              { key: '_velocity_north', value: 'Velocity, North' },
+              { key: '_velocity_up', value: 'Velocity, Up' },
+            ],
+          },
         ],
       },
       {
