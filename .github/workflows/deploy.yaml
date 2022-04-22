@@ -1,0 +1,66 @@
+name: deploy
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - "src/dashboard/**/*"
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 16
+jobs:
+  build_and_deploy:
+    name: build-deploy
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        working-directory: src/dashboard
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET }}
+          aws-region: us-west-2
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - uses: actions/cache@v2
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+      - name: Install dependencies
+        run: yarn install
+      
+      - name: Run linter
+        run: yarn lint
+      
+      - name: Create Build
+        run: yarn build
+      
+      - name: Deploy Dashboard to s3
+        run: |
+          aws s3 sync \
+            --acl public-read \
+            --exclude 'QAQC_plots/*' \
+            --exclude 'HITL_notes/*' \
+            --delete \
+            ./dist \
+            ${{ secrets.DASHBOARD_BUCKET }}
+      - name: Invalidate CDN
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.DASHBOARD_CDN_ID }} \
+            --paths '/*'
