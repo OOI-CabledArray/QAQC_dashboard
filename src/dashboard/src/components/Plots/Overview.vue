@@ -5,7 +5,7 @@
     </h1>
     <b-card no-body v-if="filteredPlots.length > 0">
     <b-tabs card>
-    <b-tab title="Profile" active>
+    <b-tab title="Fixed Depths and Profiles" active>
         <b-img
         v-for="url in profilePlots"
         :key="url"
@@ -15,7 +15,7 @@
         >
         </b-img>
     </b-tab>
-    <b-tab title="Binned" v-if="hasBinned">
+    <b-tab title="Depth Binned" v-if="hasBinned">
         <div v-for="(vars, key) in binnedPlots" :key="key">
             <h5>
                 {{key}}
