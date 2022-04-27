@@ -15,7 +15,7 @@
         >
         </b-img>
     </b-tab>
-    <b-tab title="Depth Binned" v-if="hasBinned">
+    <b-tab title="Depth Binned Profiler Data" v-if="hasBinned">
         <div v-for="(vars, key) in binnedPlots" :key="key">
             <h5>
                 {{key}}
