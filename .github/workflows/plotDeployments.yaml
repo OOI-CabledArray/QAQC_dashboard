@@ -1,4 +1,4 @@
-name: QAQC Plots
+name: QAQC Plots Deployment Span
 
 on:
   workflow_dispatch:
