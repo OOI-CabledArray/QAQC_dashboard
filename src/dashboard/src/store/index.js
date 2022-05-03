@@ -169,6 +169,11 @@ export default new Vuex.Store({
         external: true,
       },
       {
+        title: 'Nereus: Suspect Instrument List',
+        route: 'https://nereus.ooirsn.uw.edu/suspect-instruments',
+        external: true,
+      },
+      {
         title: 'Nereus M2M Plots',
         route: 'https://nereus.ooirsn.uw.edu/m2m-data-plots',
         external: true,
