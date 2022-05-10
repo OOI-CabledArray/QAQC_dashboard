@@ -1,0 +1,18 @@
+name: qaqc-stack
+channels:
+- conda-forge
+dependencies:
+- python=3.8
+- nodejs=16
+- pip>=22
+- pip:
+  - -r requirements.txt
+- black
+- flake8
+- flake8-builtins
+- flake8-comprehensions
+- flake8-mutable
+- flake8-print
+- isort
+- mypy
+- pre-commit

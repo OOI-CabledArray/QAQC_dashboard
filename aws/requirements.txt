@@ -1,0 +1,7 @@
+# aws cdk
+aws-cdk-lib==2.23.0
+constructs==10.1.5
+
+# pydantic settings
+pydantic
+python-dotenv
