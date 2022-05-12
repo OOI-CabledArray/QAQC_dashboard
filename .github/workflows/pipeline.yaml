@@ -68,4 +68,4 @@ jobs:
           prefect auth login --key ${{ secrets.PREFECT_TOKEN }}
 
           # Run flow
-          qaqc_pipeline --all --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }}
+          qaqc_pipeline --all --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }} --s3-bucket ${{ secrets.DASHBOARD_BUCKET }}
