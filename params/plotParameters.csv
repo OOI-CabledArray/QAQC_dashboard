@@ -1,3 +1,0 @@
-instrument,plotParameters
-CTD-FIXED,"""temperature,salinity,density,oxygen"""
-CTD-PROFILER,"""temperature,salinity,density,oxygen"""
