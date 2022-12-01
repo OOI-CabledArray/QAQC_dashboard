@@ -6,6 +6,8 @@ Wendi's awesome QAQC Dashboard that will display all the information you need fo
 
 **The vue based frontend code can be found in `dashboard` directory.**
 
+See the [documentation](https://github.com/OOI-CabledArray/rca-data-tools/blob/main/docs/src/qaqc-dashboard.md) for all the components/repository to deploy the QAQC Dashboard.
+
 ## Running the png creation script
 
 1. Install the conda environment.
