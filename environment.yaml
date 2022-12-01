@@ -13,3 +13,6 @@ dependencies:
 # Frontend stuff
 - yarn
 - nodejs
+- pip
+- pip:
+  - git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
