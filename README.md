@@ -4,6 +4,8 @@
 
 Wendi's awesome QAQC Dashboard that will display all the information you need for RCA QAQC Data!
 
+**The vue based frontend code can be found in `dashboard` directory.**
+
 ## Running the png creation script
 
 1. Install the conda environment.
