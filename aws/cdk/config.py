@@ -14,6 +14,7 @@ class StackSettings(pydantic.BaseSettings):
     name: str = "qaqc-dashboard"
     stage: str = "production"
 
+    # Default tagging
     owner: str = "RCA Data Team"
     project: str = "OOI Cabled Array"
 
