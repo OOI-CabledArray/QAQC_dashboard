@@ -40,6 +40,7 @@ export default {
           key: 'dataRange',
           filters: [
             { key: 'full', value: 'full range' },
+            { key: 'standard', value: 'standard range' },
             { key: 'local', value: 'local range' },
           ],
         },
@@ -51,7 +52,7 @@ export default {
             { key: 'week', value: '1 week' },
             { key: 'month', value: '1 month' },
             { key: 'year', value: '1 year' },
-            { key: 'deploy', value: 'deploy'},
+            { key: 'deploy', value: 'deploy' },
           ],
         },
         {
