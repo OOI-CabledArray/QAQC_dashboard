@@ -156,6 +156,16 @@ export default new Vuex.Store({
           { key: 'D1000', value: 'D1000' },
         ],
       },
+      { 
+        title: 'Data: Watchlist',
+        route: '/watchlist',
+        external: false, 
+        hitl: 'Watchlist', 
+        groups: [
+          { key: 'WATCH', value: 'Watchlist' },
+        ],
+      },
+
       {
         title: 'Alerts and Issues',
         route: 'https://nereus.ooirsn.uw.edu/alarms',
