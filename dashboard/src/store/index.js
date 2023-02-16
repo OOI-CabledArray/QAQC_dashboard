@@ -162,7 +162,7 @@ export default new Vuex.Store({
         external: false, 
         hitl: 'Status', 
         groups: [
-          { key: 'WATCH', value: 'Watchlist' },
+          { key: 'Watch', value: 'Watchlist' },
         ],
       },
 
