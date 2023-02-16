@@ -157,10 +157,10 @@ export default new Vuex.Store({
         ],
       },
       { 
-        title: 'Data: Watchlist',
-        route: '/watchlist',
+        title: 'Data: By Status',
+        route: '/status',
         external: false, 
-        hitl: 'Watchlist', 
+        hitl: 'Status', 
         groups: [
           { key: 'WATCH', value: 'Watchlist' },
         ],
