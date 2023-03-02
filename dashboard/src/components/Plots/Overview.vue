@@ -134,16 +134,24 @@ export default {
       return _.filter(csvs, (csv) => csv.name.includes('HITL_Status'));
     },
     filterPlotList() {
+      console.log('hitlStatus:');
+      console.log(this.hitlStatus);
+      console.log('plot keyword:'):
+      console.log(this.keyword);
       if (this.hitlStatus.includes('Status')) {
+        console.log('in the status filter loop...');
         const plotListHITL = [];
         this.filteredPlotList = [];
         Object.values(this.csvTables).forEach((csvValue) => {
           if (csvValue.name.includes(this.keyword)) {
+            console.log('found some plots with the right keyword in the csvTables...');
             Object.values(csvValue.data).forEach((dataValue) => plotListHITL.push(dataValue.ref));
           }
         });
         Object.values(this.plotList).forEach((plotValue) => {
           if (plotListHITL.includes(plotValue.split('_')[0])) {
+            console.log('found overlapping plots with plotList and HITL plotList...');
+            console.log(plotValue);
             this.filteredPlotList.push(plotValue);
           }
         });
