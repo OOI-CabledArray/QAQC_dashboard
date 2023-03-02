@@ -40,7 +40,8 @@
     <!-- Heading -->
     <div class="sidebar-heading">Interface</div>
 
-    <li class="nav-item" v-for="item in navList" :key="item.route">
+    <li class="nav-item" v-for="item in navList" :key="item.route"
+      v-on:click="updateHITLStatus(item.hitl)">
       <a
         class="nav-link"
         v-if="!item.external && item.groups"
@@ -73,8 +74,7 @@
       >
         <b-list-group>
           <b-list-group-item>
-            <b-link :to="{ path: `/status/${item.hitl}`}"
-              @click="updateHITLStatus(item.hitl)">
+            <b-link :to="{ path: `/status/${item.hitl}`}">
               HITL Status
             </b-link>
           </b-list-group-item>
@@ -82,7 +82,6 @@
             <b-link
               v-if="!group.groups"
               :to="{ path: `/plots?keyword=${group.key}` }"
-              @click="updateHITLStatus(item.hitl)"
               >{{ group.value }}</b-link>
             <b-dropdown
               dropright
@@ -96,7 +95,6 @@
                 v-for="innerGroup in group.groups"
                 :key="innerGroup.key"
                 :to="{ path: `/plots?keyword=${innerGroup.key}` }"
-                @click="updateHITLStatus(item.hitl)"
               >
                 {{ innerGroup.value }}
               </b-dropdown-item>

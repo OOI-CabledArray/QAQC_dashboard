@@ -149,7 +149,7 @@ export default {
           }
         });
         Object.values(this.plotList).forEach((plotValue) => {
-          if (plotListHITL.includes(plotValue.split('_')[0])) {
+          if (plotListHITL.includes(plotValue.split('_')[1])) {
             console.log('found overlapping plots with plotList and HITL plotList...');
             console.log(plotValue);
             this.filteredPlotList.push(plotValue);
