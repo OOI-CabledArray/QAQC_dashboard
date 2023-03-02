@@ -10,6 +10,7 @@ export default new Vuex.Store({
     plotList: [],
     hitlList: [],
     csvData: [],
+    hitlStatus: '',
     mainNav: [
       {
         title: 'Data: by Site',
@@ -156,21 +157,16 @@ export default new Vuex.Store({
           { key: 'D1000', value: 'D1000' },
         ],
       },
-      { 
+      {
         title: 'Data: By Status',
         route: '/status',
-        external: false, 
-        hitl: 'Status', 
+        external: false,
+        hitl: 'Status',
         groups: [
           { key: 'Watch', value: 'Watchlist' },
         ],
       },
 
-      {
-        title: 'Alerts and Issues',
-        route: 'https://nereus.ooirsn.uw.edu/alarms',
-        external: true,
-      },
     ],
     aplSites: [
       {
@@ -225,6 +221,9 @@ export default new Vuex.Store({
     APPEND_CSV: (state, data) => {
       state.csvData.push(data);
     },
+    STORE_HITL_STATUS: (state, hitlStatus) => {
+      state.hitlStatus = hitlStatus;
+    },
   },
   actions: {
     storePlots: ({ commit }, { plots }) => {
@@ -235,6 +234,9 @@ export default new Vuex.Store({
     },
     appendCSVData: ({ commit }, { data }) => {
       commit('APPEND_CSV', data);
+    },
+    storeHITLStatus: ({ commit }, { hitlStatus }) => {
+      commit('STORE_HITL_STATUS', hitlStatus);
     },
   },
   modules: {

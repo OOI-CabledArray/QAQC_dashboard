@@ -73,7 +73,8 @@
       >
         <b-list-group>
           <b-list-group-item>
-            <b-link :to="{ path: `/status/${item.hitl}`}">
+            <b-link :to="{ path: `/status/${item.hitl}`}"
+              @click="updateHITLStatus(item.hitl)">
               HITL Status
             </b-link>
           </b-list-group-item>
@@ -81,6 +82,7 @@
             <b-link
               v-if="!group.groups"
               :to="{ path: `/plots?keyword=${group.key}` }"
+              @click="updateHITLStatus(item.hitl)"
               >{{ group.value }}</b-link>
             <b-dropdown
               dropright
@@ -94,6 +96,7 @@
                 v-for="innerGroup in group.groups"
                 :key="innerGroup.key"
                 :to="{ path: `/plots?keyword=${innerGroup.key}` }"
+                @click="updateHITLStatus(item.hitl)"
               >
                 {{ innerGroup.value }}
               </b-dropdown-item>
@@ -110,7 +113,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex';
+import { mapActions, mapState } from 'vuex';
 
 export default {
   name: 'SideBar',
@@ -119,6 +122,14 @@ export default {
     ...mapState({
       aplSites: (state) => state.aplSites,
     }),
+  },
+  methods: {
+    ...mapActions([
+      'storeHITLStatus',
+    ]),
+    updateHITLStatus(statusId) {
+      this.storeHITLStatus({ hitlStatus: statusId });
+    },
   },
 };
 </script>

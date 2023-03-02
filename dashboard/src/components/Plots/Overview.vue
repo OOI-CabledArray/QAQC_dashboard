@@ -83,15 +83,30 @@ export default {
     ...mapState({
       plotList: (state) => state.plotList,
       plotsURL: (state) => state.plotsURL,
+      csvData: (state) => state.csvData,
+      hitlStatus: (state) => state.hitlStatus,
     }),
     filteredPlots() {
       return this.filteredPlotList.map((plot) => `${this.plotsURL}/${plot}`);
+    },
+    filteredCSVs() {
+      return this.filterCSVs_status(this.csvData);
+    },
+    csvTables() {
+      return this.filteredCSVs.map((csv) => {
+        const cleanedData = csv.data.map((d) => _.zipObject(['ref', 'value'], d));
+        return {
+          name: csv.name.split('_').at(-1),
+          data: _.sortBy(cleanedData, (o) => o.ref.split('-').at(-1)),
+        };
+      });
     },
     binnedPlots() {
       const binnedPlots = this.filteredPlotList.filter((plot) => plot.includes(this.depthUnit));
       const binnedCollections = binnedPlots.map((plot) => {
         const nameList = plot.split('/').at(-1).replace('.png', '').split('_');
-        const plotObj = _.zipObject(['ref', 'variable', 'depthString', 'timeSpan', 'overlays', 'dataRange'], nameList);
+        const plotObj = _.zipObject([
+          'ref', 'variable', 'depthString', 'timeSpan', 'overlays', 'dataRange'], nameList);
         return {
           ...plotObj,
           url: this.setURL(plot),
@@ -115,9 +130,27 @@ export default {
     },
   },
   methods: {
+    filterCSVs_status(csvs) {
+      return _.filter(csvs, (csv) => csv.name.includes('HITL_Status'));
+    },
     filterPlotList() {
-      this.filteredPlotList = this.plotList;
-      this.filteredPlotList = this.filteredPlotList.filter((plot) => plot.includes(this.keyword));
+      if (this.hitlStatus.includes('Status')) {
+        const plotListHITL = [];
+        this.filteredPlotList = [];
+        Object.values(this.csvTables).forEach((csvValue) => {
+          if (csvValue.name.includes(this.keyword)) {
+            Object.values(csvValue.data).forEach((dataValue) => plotListHITL.push(dataValue.ref));
+          }
+        });
+        Object.values(this.plotList).forEach((plotValue) => {
+          if (plotListHITL.includes(plotValue.split('_')[0])) {
+            this.filteredPlotList.push(plotValue);
+          }
+        });
+      } else {
+        this.filteredPlotList = this.plotList;
+        this.filteredPlotList = this.filteredPlotList.filter((plot) => plot.includes(this.keyword));
+      }
       this.filteredPlotList = this.filteredPlotList.filter((plot) => plot.includes(this.dataRange));
       this.filteredPlotList = this.filteredPlotList.filter((plot) => plot.includes(this.timeSpan));
       this.filteredPlotList = this.filteredPlotList.filter((plot) => plot.includes(this.overlays));
