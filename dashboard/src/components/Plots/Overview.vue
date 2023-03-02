@@ -136,7 +136,7 @@ export default {
     filterPlotList() {
       console.log('hitlStatus:');
       console.log(this.hitlStatus);
-      console.log('plot keyword:'):
+      console.log('plot keyword:');
       console.log(this.keyword);
       if (this.hitlStatus.includes('Status')) {
         console.log('in the status filter loop...');
