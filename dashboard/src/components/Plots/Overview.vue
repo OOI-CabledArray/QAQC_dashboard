@@ -154,6 +154,7 @@ export default {
       this.filteredPlotList = this.filteredPlotList.filter((plot) => plot.includes(this.dataRange));
       this.filteredPlotList = this.filteredPlotList.filter((plot) => plot.includes(this.timeSpan));
       this.filteredPlotList = this.filteredPlotList.filter((plot) => plot.includes(this.overlays));
+      console.log(this.filteredPlotList);
     },
     createPlotURL(plots) {
       return plots.map(this.setURL);
