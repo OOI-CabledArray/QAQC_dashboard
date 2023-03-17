@@ -60,6 +60,7 @@ export default {
           key: 'overlays',
           filters: [
             { key: 'clim', value: 'Climatology' },
+            { key: 'flag', value: 'Flagged Data'},
             { key: 'near', value: 'Nearest Neighbor' },
             { key: 'time', value: 'Time Machine' },
             { key: 'none', value: 'None' },
