@@ -164,6 +164,8 @@ export default new Vuex.Store({
         hitl: 'Status',
         groups: [
           { key: 'Watch', value: 'Watchlist' },
+          { key: 'Plotting', value: 'Plotting Issues' },
+          { key: 'Harvest', value: 'Data Harvest Issues' },
         ],
       },
 
