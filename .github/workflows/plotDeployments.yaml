@@ -61,6 +61,8 @@ jobs:
 
           # Set backend of prefect to server
           prefect backend server
+          echo "[server]" >> ~/.prefect/backend.toml
+          echo "endpoint = ${secrets.AWS_PREFECT_SERVER}" >> ~/.prefect/backend.toml
 
           # Run flow
           qaqc_pipeline --all --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }} --s3-bucket ${{ secrets.DASHBOARD_BUCKET }}
