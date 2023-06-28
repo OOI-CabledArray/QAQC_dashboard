@@ -57,7 +57,7 @@ jobs:
           mkdir ~/.prefect
 
           # Login
-          prefect auth login --key ${{ secrets.PREFECT_TOKEN }}
+          ###prefect auth login --key ${{ secrets.PREFECT_TOKEN }}
 
           # Set backend of prefect to server
           prefect backend server
