@@ -63,4 +63,4 @@ jobs:
           prefect backend server
 
           # Run flow
-          qaqc_pipeline --all --server --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }} --s3-bucket ${{ secrets.DASHBOARD_BUCKET }}
+          qaqc_pipeline --all --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }} --s3-bucket ${{ secrets.DASHBOARD_BUCKET }}
