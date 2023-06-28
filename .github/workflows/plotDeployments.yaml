@@ -59,5 +59,8 @@ jobs:
           # Login
           prefect auth login --key ${{ secrets.PREFECT_TOKEN }}
 
+          # Set backend of prefect to server
+          prefect backend server
+
           # Run flow
-          qaqc_pipeline --all --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }} --s3-bucket ${{ secrets.DASHBOARD_BUCKET }}
+          qaqc_pipeline --all --server --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }} --s3-bucket ${{ secrets.DASHBOARD_BUCKET }}
