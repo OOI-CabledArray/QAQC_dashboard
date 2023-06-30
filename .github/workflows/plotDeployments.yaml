@@ -63,10 +63,12 @@ jobs:
           prefect backend server
           echo "[server]" >> ~/.prefect/backend.toml
           echo "endpoint = '${{secrets.AWS_PREFECT_SERVER}}'" >> ~/.prefect/backend.toml
+          cat ~/.preect/backend.toml
 
           echo "[server]" >> ~/.prefect/config.toml
           echo "[server_ui]" >> ~/.prefect/config.toml
           echo "endpoint = '${{secrets.AWS_PREFECT_SERVER}}'" >> ~/.prefect/config.toml
+          cat ~/.prefect.config.toml
 
           # Run flow
           qaqc_pipeline --all --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }} --s3-bucket ${{ secrets.DASHBOARD_BUCKET }}
