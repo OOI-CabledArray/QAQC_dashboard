@@ -72,6 +72,3 @@ jobs:
 
           # Run flow
           qaqc_pipeline --all --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }} --s3-bucket ${{ secrets.DASHBOARD_BUCKET }}
-
-
-echo "endpoint = 'http://54.213.226.252:4200'" >> ~/.prefect/backend.toml
