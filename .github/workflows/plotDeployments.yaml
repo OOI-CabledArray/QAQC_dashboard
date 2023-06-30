@@ -63,7 +63,7 @@ jobs:
           prefect backend server
           echo "[server]" >> ~/.prefect/backend.toml
           ##echo "endpoint = '${{secrets.AWS_PREFECT_SERVER}}'" >> ~/.prefect/backend.toml
-          echo "endpoint = ''http://18.246.70.121:4200'" >> ~/.prefect/backend.toml
+          echo "endpoint = 'http://18.246.70.121:4200'" >> ~/.prefect/backend.toml
           cat ~/.prefect/backend.toml
 
           echo "[server]" >> ~/.prefect/config.toml
