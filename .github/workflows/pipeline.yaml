@@ -64,6 +64,6 @@ jobs:
           PREFECT_KEY: ${{ secrets.PREFECT_KEY }}
         run: |
           # Authenticate with prefect2 cloud 
-          prefect cloud login --key "{{ env.PREFECT_KEY}}" --workspace "{{ env.PREFECT_WORKSPACE }}"
+          prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
           # Run flow
           qaqc_pipeline --all --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }}
