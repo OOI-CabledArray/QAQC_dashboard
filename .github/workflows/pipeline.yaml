@@ -62,7 +62,8 @@ jobs:
           EXECUTION_ROLE_ARN: ${{ secrets.EXECUTION_ROLE_ARN }}
           PREFECT_WORKSPACE: jdupreyuwedu/ooi-rca-prefect2
           PREFECT_KEY: ${{ secrets.PREFECT_KEY }}
-        #  prefect cloud login --key "{{ env.PREFECT_KEY}}" --workspace "{{ env.PREFECT_WORKSPACE }}"
         run: |
+          # Authenticate with prefect2 cloud 
+          prefect cloud login --key "{{ env.PREFECT_KEY}}" --workspace "{{ env.PREFECT_WORKSPACE }}"
           # Run flow
           qaqc_pipeline --all --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }}
