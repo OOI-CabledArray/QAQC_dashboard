@@ -1,8 +1,8 @@
 name: Update QAQC Index
 
 on:
-  schedule:
-  - cron: "0 2 * * *" 
+  # schedule:
+  # - cron: "0 16 * * *" 
   workflow_dispatch:
 
 env:
@@ -44,7 +44,7 @@ jobs:
           conda info
           conda list
       - name: Install package
-        run: pip install git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
+        run: pip install git+https://github.com/OOI-CabledArray/rca-data-tools.git@prefect2_migration
       - name: Index update
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
