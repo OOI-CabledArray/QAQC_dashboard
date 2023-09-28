@@ -60,7 +60,7 @@ jobs:
             --exclude 'HITL_notes/*' \
             --delete \
             ./dist \
-            s3://${{ secrets.PREFECT2_DASHBOARD_BUCKET }}
+            s3://${{ secrets.DASHBOARD_BUCKET }}
       - name: Invalidate CDN
         run: |
           aws cloudfront create-invalidation \
