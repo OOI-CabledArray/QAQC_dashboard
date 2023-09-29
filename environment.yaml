@@ -15,4 +15,4 @@ dependencies:
 - nodejs
 - pip
 - pip:
-  - git+https://github.com/OOI-CabledArray/rca-data-tools.git@prefect2_migration
+  - git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
