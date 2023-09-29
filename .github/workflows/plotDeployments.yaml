@@ -46,7 +46,7 @@ jobs:
           conda info
           conda list
       - name: Install package
-        run: pip install git+https://github.com/OOI-CabledArray/rca-data-tools.git@prefect2_migration
+        run: pip install git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
       - name: Run pipeline plot creation
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
