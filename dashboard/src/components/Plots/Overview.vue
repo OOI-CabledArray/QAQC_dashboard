@@ -5,7 +5,7 @@
     </h1>
     <b-card no-body v-if="filteredPlots.length > 0">
     <b-tabs card>
-    <b-tab title="Fixed Depths and Profiles" active>
+    <b-tab title="Fixed Depths and Colormap Profiles" active>
         <b-img
         v-for="url in profilePlots"
         :key="url"
@@ -38,6 +38,29 @@
             <hr/>
         </div>
     </b-tab>
+    <b-tab title="Profiles" v-if="hasProfiles">
+        <div v-for="(vars, key) in profilerPlots" :key="key">
+            <h5>
+                {{key}}
+            </h5>
+            <b-card no-body>
+                <b-tabs pills card vertical>
+                    <b-tab
+                      :title="toTitle(varkey)"
+                      v-for="(plots, varkey) in vars"
+                      :key="varkey"
+                    >
+                      <ProfileViewer
+                        :plots="plots"
+                        :variable="varkey"
+                        :refdes="key"
+                      />
+                    </b-tab>
+                </b-tabs>
+            </b-card>
+            <hr/>
+        </div>
+    </b-tab>
     </b-tabs>
     </b-card>
   </div>
@@ -47,10 +70,12 @@
 import { mapState } from 'vuex';
 import _ from 'lodash';
 import BinnedViewer from './BinnedViewer.vue';
+import ProfileViewer from './ProfileViewer.vue';
 
 export default {
   components: {
     BinnedViewer,
+    ProfileViewer,
   },
   props: {
     keyword: {
@@ -74,6 +99,7 @@ export default {
     return {
       filteredPlotList: [],
       depthUnit: 'meters',
+      profUnit: 'profile',
     };
   },
   mounted() {
@@ -122,13 +148,44 @@ export default {
       return finalObj;
     },
     profilePlots() {
-      const profilePlots = this.filteredPlotList.filter((plot) => !plot.includes(this.depthUnit));
+      const profilePlots = this.filteredPlotList.filter(
+        (plot) => !plot.includes(this.depthUnit) && !plot.includes(this.profUnit)
+      );
       return this.createPlotURL(profilePlots);
     },
     hasBinned() {
       return _.keys(this.binnedPlots).length > 0;
     },
+
+    profilerPlots() {
+      const profilerPlots = this.filteredPlotList.filter((plot) => plot.includes(this.profUnit));
+      const profilerCollections = profilerPlots.map((plot) => {
+        const nameList = plot.split('/').at(-1).replace('.png', '').split('_');
+        const plotObj = _.zipObject([
+          'ref', 'variable', 'profilerString', 'timeSpan', 'overlays', 'dataRange'], nameList);
+        return {
+          ...plotObj,
+          url: this.setURL(plot),
+          profile: this.parseProfile(plotObj.profilerString),
+          profUnit: this.profUnit,
+        };
+      });
+      const groupedRef = _.groupBy(profilerCollections, 'ref');
+      const finalObj = {};
+      _.forEach(groupedRef, (value, key) => {
+        finalObj[key] = _.groupBy(value, 'variable');
+      });
+      return finalObj;
+    },
+    profPlotsList() {
+      const profPlotsList = this.filteredPlotList.filter((plot) => !plot.includes(this.profUnit));
+      return this.createPlotURL(profPlotsList);
+    },
+    hasProfiles() {
+      return _.keys(this.profPlotsList).length > 0;
+    },
   },
+
   methods: {
     filterCSVs_status(csvs) {
       return _.filter(csvs, (csv) => csv.name.includes('HITL_Status'));
@@ -165,8 +222,16 @@ export default {
       const str = depthString.replace(this.depthUnit, '');
       return _.toNumber(str);
     },
+    parseProfile(profileString) {
+      const str = profileString.replace(this.profileUnit, '');
+      return _.toNumber(str);
+    },
     filterBinnedVariable(key, variable) {
       const plots = this.binnedPlots[key];
+      return _.filter(plots, ['variable', variable]);
+    },
+    filterProfileVariable(key, variable) {
+      const plots = this.profilePlots[key];
       return _.filter(plots, ['variable', variable]);
     },
     toTitle(text) {
