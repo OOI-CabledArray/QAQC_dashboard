@@ -14,6 +14,15 @@
         lazy
         >
         </b-img>
+        <object
+        v-for="url in svgPlots"
+        :key="url"
+        :data="url"
+        fluid
+        lazy
+        type="image/svg+xml"
+        class="svg-object"
+        ></object>
     </b-tab>
     <b-tab title="Depth Binned Profiler Data" v-if="hasBinned">
         <div v-for="(vars, key) in binnedPlots" :key="key">
@@ -149,9 +158,18 @@ export default {
     },
     profilePlots() {
       const profilePlots = this.filteredPlotList.filter(
-        (plot) => !plot.includes(this.depthUnit) && !plot.includes(this.profUnit)
+        (plot) => plot.endsWith('.png') && !plot.includes(this.depthUnit) && !plot.includes(this.profUnit),
       );
+      console.log('profile plots:', this.createPlotURL(profilePlots));
       return this.createPlotURL(profilePlots);
+    },
+    // similar to above method but for `.svg` files
+    svgPlots() {
+      const svgPlots = this.filteredPlotList.filter(
+        (plot) => plot.endsWith('.svg') && !plot.includes(this.depthUnit) && !plot.includes(this.profUnit),
+      );
+      console.log('SVG plots:', this.createPlotURL(svgPlots));
+      return this.createPlotURL(svgPlots);
     },
     hasBinned() {
       return _.keys(this.binnedPlots).length > 0;
@@ -248,5 +266,8 @@ export default {
 </script>
 
 <style>
-
+.svg-object {
+  width: 100%;
+  height: auto; /* This will maintain the aspect ratio */
+}
 </style>

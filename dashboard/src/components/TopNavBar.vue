@@ -59,8 +59,9 @@ export default {
           title: 'Overlays',
           key: 'overlays',
           filters: [
+            { key: 'anno', value: 'Annotations' },
             { key: 'clim', value: 'Climatology' },
-            { key: 'flag', value: 'Flagged Data'},
+            { key: 'flag', value: 'Flagged Data' },
             { key: 'near', value: 'Nearest Neighbor' },
             { key: 'time', value: 'Time Machine' },
             { key: 'none', value: 'None' },
