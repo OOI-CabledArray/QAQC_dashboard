@@ -10,11 +10,13 @@
     </b-form-input>
     <b-img :src="currentPlot.url" lazy fluid>
     </b-img>
-    <object :key="currentPlot.url"
-      :data="currentPlot.url"
-      type="image/svg+xml"
-      class="svg-object"
-    ></object>
+    <template v-if="isSVG(currentPlot.url)">
+      <object :key="currentPlot.url"
+        :data="currentPlot.url"
+        type="image/svg+xml"
+        class="svg-object"
+      ></object>
+    </template>
   </div>
 </template>
 
@@ -32,6 +34,9 @@ export default {
     sortByDepth(plots) {
       console.log('entering sortByDepth. plots:', plots);
       return _.sortBy(plots, 'depth');
+    },
+    isSVG(url) {
+      return url.toLowerCase().endsWith('.svg');
     },
   },
   computed: {
