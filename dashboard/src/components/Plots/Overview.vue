@@ -246,10 +246,12 @@ export default {
     },
     filterBinnedVariable(key, variable) {
       const plots = this.binnedPlots[key];
+      console.log('Entering filterBinnedVariable. plots:', plots);
       return _.filter(plots, ['variable', variable]);
     },
     filterProfileVariable(key, variable) {
       const plots = this.profilePlots[key];
+      console.log('Entering filterProfileVariable. plots:', plots);
       return _.filter(plots, ['variable', variable]);
     },
     toTitle(text) {
