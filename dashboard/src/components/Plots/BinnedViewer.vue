@@ -10,7 +10,8 @@
     </b-form-input>
     <b-img :src="currentPlot.url" lazy fluid>
     </b-img>
-    <object :src="currentPlot.url"
+    <object :key="currentPlot.url"
+      :data="currentPlot.url"
       type="image/svg+xml"
       class="svg-object"
     ></object>
@@ -51,4 +52,8 @@ export default {
 </script>
 
 <style>
+.svg-object {
+  width: 100%;
+  height: auto; /* This will maintain the aspect ratio */
+}
 </style>
