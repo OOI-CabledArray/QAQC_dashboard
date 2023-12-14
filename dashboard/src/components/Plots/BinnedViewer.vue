@@ -10,6 +10,10 @@
     </b-form-input>
     <b-img :src="currentPlot.url" lazy fluid>
     </b-img>
+    <object :src="currentPlot.url"
+      type="image/svg+xml"
+      class="svg-object"
+    ></object>
   </div>
 </template>
 
