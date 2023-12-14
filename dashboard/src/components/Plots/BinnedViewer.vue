@@ -8,15 +8,16 @@
         :max="maxDepthIdx"
     >
     </b-form-input>
-    <b-img :src="currentPlot.url" lazy fluid>
+    <b-img 
+     v-if="isPNG(currentPlot.url)"
+     :src="currentPlot.url" lazy fluid>
     </b-img>
-    <template v-if="isSVG(currentPlot.url)">
-      <object :key="currentPlot.url"
-        :data="currentPlot.url"
-        type="image/svg+xml"
-        class="svg-object"
-      ></object>
-    </template>
+    <object v-if="isSVG(currentPlot.url)" 
+      :key="currentPlot.url"
+      :data="currentPlot.url"
+      type="image/svg+xml"
+      class="svg-object"
+    ></object>
   </div>
 </template>
 
@@ -37,6 +38,9 @@ export default {
     },
     isSVG(url) {
       return url.toLowerCase().endsWith('.svg');
+    },
+    isPNG(url) {
+      return url.toLowerCase().endsWith('.png');
     },
   },
   computed: {
