@@ -249,7 +249,7 @@ export default {
       return _.filter(plots, ['variable', variable]);
     },
     filterProfileVariable(key, variable) {
-      const plots = this.profilePlots[key];
+      const plots = [this.profilePlots[key], this.svgPlots[key]];
       return _.filter(plots, ['variable', variable]);
     },
     toTitle(text) {
