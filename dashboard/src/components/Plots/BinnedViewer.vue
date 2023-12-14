@@ -25,6 +25,7 @@ export default {
   },
   methods: {
     sortByDepth(plots) {
+      console.log("entering sortByDepth. plots:", plots)
       return _.sortBy(plots, 'depth');
     },
   },
