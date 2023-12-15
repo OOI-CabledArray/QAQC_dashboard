@@ -8,13 +8,22 @@
         :max="maxProfileIdx"
     >
     </b-form-input>
-    <b-img :src="currentPlot.url" lazy fluid>
+    <b-img 
+     v-if="isPNG(currentPlot.url)"
+     :src="currentPlot.url" lazy fluid>
     </b-img>
+    <object v-if="isSVG(currentPlot.url)" 
+      :key="currentPlot.url"
+      :data="currentPlot.url"
+      type="image/svg+xml"
+      class="svg-object"
+    ></object>
   </div>
 </template>
 
 <script>
 import _ from 'lodash';
+import { isSVG, isPNG } from './BinnedViewer.vue';
 
 export default {
   props: ['plots', 'variable', 'refdes'],
