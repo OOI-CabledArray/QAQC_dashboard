@@ -35,6 +35,12 @@ export default {
     sortByProfile(plots) {
       return _.sortBy(plots, 'profile');
     },
+    isSVG(url) {
+      return url.toLowerCase().endsWith('.svg');
+    },
+    isPNG(url) {
+      return url.toLowerCase().endsWith('.png');
+    },
   },
   computed: {
     sortedPlots() {
