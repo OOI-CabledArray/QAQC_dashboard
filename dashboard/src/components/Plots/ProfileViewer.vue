@@ -23,7 +23,6 @@
 
 <script>
 import _ from 'lodash';
-import { isPNG, isSVG } from './BinnedViewer.vue';
 
 export default {
   props: ['plots', 'variable', 'refdes'],
@@ -35,6 +34,12 @@ export default {
   methods: {
     sortByProfile(plots) {
       return _.sortBy(plots, 'profile');
+    },
+    isSVG(url) {
+      return url.toLowerCase().endsWith('.svg');
+    },
+    isPNG(url) {
+      return url.toLowerCase().endsWith('.png');
     },
   },
   computed: {
