@@ -25,10 +25,6 @@ jobs:
             name: 'Monthly'
           - span: '365'
             name: 'Yearly'
-        exclude:
-          - span: '365'
-            name: 'Yearly'
-            if: contains(formatDate(now(), 'u'), '1') == false
     defaults:
       run:
         shell: bash -l {0}
