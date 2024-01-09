@@ -1,8 +1,8 @@
-name: QAQC Plots (Daily)
-# Run all spans except 365 on tuesday - friday to save on cloud costs.
+name: QAQC Plots (Weekly)
+# On monday run all spans including 365.
 on:
   schedule:
-  - cron: "0 13 * * 2-5" 
+  - cron: "0 13 * * 1" 
   workflow_dispatch:
 
 env:
@@ -23,6 +23,8 @@ jobs:
             name: 'Weekly'
           - span: '30'
             name: 'Monthly'
+          - span: '365'
+            name: 'Yearly'
     defaults:
       run:
         shell: bash -l {0}
@@ -34,11 +36,6 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      # - name: Login to DockerHub
-      #   uses: docker/login-action@v1 
-      #   with:
-      #     username: ${{ secrets.DOCKER_USERNAME }}
-      #     password: ${{ secrets.DOCKER_TOKEN }}
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
@@ -64,4 +61,4 @@ jobs:
           # Authenticate with prefect2 cloud 
           prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
           # Run flow
-          qaqc_pipeline --all --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }}
+          qaqc_pipeline --all --time 2023-11-26 --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }}
