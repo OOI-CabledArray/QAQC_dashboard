@@ -63,4 +63,4 @@ jobs:
           # Authenticate with prefect2 cloud 
           prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
           # Run flow
-          qaqc_pipeline --all --time 2023-11-26 --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }}
+          qaqc_pipeline --all --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }}
