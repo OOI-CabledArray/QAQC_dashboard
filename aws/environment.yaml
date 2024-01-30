@@ -1,8 +1,9 @@
+# deprecated?
 name: qaqc-stack
 channels:
 - conda-forge
 dependencies:
-- python=3.8
+- python=3.11
 - nodejs=16
 - pip>=22
 - pip:
