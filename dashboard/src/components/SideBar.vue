@@ -10,7 +10,7 @@
       href="/"
     >
       <div class="sidebar-brand-icon rotate-n-15">
-        <i class="fas fa-qrcode"></i>
+        <i class="fas fa-fish"></i>
       </div>
       <div class="sidebar-brand-text mx-3">Data QA/QC</div>
     </a>
