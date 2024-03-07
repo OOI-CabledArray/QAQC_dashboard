@@ -193,7 +193,7 @@ export default new Vuex.Store({
       },
       {
         title: 'APL RealTime Dashboard',
-        route: 'http://rtime.ooirsn.uw.edu/',
+        route: 'http://rtime.ooirsn.uw.edu:8888/',
         external: true,
       },
       {
