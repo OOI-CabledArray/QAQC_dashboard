@@ -70,7 +70,7 @@ export default new Vuex.Store({
         external: false,
         hitl: 'Stage1',
         groups: [
-          { key: '_adcp_', value: 'ADCP' },
+          { key: 'ADCP', value: 'ADCP' },
           { key: '_botpt_', value: 'BOTPT' },
           {
             key: 'CTD',
