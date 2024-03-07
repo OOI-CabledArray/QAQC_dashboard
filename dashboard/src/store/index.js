@@ -102,7 +102,7 @@ export default new Vuex.Store({
             ],
           },
           {
-            key: '_velocity_',
+            key: 'VELPT',
             value: 'VELPT',
             groups: [
               { key: '_velocity_east', value: 'Velocity, East' },
