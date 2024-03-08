@@ -22,6 +22,7 @@ const routes = [
     component: Plots,
     props: (route) => ({
       keyword: route.query.keyword,
+      subkey: route.query.subkey,
       dataRange: route.query.dataRange,
       timeSpan: route.query.timeSpan,
       overlays: route.query.overlays,
