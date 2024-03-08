@@ -217,7 +217,7 @@ export default {
         const plotListHITL = [];
         this.filteredPlotList = [];
         Object.values(this.csvTables).forEach((csvValue) => {
-          if (csvValue.name.includes(this.keyword) && csvValue.name.includes(this.subkey)) {
+          if (csvValue.name.includes(this.keyword)) {
             Object.values(csvValue.data).forEach((dataValue) => plotListHITL.push(dataValue.ref));
           }
         });
