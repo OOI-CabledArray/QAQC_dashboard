@@ -91,6 +91,10 @@ export default {
       type: String,
       required: true,
     },
+    subkey: {
+      type: String,
+      required: true,
+    },
     dataRange: {
       type: String,
       default: 'full',
@@ -213,7 +217,7 @@ export default {
         const plotListHITL = [];
         this.filteredPlotList = [];
         Object.values(this.csvTables).forEach((csvValue) => {
-          if (csvValue.name.includes(this.keyword)) {
+          if (csvValue.name.includes(this.keyword) && csvValue.name.includes(this.subkey)) {
             Object.values(csvValue.data).forEach((dataValue) => plotListHITL.push(dataValue.ref));
           }
         });
@@ -225,6 +229,7 @@ export default {
       } else {
         this.filteredPlotList = this.plotList;
         this.filteredPlotList = this.filteredPlotList.filter((plot) => plot.includes(this.keyword));
+        this.filteredPlotList = this.filteredPlotList.filter((plot) => plot.includes(this.subkey));
       }
       this.filteredPlotList = this.filteredPlotList.filter((plot) => plot.includes(this.dataRange));
       this.filteredPlotList = this.filteredPlotList.filter((plot) => plot.includes(this.timeSpan));
@@ -260,6 +265,7 @@ export default {
   },
   watch: {
     keyword: 'filterPlotList',
+    subkey: 'filterPlotList',
     overlays: 'filterPlotList',
     dataRange: 'filterPlotList',
     timeSpan: 'filterPlotList',

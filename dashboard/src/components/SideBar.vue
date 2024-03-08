@@ -94,7 +94,7 @@
               <b-dropdown-item
                 v-for="innerGroup in group.groups"
                 :key="innerGroup.key"
-                :to="{ path: `/plots?keyword=${innerGroup.key}` }"
+                :to="{ path: `/plots?keyword=${group.key}subkey=${innerGroup.key}` }"
               >
                 {{ innerGroup.value }}
               </b-dropdown-item>

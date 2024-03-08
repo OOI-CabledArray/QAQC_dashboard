@@ -6,6 +6,7 @@
       <b-col>
         <PlotsOverview
           :keyword="keyword"
+          :subkey="subkey"
           :dataRange="dataRange"
           :timeSpan="timeSpan"
           :overlays="overlays"
@@ -28,6 +29,10 @@ export default {
   props: {
     keyword: {
       type: String,
+      required: true,
+    },
+    subkey: {
+      type: String,  
       required: true,
     },
     dataRange: {
