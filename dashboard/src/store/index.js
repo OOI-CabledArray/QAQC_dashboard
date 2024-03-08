@@ -70,7 +70,16 @@ export default new Vuex.Store({
         external: false,
         hitl: 'Stage1',
         groups: [
-          { key: 'ADCP', value: 'ADCP' },
+          { 
+            key: 'ADCP', 
+            value: 'ADCP',
+            groups: [
+              { key: '_velocity_east', value: 'Velocity, East' },
+              { key: '_velocity_north', value: 'Velocity, North' },
+              { key: '_velocity_up', value: 'Velocity, Up' },
+              { key: '_percent_good_beam', value: "Beam"}
+            ],
+          },
           { key: '_botpt_', value: 'BOTPT' },
           {
             key: 'CTD',
