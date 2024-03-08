@@ -81,7 +81,7 @@
           <b-list-group-item v-for="group in item.groups" :key="group.key">
             <b-link
               v-if="!group.groups"
-              :to="{ path: `/plots?keyword=${group.key}` }"
+              :to="{ path: `/plots?keyword=${group.key}?subkey='_'` }"
               >{{ group.value }}</b-link>
             <b-dropdown
               dropright
@@ -94,7 +94,7 @@
               <b-dropdown-item
                 v-for="innerGroup in group.groups"
                 :key="innerGroup.key"
-                :to="{ path: `/plots?keyword=${group.key}subkey=${innerGroup.key}` }"
+                :to="{ path: `/plots?keyword=${group.key}?subkey=${innerGroup.key}` }"
               >
                 {{ innerGroup.value }}
               </b-dropdown-item>
