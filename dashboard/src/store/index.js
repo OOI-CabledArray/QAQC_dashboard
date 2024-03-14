@@ -140,6 +140,15 @@ export default new Vuex.Store({
           { key: 'PREST', value: 'PREST' },
           { key: 'TMPSF', value: 'TMPSF' },
           { key: 'TRHPH', value: 'TRHPH' },
+          {
+            key: 'TRHPH',
+            value: 'TRHPH',
+            groups: [
+              { key: 'temp', value: 'Temperature' },
+              { key: 'resistivity', value: 'Resistivity' },
+            ],
+          },
+
           { key: 'VEL3D', value: 'VEL3D' },
           { key: 'ZPLSC', value: 'ZPLSC' },
         ],
