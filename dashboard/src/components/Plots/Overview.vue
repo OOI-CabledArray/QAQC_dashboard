@@ -6,7 +6,7 @@
     <b-card no-body v-if="filteredPlots.length > 0">
     <b-tabs card>
     <b-tab title="Fixed Depths and Colormap Profiles" active>
-      <template 
+      <template
       v-for="url in profilePlots">
         <b-img
         v-if="isPNG(url)"
@@ -164,7 +164,7 @@ export default {
     },
     profilePlots() {
       const profilePlots = this.filteredPlotList.filter(
-        (plot) => (plot.endsWith('.png') || plot.endsWith('.svg')) 
+        (plot) => (plot.endsWith('.png') || plot.endsWith('.svg'))
         && !plot.includes(this.depthUnit) && !plot.includes(this.profUnit),
       );
       console.log('profile plots:', this.createPlotURL(profilePlots).sort());
