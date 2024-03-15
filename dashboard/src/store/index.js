@@ -139,7 +139,6 @@ export default new Vuex.Store({
           { key: 'OPTAA', value: 'OPTAA' },
           { key: 'PREST', value: 'PREST' },
           { key: 'TMPSF', value: 'TMPSF' },
-          { key: 'TRHPH', value: 'TRHPH' },
           {
             key: 'TRHPH',
             value: 'TRHPH',
