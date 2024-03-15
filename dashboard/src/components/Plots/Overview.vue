@@ -6,8 +6,10 @@
     <b-card no-body v-if="filteredPlots.length > 0">
     <b-tabs card>
     <b-tab title="Fixed Depths and Colormap Profiles" active>
+      <template 
+      v-for="url in profilePlots">
         <b-img
-        v-for="url in profilePlots"
+        v-if="isPNG(url)"
         :key="url"
         :src="url"
         fluid
@@ -15,7 +17,7 @@
         >
         </b-img>
         <object
-        v-for="url in svgPlots"
+        v-if="isSVG(url)"
         :key="url"
         :data="url"
         fluid
@@ -23,6 +25,7 @@
         type="image/svg+xml"
         class="svg-object"
         ></object>
+      </template>
     </b-tab>
     <b-tab title="Depth Binned Profiler Data" v-if="hasBinned">
         <div v-for="(vars, key) in binnedPlots" :key="key">
@@ -162,18 +165,11 @@ export default {
     },
     profilePlots() {
       const profilePlots = this.filteredPlotList.filter(
-        (plot) => plot.endsWith('.png') && !plot.includes(this.depthUnit) && !plot.includes(this.profUnit),
+        (plot) => (plot.endsWith('.png') || plot.endsWith('.svg')) 
+        && !plot.includes(this.depthUnit) && !plot.includes(this.profUnit),
       );
       console.log('profile plots:', this.createPlotURL(profilePlots));
       return this.createPlotURL(profilePlots);
-    },
-    // similar to above method but for `.svg` files
-    svgPlots() {
-      const svgPlots = this.filteredPlotList.filter(
-        (plot) => plot.endsWith('.svg') && !plot.includes(this.depthUnit) && !plot.includes(this.profUnit),
-      );
-      console.log('SVG plots:', this.createPlotURL(svgPlots));
-      return this.createPlotURL(svgPlots);
     },
     hasBinned() {
       return _.keys(this.binnedPlots).length > 0;
@@ -261,6 +257,12 @@ export default {
     },
     toTitle(text) {
       return _.capitalize(text);
+    },
+    isSVG(url) {
+      return url.toLowerCase().endsWith('.svg');
+    },
+    isPNG(url) {
+      return url.toLowerCase().endsWith('.png');
     },
   },
   watch: {
