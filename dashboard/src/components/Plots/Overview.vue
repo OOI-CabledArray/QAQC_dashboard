@@ -166,10 +166,10 @@ export default {
     profilePlots() {
       const profilePlots = this.filteredPlotList.filter(
         (plot) => (plot.endsWith('.png') || plot.endsWith('.svg')) 
-        && !plot.includes(this.depthUnit) && !plot.includes(this.profUnit).sort(),
+        && !plot.includes(this.depthUnit) && !plot.includes(this.profUnit),
       );
-      console.log('profile plots:', this.createPlotURL(profilePlots));
-      return this.createPlotURL(profilePlots);
+      console.log('profile plots:', this.createPlotURL(profilePlots).sort());
+      return this.createPlotURL(profilePlots).sort();
     },
     hasBinned() {
       return _.keys(this.binnedPlots).length > 0;
