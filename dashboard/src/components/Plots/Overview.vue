@@ -14,8 +14,7 @@
         :src="url"
         fluid
         lazy
-        >
-        </b-img>
+        ></b-img>
         <object
         v-if="isSVG(url)"
         :key="url"
