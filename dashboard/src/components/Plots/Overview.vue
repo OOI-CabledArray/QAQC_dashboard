@@ -199,7 +199,7 @@ export default {
       return this.createPlotURL(profPlotsList);
     },
     hasProfiles() {
-      return _.keys(this.profPlotsList).length > 0;
+      return _.keys(this.profilerPlots).length > 0;
     },
   },
 
