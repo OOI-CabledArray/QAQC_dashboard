@@ -48,7 +48,7 @@ export default new Vuex.Store({
           { key: 'PS-SF0', value: 'Shallow Profilers' },
           { key: 'PS-PC0', value: 'Shallow Profiler 200 m Platform' },
           {
-            key: 'Seafloor-Drop',
+            key: '-',
             value: 'Seafloor',
             groups: [
               { key: 'ASHS', value: 'Ashes' },
@@ -137,7 +137,14 @@ export default new Vuex.Store({
         groups: [
           { key: 'CAMHD', value: 'CAMHD' },
           { key: 'OPTAA', value: 'OPTAA' },
-          { key: 'PREST', value: 'PREST' },
+          {
+            key: 'PREST',  
+            value: 'PREST',
+            groups: [
+              { key: 'seafloor_pressure', value: 'Seafloor Pressure' },
+              { key: 'temp', value: 'Temperature' },
+            ],
+          },
           { key: 'TMPSF', value: 'TMPSF' },
           {
             key: 'TRHPH',
