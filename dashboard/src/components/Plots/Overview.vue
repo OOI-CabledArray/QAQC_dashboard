@@ -277,7 +277,7 @@ export default {
 <style>
 .svg-object {
   width: 100%;
-  max-width: 500px; 
+  max-width: 500px;
   height: auto; /* This will maintain the aspect ratio */
 }
 </style>
