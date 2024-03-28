@@ -70,14 +70,16 @@ export default new Vuex.Store({
         external: false,
         hitl: 'Stage1',
         groups: [
-          { 
-            key: 'ADCP', 
+          {
+            key: 'ADCP',
             value: 'ADCP',
             groups: [
               { key: '_velocity_east', value: 'Velocity, East' },
               { key: '_velocity_north', value: 'Velocity, North' },
               { key: '_velocity_up', value: 'Velocity, Up' },
-              { key: '_percent_good_beam', value: "Beam"}
+              { key: '_corrected_echo_intensity', value: 'Echo Intensity' },
+              { key: '_correlation_magnitude', value: 'Correlation Magnitude' },
+              { key: '_percent_good_beam', value: 'Beam' },
             ],
           },
           { key: '_botpt_', value: 'BOTPT' },
@@ -138,7 +140,7 @@ export default new Vuex.Store({
           { key: 'CAMHD', value: 'CAMHD' },
           { key: 'OPTAA', value: 'OPTAA' },
           {
-            key: 'PREST',  
+            key: 'PREST',
             value: 'PREST',
             groups: [
               { key: 'seafloor_pressure', value: 'Seafloor Pressure' },
