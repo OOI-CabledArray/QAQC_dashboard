@@ -2,7 +2,7 @@ name: Update QAQC Index
 
 on:
   schedule:
-  - cron: "0 14 * * *" 
+  - cron: "0 2,14,18 * * *" 
   workflow_dispatch:
 
 env:
