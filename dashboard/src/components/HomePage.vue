@@ -2,7 +2,7 @@
   <b-jumbotron
     class="mt-5"
     header="RCA Data QA/QC Dashboard"
-    lead="A simple little dashboard to help keep track of data streams...">
+    lead="Updated daily at 0400 - 0800 PST">
   </b-jumbotron>
 </template>
 
