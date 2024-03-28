@@ -77,6 +77,7 @@ export default new Vuex.Store({
               { key: '_velocity_east', value: 'Velocity, East' },
               { key: '_velocity_north', value: 'Velocity, North' },
               { key: '_velocity_up', value: 'Velocity, Up' },
+              { key: '_error_seawater_velocity', value: 'Velocity Error' },
               { key: '_corrected_echo_intensity', value: 'Echo Intensity' },
               { key: '_correlation_magnitude', value: 'Correlation Magnitude' },
               { key: '_percent_good_beam', value: 'Beam' },
