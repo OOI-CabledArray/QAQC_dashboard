@@ -11,9 +11,9 @@ export default new Vuex.Store({
     hitlList: [],
     csvData: [],
     hitlStatus: '',
-    DataRange: '',
-    TimeSpan: '',
-    Overlay: '',
+    DataRange: '', // TODO new state properties
+    TimeSpan: '', // hopefully we can use these to filter
+    Overlay: '', // instead of the props in each file
     mainNav: [
       {
         title: 'Data: by Site',
