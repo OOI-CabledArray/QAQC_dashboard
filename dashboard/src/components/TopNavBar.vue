@@ -15,7 +15,7 @@
         <b-dropdown-item
           v-for="item in filter.filters"
           :key="item.key"
-          @click="getPath(filter.key, item.key)"
+          @click="getPath(filter.key, item.key); checkFilterItem(item) "
         >
           {{ item.value }}
         </b-dropdown-item>
@@ -26,6 +26,7 @@
 
 <script>
 import _ from 'lodash';
+import { mapActions } from 'vuex';
 
 export default {
   data() {
@@ -71,6 +72,24 @@ export default {
     };
   },
   methods: {
+    ...mapActions([ // these reference actions in vue store
+      'storeDatarange',
+      'storeTimespan',
+      'storeOverlay',
+    ]),
+    checkFilterItem(item) {
+     console.log(item);
+     switch(item.key) {
+      case 'dataRange': // if dataRange dropdown
+        this.storeDatarange( {datarange: item.filters.key} ); // use key to set state in store
+      break;
+      case 'timeSpan':
+        this.storeTimespan( {timespan: item.filters.key} );
+      break;
+      case 'overlays':
+        this.storeOverlay( {overlay: item.filters.key} );
+     }
+    },
     getPath(key, value) {
       const query = {
         ...this.$route.query,

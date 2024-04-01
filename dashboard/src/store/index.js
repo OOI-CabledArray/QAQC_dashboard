@@ -11,6 +11,9 @@ export default new Vuex.Store({
     hitlList: [],
     csvData: [],
     hitlStatus: '',
+    DataRange: '',
+    TimeSpan: '',
+    Overlay: '',
     mainNav: [
       {
         title: 'Data: by Site',
@@ -247,7 +250,7 @@ export default new Vuex.Store({
     ],
   },
   mutations: {
-    STORE_PLOTS: (state, plots) => {
+    STORE_PLOTS: (state, plots) => { // updates the state.plotList with current selections
       state.plotList = plots;
     },
     STORE_HITL_NOTES: (state, notes) => {
@@ -259,19 +262,44 @@ export default new Vuex.Store({
     STORE_HITL_STATUS: (state, hitlStatus) => {
       state.hitlStatus = hitlStatus;
     },
+    STORE_DATARANGE: (state, datarange) => {
+      state.DataRange = datarange;
+    },
+    STORE_TIMESPAN: (state, timespan) => {
+      state.TimeSpan = timespan;
+    },
+    STORE_OVERLAY: (state, overlay) => {
+      state.Overlay = overlay;
+    },
   },
   actions: {
-    storePlots: ({ commit }, { plots }) => {
+    storePlots: ({ commit }, { plots }) => { // commits plots to STORE_PLOTS
+      console.log(plots);
       commit('STORE_PLOTS', plots);
     },
     storeHITLNotes: ({ commit }, { notes }) => {
+      console.log(notes);
       commit('STORE_HITL_NOTES', notes);
     },
     appendCSVData: ({ commit }, { data }) => {
+      console.log(data);
       commit('APPEND_CSV', data);
     },
     storeHITLStatus: ({ commit }, { hitlStatus }) => {
+      console.log(hitlStatus);
       commit('STORE_HITL_STATUS', hitlStatus);
+    },
+    storeDatarange: ({ commit }, { datarange }) => {
+      console.log(datarange);
+      commit('STORE_DATARANGE', datarange);
+    },
+    storeTimespan: ({ commit }, { timespan }) => {
+      console.log(timespan);
+      commit('STORE_TIMESPAN', timespan);
+    },
+    storeOverlay: ({ commit }, { overlay }) => {
+      console.log(overlay);
+      commit('STORE_OVERLAY', overlay);
     },
   },
   modules: {
