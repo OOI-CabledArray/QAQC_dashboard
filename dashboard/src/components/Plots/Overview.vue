@@ -88,6 +88,8 @@ export default {
     BinnedViewer,
     ProfileViewer,
   },
+  // TODO we shouldn't use props to filter - filtering should be pulled from the store
+  // and both the side nav bar and the top nav bar should make changes to the store
   props: {
     keyword: {
       type: String,
