@@ -88,6 +88,8 @@ export default {
       break;
       case 'overlays':
         this.storeOverlay( {overlay: item.filters.key} );
+      break;
+      default:
      }
     },
     getPath(key, value) {
