@@ -32,7 +32,7 @@ export default {
       required: true,
     },
     subkey: {
-      type: String,  
+      type: String,
       required: true,
     },
     dataRange: {

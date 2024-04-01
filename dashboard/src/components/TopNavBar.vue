@@ -12,6 +12,7 @@
         <template #button-content>
           {{ filter.title }}
         </template>
+        <!-- @click = on click performs following functions -->
         <b-dropdown-item
           v-for="item in filter.filters"
           :key="item.key"
@@ -78,19 +79,19 @@ export default {
       'storeOverlay',
     ]),
     checkFilterItem(item) {
-     console.log(item);
-     switch(item.key) {
-      case 'dataRange': // if dataRange dropdown
-        this.storeDatarange( {datarange: item.filters.key} ); // use key to set state in store
-      break;
-      case 'timeSpan':
-        this.storeTimespan( {timespan: item.filters.key} );
-      break;
-      case 'overlays':
-        this.storeOverlay( {overlay: item.filters.key} );
-      break;
-      default:
-     }
+      console.log(item);
+      switch (item.key) {
+        case 'dataRange': // if dataRange dropdown
+          this.storeDatarange({ datarange: item.filters.key }); // use key to set state in store
+          break;
+        case 'timeSpan':
+          this.storeTimespan({ timespan: item.filters.key });
+          break;
+        case 'overlays':
+          this.storeOverlay({ overlay: item.filters.key });
+          break;
+        default:
+      }
     },
     getPath(key, value) {
       const query = {
