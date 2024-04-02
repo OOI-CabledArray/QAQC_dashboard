@@ -160,8 +160,18 @@ export default new Vuex.Store({
               { key: 'resistivity', value: 'Resistivity' },
             ],
           },
-
-          { key: 'VEL3D', value: 'VEL3D' },
+          {
+            key: 'VEL3D',
+            value: 'VEL3D',
+            groups: [
+              { key: '_velocity_east', value: 'Velocity, East' },
+              { key: '_velocity_north', value: 'Velocity, North' },
+              { key: '_velocity_up', value: 'Velocity, Up' },
+              { key: '_amplitude', value: 'Echo Intensity' },
+              { key: '_correlation', value: 'Correlation Magnitude' },
+              { key: '_seawater_pressure_mbar', value: 'Seawater Pressure, mbar' },
+            ],
+          },
           { key: 'ZPLSC', value: 'ZPLSC' },
         ],
       },
