@@ -3,6 +3,9 @@
     class="mt-5"
     header="RCA Data QA/QC Dashboard"
     lead="Updated daily at 0800 PST">
+    <img src="ooilogo.png" alt="OOI logo" class="small-logo">
+    <img src="NSF.png" alt="NSF logo" class="small-logo">
+    <img src="oceanographyUW.png" alt="UW Oceanography logo" class="small-logo">
   </b-jumbotron>
 </template>
 
@@ -20,5 +23,8 @@ export default {
 <style scoped>
 .home-page {
   height: 100%;
+}
+.small-logo {
+  max-height: 100px;
 }
 </style>
