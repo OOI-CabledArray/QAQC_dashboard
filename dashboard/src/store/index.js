@@ -86,7 +86,7 @@ export default new Vuex.Store({
               { key: '_percent_good_beam', value: 'Beam' },
             ],
           },
-          { key: '_botpt_', value: 'BOTPT' },
+          { key: 'BOTPT', value: 'BOTPT' },
           {
             key: 'CTD',
             value: 'CTD',
