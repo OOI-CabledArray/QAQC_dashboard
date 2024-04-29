@@ -142,7 +142,16 @@ export default new Vuex.Store({
         hitl: 'Stage2',
         groups: [
           { key: 'CAMHD', value: 'CAMHD' },
-          { key: 'OPTAA', value: 'OPTAA' },
+          {
+            key: 'OPTAA',
+            value: 'OPTAA',
+            groups: [
+              { key: 'temp', value: 'Temperature' },
+              { key: 'dark', value: 'Dark Counts' },
+              { key: 'ratios', value: 'Ratios' },
+            ],
+          },
+
           {
             key: 'PREST',
             value: 'PREST',
