@@ -148,7 +148,7 @@ export default new Vuex.Store({
             groups: [
               { key: 'temp', value: 'Temperature' },
               { key: 'dark', value: 'Dark Counts' },
-              { key: 'ratios', value: 'Ratios' },
+              { key: 'ratio', value: 'Ratios' },
             ],
           },
 
