@@ -61,6 +61,7 @@
                       v-for="(plots, varkey) in vars"
                       :key="varkey"
                     >
+                      <!--NOTE component imported below-->
                       <ProfileViewer
                         :plots="plots"
                         :variable="varkey"
