@@ -268,7 +268,7 @@ export default new Vuex.Store({
       },
       {
         title: 'PMEL Axial Forecast',
-        route: 'https://www.pmel.noaa.gov/eoi/axial_blog.html#:~:text=With%20rates%20of%20inflation%20out,year%20window%2C%20for%20now).',
+        route: 'https://www.pmel.noaa.gov/eoi/axial_blog.html',
         external: true,
       },
       {
