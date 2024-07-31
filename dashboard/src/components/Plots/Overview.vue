@@ -130,7 +130,6 @@ export default {
       hitlStatus: (state) => state.hitlStatus,
     }),
     filteredPlots() {
-      console.log('plotsURL:', state.plotsURL)
       return this.filteredPlotList.map((plot) => `${this.plotsURL}/${plot}`);
     },
     filteredCSVs() {
