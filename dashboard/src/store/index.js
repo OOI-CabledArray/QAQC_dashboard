@@ -95,6 +95,7 @@ export default new Vuex.Store({
               { key: 'salinity', value: 'Salinity' },
               { key: 'density', value: 'Density' },
               { key: 'oxygen', value: 'Oxygen' },
+              { key: 'sea_water_pressure', value: 'Pressure' },
             ],
           },
           { key: '_oxygen_', value: 'OXYGEN' },
