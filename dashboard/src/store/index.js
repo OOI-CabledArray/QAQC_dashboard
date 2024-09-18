@@ -222,7 +222,7 @@ export default new Vuex.Store({
           { key: 'Watch', value: 'Watchlist' },
           { key: 'Plotting', value: 'Plotting Issues' },
           { key: 'Harvest', value: 'Data Harvest Issues' },
-          { key: 'Pending', value: 'Pending'}
+          { key: 'Pending', value: 'Pending' },
         ],
       },
 
