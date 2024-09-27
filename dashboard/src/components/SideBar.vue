@@ -159,13 +159,18 @@ export default {
 }
 .btn-primary {
     color: #fff;
-    background-color: #224bb1;
-    border-color: #224bb1;
+    background-color: #2267b1;
+    border-color: #2267b1;
 }
 .btn-primary:hover {
     color: #fff;
     background-color: #1b239e;
     border-color: #1b239e;
+}
+.show > .btn-primary.dropdown-toggle {
+    color: #fff;
+    background-color: #2267b1;
+    border-color: #2267b1;
 }
 a {
     color: #224bb1;
