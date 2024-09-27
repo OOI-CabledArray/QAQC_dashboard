@@ -30,4 +30,7 @@ export default {
 .med-logo {
   max-height: 115px;
 }
+.jumbotron {
+    background-color: #ccebf2;
+}
 </style>
