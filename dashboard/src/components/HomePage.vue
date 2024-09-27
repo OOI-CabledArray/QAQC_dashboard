@@ -31,6 +31,6 @@ export default {
   max-height: 115px;
 }
 .jumbotron {
-    background-color: #daedf1;
+    background-color: #ffffff;
 }
 </style>
