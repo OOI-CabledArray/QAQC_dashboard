@@ -140,4 +140,11 @@ export default {
 #sidebar-no-header {
   margin-top: 56px;
 }
+.list-group-item {
+  padding: 0.25rem 0.5rem; /* Reduce padding */
+  margin: 0; /* Remove margins */
+}
+.btn {
+  padding: 0.1rem 0.6rem /* Reduce padding */
+}
 </style>
