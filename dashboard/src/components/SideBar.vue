@@ -147,4 +147,29 @@ export default {
 .btn {
   padding: 0.1rem 0.6rem /* Reduce padding */
 }
+.bg-gradient-primary {
+    background-color: #1862b2;
+    background-image: linear-gradient(180deg, #46a9e3 10%, #040f30 100%);
+    background-size: cover;
+}
+.toggle {
+    color: #fff;
+    background-color: #1b239e;
+    border-color: #1b239e;
+}
+.btn-primary {
+    color: #fff;
+    background-color: #224bb1;
+    border-color: #224bb1;
+}
+.btn-primary:hover {
+    color: #fff;
+    background-color: #1b239e;
+    border-color: #1b239e;
+}
+a {
+    color: #224bb1;
+    text-decoration: none;
+    background-color: transparent;
+}
 </style>
