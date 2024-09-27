@@ -8,7 +8,4 @@ module.exports = {
     const cryptoOrigCreateHash = crypto.createHash;
     crypto.createHash = (algorithm) => cryptoOrigCreateHash(algorithm === 'md4' ? 'sha256' : algorithm); // eslint-disable-line no-eval
   },
-  configureWebpack: {
-    devtool: 'source-map'
-  }
 };
