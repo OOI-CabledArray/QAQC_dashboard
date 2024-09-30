@@ -172,6 +172,11 @@ export default {
     background-color: #2267b1;
     border-color: #2267b1;
 }
+button:focus:not(:focus-visible) {
+    outline: 0;
+    background-color: #2267b1;
+    color: #fff;
+}
 a {
     color: #224bb1;
     text-decoration: none;
