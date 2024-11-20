@@ -225,7 +225,6 @@ export default new Vuex.Store({
           { key: 'Pending', value: 'Pending' },
         ],
       },
-
     ],
     aplSites: [
       {
@@ -269,8 +268,8 @@ export default new Vuex.Store({
         external: true,
       },
       {
-        title: 'PMEL Axial Forecast',
-        route: 'https://www.pmel.noaa.gov/eoi/axial_blog.html',
+        title: 'Axial Forecast',
+        route: 'https://axial.ceoas.oregonstate.edu/axial_blog.html',
         external: true,
       },
       {
