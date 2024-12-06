@@ -100,7 +100,7 @@ export default new Vuex.Store({
           },
           { key: '_oxygen_', value: 'OXYGEN' },
           {
-            key: 'FLOR',
+            key: 'FL',
             value: 'FLUOROMETER',
             groups: [
               { key: '_chlorophyll_', value: 'Chlorophyll-a' },
