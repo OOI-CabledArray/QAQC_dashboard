@@ -93,6 +93,7 @@ export default new Vuex.Store({
             groups: [
               { key: 'temperature', value: 'Temperature' },
               { key: 'salinity', value: 'Salinity' },
+              { key: 'conductivity', value: 'Conductivity' },
               { key: 'density', value: 'Density' },
               { key: 'oxygen', value: 'Oxygen' },
               { key: 'sea_water_pressure', value: 'Pressure' },
