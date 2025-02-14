@@ -131,8 +131,5 @@ dmypy.json
 # vscode
 .vscode
 
-# misc
-test_repo/
-
-version.py
-QAQCplots/*.png
+dashboard/public/HITL_notes/
+dashboard/public/QAQC_plots/
