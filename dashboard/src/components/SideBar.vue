@@ -38,7 +38,7 @@
     <hr class="sidebar-divider" />
 
     <!-- Heading -->
-    <div class="sidebar-heading">Interface</div>
+    <div class="sidebar-heading">Views</div>
 
     <li class="nav-item" v-for="item in navList" :key="item.route"
       v-on:click="updateHITLStatus(item.hitl)">
