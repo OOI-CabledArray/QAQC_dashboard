@@ -1,7 +1,7 @@
 <template>
   <b-jumbotron
     class="mt-5"
-    header="RCA Data QA/QC Dashboard test test"
+    header="RCA Data QA/QC Dashboard"
     lead="Updated daily at 0800 PST">
     <img src="oceanographyUW.png" alt="UW Oceanography logo" class="small-logo">
     <img src="ooilogo.png" alt="OOI logo" class="small-logo">
