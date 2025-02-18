@@ -20,8 +20,8 @@ const routes = [
   {
     path: '/plots',
     component: Plots,
-    props: (route) => ({
-      keyword: route.query.keyword,
+    props: (route) => ({ //TODO need query using these keys to be run when link is provided
+      keyword: route.query.keyword, // not just when user enters from home page
       subkey: route.query.subkey,
       dataRange: route.query.dataRange,
       timeSpan: route.query.timeSpan,
