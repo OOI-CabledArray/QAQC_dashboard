@@ -57,3 +57,7 @@ The code for the infrastructure, backend, and frontend are hosted in 3 separate 
     ```
 
 4. Go to [http://localhost:8080](http://localhost:8080)
+
+## Debugging 
+
+When debugging the vue app, the plot display list can be accessed via `this.$store.state.plotList`
