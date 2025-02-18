@@ -60,4 +60,4 @@ The code for the infrastructure, backend, and frontend are hosted in 3 separate 
 
 ## Debugging 
 
-When debugging the vue app, the plot display list can be accessed via `this.$store.state.plotList`
+When debugging the vue app, the plot display list can be accessed via `this.$store.state.plotList` In the plots `Overview.vue` component, the filtered plot png list can be accessed via `this.filteredPlotList`.
