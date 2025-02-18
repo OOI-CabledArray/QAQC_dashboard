@@ -52,7 +52,7 @@ jobs:
       - name: Create Build
         run: yarn build
       
-      - name: Deploy Dashboard to s3
+      - name: Deploy Dashboard to s3 # Prefect2 Dashboard bucket is the key link here
         run: |
           aws s3 sync \
             --acl public-read \
