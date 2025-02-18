@@ -33,6 +33,7 @@ new Vue({
     ]),
     getPlots() {
       const plotsIndex = `${store.state.plotsURL}/index.json`;
+      console.log('plotsURL:', store.state.plotsURL);
       console.log(plotsIndex);
       return axios
         .get(plotsIndex)
