@@ -6,7 +6,8 @@
 //     // which is not supported in FIPS-compliant OpenSSL
 //     // See https://github.com/jupyterlab/jupyterlab/issues/11248
 //     const cryptoOrigCreateHash = crypto.createHash;
-//     crypto.createHash = (algorithm) => cryptoOrigCreateHash(algorithm === 'md4' ? 'sha256' : algorithm); // eslint-disable-line no-eval
+//     crypto.createHash = (algorithm) => cryptoOrigCreateHash(algorithm === 'md4' ? 
+// 'sha256' : algorithm); // eslint-disable-line no-eval
 //   },
 // };
 module.exports = {
