@@ -31,45 +31,42 @@ new Vue({
       'storeHITLNotes',
       'appendCSVData',
     ]),
-    getPlots() {
+    async getPlots() {
       const plotsIndex = `${store.state.plotsURL}/index.json`;
       console.log('plotsURL:', store.state.plotsURL);
       console.log(plotsIndex);
-      return axios
-        .get(plotsIndex)
-        .then((response) => {
-          this.storePlots({ plots: response.data });
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+      try {
+        const response = await axios
+          .get(plotsIndex);
+        this.storePlots({ plots: response.data });
+      } catch (error) {
+        console.log(error);
+      }
     },
-    getHITLNotes() {
+    async getHITLNotes() {
       const hitlIndex = `${store.state.hitlURL}/index.json`;
-      return axios
-        .get(hitlIndex)
-        .then((response) => {
-          this.storeHITLNotes({ notes: response.data });
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+      try {
+        const response = await axios
+          .get(hitlIndex);
+        this.storeHITLNotes({ notes: response.data });
+      } catch (error) {
+        console.log(error);
+      }
     },
-    readCSV(url) {
-      return axios({
-        method: 'get',
-        url,
-        responseType: 'stream',
-      })
-        .then((response) => {
-          const cleaned = response.data.trim().split('\n');
-          const name = url.split('/').at(-1).replace('.csv', '');
-          const data = { name, data: cleaned.map((d) => d.split(',')) };
-          this.appendCSVData({ data });
-        })
-        .catch((error) => {
-          console.log(error);
+    async readCSV(url) {
+      try {
+        const response = await axios({
+          method: 'get',
+          url,
+          responseType: 'stream',
         });
+        const cleaned = response.data.trim().split('\n');
+        const name = url.split('/').at(-1).replace('.csv', '');
+        const data = { name, data: cleaned.map((d) => d.split(',')) };
+        this.appendCSVData({ data });
+      } catch (error) {
+        console.log(error);
+      }
     },
     async loadCSVs() {
       const csvURLs = this.allCSVs.map((csv) => `${this.hitlURL}/${csv}`);
