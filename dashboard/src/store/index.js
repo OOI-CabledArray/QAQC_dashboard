@@ -305,31 +305,24 @@ export default new Vuex.Store({
   },
   actions: {
     storePlots: ({ commit }, { plots }) => { // commits plots to STORE_PLOTS
-      console.log(plots);
       commit('STORE_PLOTS', plots);
     },
     storeHITLNotes: ({ commit }, { notes }) => {
-      console.log(notes);
       commit('STORE_HITL_NOTES', notes);
     },
     appendCSVData: ({ commit }, { data }) => {
-      console.log(data);
       commit('APPEND_CSV', data);
     },
     storeHITLStatus: ({ commit }, { hitlStatus }) => {
-      console.log(hitlStatus);
       commit('STORE_HITL_STATUS', hitlStatus);
     },
     storeDatarange: ({ commit }, { datarange }) => {
-      console.log(datarange);
       commit('STORE_DATARANGE', datarange);
     },
     storeTimespan: ({ commit }, { timespan }) => {
-      console.log(timespan);
       commit('STORE_TIMESPAN', timespan);
     },
     storeOverlay: ({ commit }, { overlay }) => {
-      console.log(overlay);
       commit('STORE_OVERLAY', overlay);
     },
   },
