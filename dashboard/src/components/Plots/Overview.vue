@@ -121,7 +121,12 @@ export default {
     };
   },
   mounted() {
-    this.filterPlotList();
+    // Call the getPlots method from the root instance to load plots even when user doesn't
+    // navigate to the home page first
+    this.$root.getPlots().then(() => {
+      // once plots are loaded, perform filtering or other logic
+      this.filterPlotList();
+    });
   },
   computed: {
     ...mapState({
