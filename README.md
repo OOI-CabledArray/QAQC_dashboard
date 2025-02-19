@@ -62,7 +62,7 @@ The code for the infrastructure, backend, and frontend are hosted in 3 separate 
 
 When debugging the vue app, the plot display list can be accessed via `this.$store.state.plotList` In the plots `Overview.vue` component, the filtered plot png list can be accessed via `this.filteredPlotList`.
 
-So have breakpoints hit in app code but not modules: 
+The following `launch.json` will hit breakpoints in the app code but not node modules: 
 
 ```
 {
