@@ -61,3 +61,25 @@ The code for the infrastructure, backend, and frontend are hosted in 3 separate 
 ## Debugging 
 
 When debugging the vue app, the plot display list can be accessed via `this.$store.state.plotList` In the plots `Overview.vue` component, the filtered plot png list can be accessed via `this.filteredPlotList`.
+
+So have breakpoints hit in app code but not modules: 
+
+```
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Launch chrome for vue",
+        "type": "chrome",
+        "request": "launch",
+        "url": "http://localhost:8080",
+        "webRoot": "${workspaceFolder}/dashboard/src",
+        "sourceMapPathOverrides": {
+          "webpack:///src/*": "${webRoot}/*",
+          "webpack:///./node_modules/*": "${webRoot}/node_modules/*"
+        },
+        "skipFiles": ["${webRoot}/<node_internals>/**", "${webRoot}/node_modules/**"] 
+      }
+    ]
+  }
+```
