@@ -11,12 +11,12 @@ env:
 jobs:
   qaqc-index:
     name: Run QAQC Index Update
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           token: ${{ secrets.GH_PAT }}
       - name: Setup python
