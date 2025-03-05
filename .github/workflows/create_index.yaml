@@ -11,7 +11,7 @@ env:
 jobs:
   qaqc-index:
     name: Run QAQC Index Update
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         shell: bash -l {0}
