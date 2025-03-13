@@ -1,23 +1,30 @@
 <template>
-    <div class="spectrogram-container">
-      <div v-if="imageExists" class="spectrogram-display">
-        <img :src="currentSpectrogramUrl" alt="Spectrogram" />
-        <p class="date-display">{{ formatDate(currentDate) }}</p>
-      </div>
-      <div v-else class="no-data-message">
-        <p>No spectrogram found for {{ formatDate(currentDate) }}</p>
-      </div>
+    <div class="spectrograms-container">
+      <!-- Loop through each instrument -->
+      <div v-for="instrument in instruments" :key="instrument" class="instrument-container">
+        <h3 class="instrument-title">{{ instrument }}</h3>
 
-      <div class="slider-controls">
-        <span>Jan 1, 2025</span>
-        <input
-          type="range"
-          min="1"
-          max="31"
-          v-model.number="currentDay"
-          class="date-slider"
-        />
-        <span>Jan 31, 2025</span>
+        <div v-if="imageExists[instrument]" class="spectrogram-display">
+          <img :src="getSpectrogramUrl(instrument)" alt="Spectrogram" />
+        </div>
+        <div v-else class="no-data-message">
+          <p>No spectrogram found for {{ instrument }} on
+            {{ formatDate(getDayForInstrument(instrument)) }}</p>
+        </div>
+
+        <!-- Individual slider controls for each instrument -->
+        <div class="slider-controls">
+          <span>Jan 1, 2025</span>
+          <input
+            type="range"
+            min="1"
+            max="31"
+            v-model.number="currentDays[instrument]"
+            class="date-slider"
+          />
+          <span>Jan 31, 2025</span>
+          <p class="date-display">{{ formatDate(getDayForInstrument(instrument)) }}</p>
+        </div>
       </div>
     </div>
   </template>
@@ -27,133 +34,153 @@ import { mapState } from 'vuex';
 
 export default {
   props: {
-    instrumentId: {
-      type: String,
-      default: 'HYDBBA105',
+    instruments: {
+      type: Array,
+      default: () => ['HYDBBA105', 'HYDBBA106'],
     },
   },
   data() {
     return {
-      currentDay: 1,
-      imageExists: false,
-      imageCache: {}, // Cache to avoid repeated checks for the same date
+      currentDays: {},
+      imageExists: {},
+      imageCache: {}, // Cache structure: { instrumentId_url: boolean }
     };
   },
   computed: {
     ...mapState(['spectrogramsURL']),
-
-    currentDate() {
-      // Create a Date object for January + the current day slider value
-      return new Date(2025, 0, this.currentDay);
-    },
-    currentSpectrogramUrl() {
-      const dateStr = this.formatDateForUrl(this.currentDate);
-      // Using the spectrogramsURL from the Vuex store
-      const currentSpectrogramUrl = `${this.spectrogramsURL}/2025/${this.instrumentId}/${this.instrumentId}_${dateStr}.png`;
-      console.log(currentSpectrogramUrl);
-      return currentSpectrogramUrl;
-    },
   },
   methods: {
+    getDayForInstrument(instrument) {
+      return new Date(2025, 0, this.currentDays[instrument] || 1);
+    },
     formatDate(date) {
       const options = { year: 'numeric', month: 'long', day: 'numeric' };
       return date.toLocaleDateString('en-US', options);
     },
     formatDateForUrl(date) {
-      // Format date as YYYYMMDD for the URL
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}${month}${day}`;
     },
-    checkImageExists() {
-      // Check if we already tested this URL
-      if (this.imageCache[this.currentSpectrogramUrl] !== undefined) {
-        this.imageExists = this.imageCache[this.currentSpectrogramUrl];
+    getSpectrogramUrl(instrumentId) {
+      const date = this.getDayForInstrument(instrumentId);
+      const dateStr = this.formatDateForUrl(date);
+      return `${this.spectrogramsURL}/2025/${instrumentId}/${instrumentId}_${dateStr}.png`;
+    },
+    checkImageExists(instrument) {
+      const url = this.getSpectrogramUrl(instrument);
+
+      // Check cache first
+      const cacheKey = `${instrument}_${url}`;
+      if (this.imageCache[cacheKey] !== undefined) {
+        this.$set(this.imageExists, instrument, this.imageCache[cacheKey]);
         return;
       }
 
       const img = new Image();
 
       img.onload = () => {
-        this.imageExists = true;
-        this.imageCache[this.currentSpectrogramUrl] = true;
+        this.$set(this.imageExists, instrument, true);
+        this.imageCache[cacheKey] = true;
       };
 
       img.onerror = () => {
-        this.imageExists = false;
-        this.imageCache[this.currentSpectrogramUrl] = false;
+        this.$set(this.imageExists, instrument, false);
+        this.imageCache[cacheKey] = false;
       };
 
-      // Set the source to trigger loading
-      img.src = this.currentSpectrogramUrl;
+      img.src = url;
     },
   },
   watch: {
-    currentDay() {
-      this.checkImageExists();
+    currentDays: {
+      handler(newValue) {
+        // When any instrument's day changes, check its image
+        Object.keys(newValue).forEach((instrument) => {
+          this.checkImageExists(instrument);
+        });
+      },
+      deep: true,
     },
   },
   mounted() {
-    this.checkImageExists();
+    // Initialize currentDays and imageExists for each instrument
+    this.instruments.forEach((instrument) => {
+      this.$set(this.currentDays, instrument, 1);
+      this.$set(this.imageExists, instrument, false);
+      this.checkImageExists(instrument);
+    });
   },
 };
 </script>
 
-<style scoped>
-.spectrogram-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 800px;
-  margin: 0 auto;
-}
+  <style scoped>
+  .spectrograms-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+  }
 
-.spectrogram-display {
-  width: 100%;
-  margin-bottom: 20px;
-}
+  .instrument-container {
+    margin-bottom: 40px;
+    width: 100%;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+  }
 
-.spectrogram-display img {
-  width: 100%;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
+  .instrument-container:last-child {
+    border-bottom: none;
+  }
 
-.date-display {
-  text-align: center;
-  font-weight: bold;
-  margin-top: 10px;
-}
+  .instrument-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
+  }
 
-.no-data-message {
-  height: 450px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f5f5f5;
-  width: 100%;
-  border-radius: 4px;
-  margin-bottom: 20px;
-}
+  .spectrogram-display {
+    width: 100%;
+    margin-bottom: 15px;
+  }
 
-.slider-controls {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-}
+  .spectrogram-display img {
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
 
-.date-slider {
-  flex-grow: 1;
-}
+  .date-display {
+    text-align: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-top: 5px;
+    margin-bottom: 0;
+  }
 
-/* .loading-indicator {
-  height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-} */
-</style>
+  .no-data-message {
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f5f5f5;
+    width: 100%;
+    border-radius: 4px;
+    margin-bottom: 15px;
+  }
+
+  .slider-controls {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .date-slider {
+    flex-grow: 1;
+  }
+  </style>
