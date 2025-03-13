@@ -18,11 +18,11 @@
           <input
             type="range"
             min="1"
-            max="31"
+            max="60"
             v-model.number="currentDays[instrument]"
             class="date-slider"
           />
-          <span>Jan 31, 2025</span>
+          <span>Mar 1, 2025</span>
           <p class="date-display">{{ formatDate(getDayForInstrument(instrument)) }}</p>
         </div>
       </div>
@@ -162,7 +162,7 @@ export default {
   }
 
   .no-data-message {
-    height: 300px;
+    height: 400px;
     display: flex;
     align-items: center;
     justify-content: center;
