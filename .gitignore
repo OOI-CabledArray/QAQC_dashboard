@@ -133,3 +133,7 @@ dmypy.json
 
 dashboard/public/HITL_notes/
 dashboard/public/QAQC_plots/
+dashboard/public/spectrograms/
+
+#mac
+.DS_Store

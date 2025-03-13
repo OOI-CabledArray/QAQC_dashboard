@@ -1,11 +1,11 @@
 <template>
   <div class="text-left pt-3">
-    <h1 v-if="filteredPlots.length === 0">
+    <h1 v-if="filteredPlots.length === 0 && !isHydrophone">
         No Plots found.
     </h1>
-    <b-card no-body v-if="filteredPlots.length > 0">
+    <b-card no-body v-if="filteredPlots.length > 0 || isHydrophone">
     <b-tabs card>
-    <b-tab title="Fixed Depths and Colormap Profiles" active>
+    <b-tab title="Fixed Depths and Colormap Profiles" active v-if=!isHydrophone>
       <template
       v-for="url in profilePlots">
         <b-img
@@ -25,6 +25,9 @@
         class="svg-object"
         ></object>
       </template>
+    </b-tab>
+    <b-tab title="hyd viewer - UNDER CONSTRUCTION" v-if="isHydrophone">
+      <HydrophoneViewer/>
     </b-tab>
     <b-tab title="Depth Binned Profiler Data" v-if="hasBinned">
         <div v-for="(vars, key) in binnedPlots" :key="key">
@@ -83,11 +86,13 @@ import { mapState } from 'vuex';
 import _ from 'lodash';
 import BinnedViewer from './BinnedViewer.vue';
 import ProfileViewer from './ProfileViewer.vue';
+import HydrophoneViewer from './HydrophoneViewer.vue';
 
 export default {
   components: {
     BinnedViewer,
     ProfileViewer,
+    HydrophoneViewer,
   },
   // TODO we shouldn't use props to filter - filtering should be pulled from the store
   // and both the side nav bar and the top nav bar should make changes to the store
@@ -208,6 +213,9 @@ export default {
     },
     hasProfiles() {
       return _.keys(this.profilerPlots).length > 0;
+    },
+    isHydrophone() {
+      return this.keyword === 'HYDBB';
     },
   },
 
