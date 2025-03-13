@@ -58,6 +58,7 @@ jobs:
             --acl public-read \
             --exclude 'QAQC_plots/*' \
             --exclude 'HITL_notes/*' \
+            --exclude 'spectrograms/*' \
             --delete \
             ./dist \
             s3://ooi-rca-qaqc-prod

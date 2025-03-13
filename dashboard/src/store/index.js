@@ -7,6 +7,7 @@ export default new Vuex.Store({
   state: {
     plotsURL: `${process.env.BASE_URL}QAQC_plots`,
     hitlURL: `${process.env.BASE_URL}HITL_notes`,
+    spectrogramsURL: `${process.env.BASE_URL}spectrograms`,
     plotList: [],
     hitlList: [],
     csvData: [],
