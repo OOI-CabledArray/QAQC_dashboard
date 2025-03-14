@@ -1,5 +1,20 @@
 <template>
     <div class="spectrograms-container">
+      <!-- Year selector dropdown -->
+      <div class="year-selector">
+        <label for="year-select">Select Year:</label>
+        <select
+          id="year-select"
+          v-model="selectedYear"
+          @change="handleYearChange"
+          class="year-dropdown"
+        >
+          <option v-for="year in availableYears" :key="year" :value="year">
+            {{ year }}
+          </option>
+        </select>
+      </div>
+
       <!-- Loop through each instrument -->
       <div v-for="instrument in instruments" :key="instrument" class="instrument-container">
         <h3 class="instrument-title">{{ instrument }}</h3>
@@ -14,15 +29,15 @@
 
         <!-- Individual slider controls for each instrument -->
         <div class="slider-controls">
-          <span>Jan 1, 2025</span>
+          <span>{{ formatDate(getStartDate()) }}</span>
           <input
             type="range"
-            min="1"
-            max="60"
+            :min="1"
+            :max="maxDaysInRange"
             v-model.number="currentDays[instrument]"
             class="date-slider"
           />
-          <span>Mar 1, 2025</span>
+          <span>{{ formatDate(getEndDate()) }}</span>
           <p class="date-display">{{ formatDate(getDayForInstrument(instrument)) }}</p>
         </div>
       </div>
@@ -40,18 +55,69 @@ export default {
     },
   },
   data() {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+
     return {
       currentDays: {},
       imageExists: {},
       imageCache: {}, // Cache structure: { instrumentId_url: boolean }
+      selectedYear: currentYear,
+      availableYears: Array.from({ length: currentYear - 2018 + 1 },
+        (_, i) => currentYear - i).sort(),
+      maxDaysInRange: this.calculateMaxDays(currentYear),
+      today: currentDate,
+      yesterday: new Date(currentDate.setDate(currentDate.getDate() - 1)),
     };
   },
   computed: {
     ...mapState(['spectrogramsURL']),
+    isCurrentYear() {
+      return this.selectedYear === new Date().getFullYear();
+    },
   },
   methods: {
+    calculateMaxDays(year) {
+      const currentYear = new Date().getFullYear();
+
+      if (year === currentYear) {
+        // For current year: days from Jan 1 to yesterday
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const startOfYear = new Date(year, 0, 1);
+        return Math.floor((yesterday - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+      }
+      // For previous years: Calculate days between Jan 1 and Dec 31
+      const startDate = new Date(year, 0, 1);
+      const endDate = new Date(year, 11, 31);
+      return Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+    },
+    handleYearChange() {
+      this.maxDaysInRange = this.calculateMaxDays(this.selectedYear);
+
+      // Reset all instruments to the first day of the selected year
+      this.instruments.forEach((instrument) => {
+        this.$set(this.currentDays, instrument, 1);
+        this.checkImageExists(instrument);
+      });
+    },
+    getStartDate() {
+      return new Date(this.selectedYear, 0, 1); // January 1st of selected year
+    },
+    getEndDate() {
+      if (this.isCurrentYear) {
+        // Yesterday for current year
+        return new Date(new Date().setDate(new Date().getDate() - 1));
+      }
+      // December 31st for previous years
+      return new Date(this.selectedYear, 11, 31);
+    },
     getDayForInstrument(instrument) {
-      return new Date(2025, 0, this.currentDays[instrument] || 1);
+      const startDate = new Date(this.selectedYear, 0, 1);
+      const dayOffset = (this.currentDays[instrument] || 1) - 1;
+      const resultDate = new Date(startDate);
+      resultDate.setDate(startDate.getDate() + dayOffset);
+      return resultDate;
     },
     formatDate(date) {
       const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -66,7 +132,7 @@ export default {
     getSpectrogramUrl(instrumentId) {
       const date = this.getDayForInstrument(instrumentId);
       const dateStr = this.formatDateForUrl(date);
-      return `${this.spectrogramsURL}/2025/${instrumentId}/${instrumentId}_${dateStr}.png`;
+      return `${this.spectrogramsURL}/${this.selectedYear}/${instrumentId}/${instrumentId}_${dateStr}.png`;
     },
     checkImageExists(instrument) {
       const url = this.getSpectrogramUrl(instrument);
@@ -103,6 +169,12 @@ export default {
       },
       deep: true,
     },
+    selectedYear() {
+      // When year changes, update the URL structure and check images
+      this.instruments.forEach((instrument) => {
+        this.checkImageExists(instrument);
+      });
+    },
   },
   mounted() {
     // Initialize currentDays and imageExists for each instrument
@@ -122,6 +194,20 @@ export default {
     width: 100%;
     max-width: 800px;
     margin: 0 auto;
+  }
+
+  .year-selector {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .year-dropdown {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
   }
 
   .instrument-container {
