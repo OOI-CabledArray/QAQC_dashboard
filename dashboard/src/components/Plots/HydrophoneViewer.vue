@@ -192,8 +192,8 @@ export default {
     display: flex;
     flex-direction: column;
     width: 100%;
-    max-width: 800px;
-    margin: 0 auto;
+    max-width: 1200px;
+    margin: 0;
   }
 
   .year-selector {
