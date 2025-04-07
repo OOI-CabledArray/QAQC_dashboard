@@ -260,6 +260,7 @@ export default {
 
   .slider-controls {
     width: 100%;
+    font-size: 0.7rem;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
