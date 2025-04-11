@@ -26,7 +26,7 @@
         ></object>
       </template>
     </b-tab>
-    <b-tab title="hyd viewer - UNDER CONSTRUCTION" v-if="isHydrophone">
+    <b-tab title="spectrogram viewer - UNDER CONSTRUCTION" v-if="isHydrophone">
       <HydrophoneViewer/>
     </b-tab>
     <b-tab title="Depth Binned Profiler Data" v-if="hasBinned">
