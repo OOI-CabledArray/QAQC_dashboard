@@ -1,4 +1,4 @@
-name: Broadband Hydrophone Spectrograms (Daily)
+name: Broadband Hydrophone (Daily)
 
 on:
   schedule:
@@ -10,7 +10,7 @@ env:
 
 jobs:
   run-acoustic-pipeline:
-    name: run acoustic pipeline
+    name: ${{matrix.name}} spectrograms
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -18,6 +18,8 @@ jobs:
         include:
           - refdes: 'CE04OSBP-LJ01C-11-HYDBBA105'
             name: 'CE04OSBP-LJ01C-11-HYDBBA105'
+          - refdes: "CE02SHBP-LJ01D-11-HYDBBA106"
+            name: 'CE02SHBP-LJ01D-11-HYDBBA106'
     defaults:
       run:
         shell: bash -l {0}
