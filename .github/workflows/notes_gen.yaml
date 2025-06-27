@@ -2,7 +2,7 @@ name: Update QAQC HITL Notes
 
 on:
   schedule:
-  - cron: "0 13 * * *" 
+  - cron: "0 12 * * *" 
   workflow_dispatch:
 
 env:
