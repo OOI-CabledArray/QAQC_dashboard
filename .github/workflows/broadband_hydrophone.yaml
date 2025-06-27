@@ -20,6 +20,8 @@ jobs:
             name: 'CE04OSBP-LJ01C-11-HYDBBA105'
           - refdes: "CE02SHBP-LJ01D-11-HYDBBA106"
             name: 'CE02SHBP-LJ01D-11-HYDBBA106'
+          - refdes: "RS03AXBS-LJ03A-09-HYDBBA302"
+            name: 'RS03AXBS-LJ03A-09-HYDBBA302'
     defaults:
       run:
         shell: bash -l {0}
