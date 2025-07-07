@@ -179,7 +179,7 @@ export default {
   mounted() {
     // Initialize currentDays and imageExists for each instrument
     this.instruments.forEach((instrument) => {
-      this.$set(this.currentDays, instrument, 1);
+      this.$set(this.currentDays, instrument, this.maxDaysInRange);
       this.$set(this.imageExists, instrument, false);
       this.checkImageExists(instrument);
     });
