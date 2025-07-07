@@ -279,6 +279,11 @@ export default new Vuex.Store({
         route: 'http://axial.ocean.washington.edu/#name1',
         external: true,
       },
+      {
+        title: 'Broadband Spectrogram+Audio',
+        route: 'https://orca.ooirsn.uw.edu/opod/',
+        external: true,
+      },
     ],
   },
   mutations: {
