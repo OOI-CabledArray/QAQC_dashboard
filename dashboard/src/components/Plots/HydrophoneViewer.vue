@@ -248,7 +248,7 @@ export default {
   }
 
   .no-data-message {
-    height: 400px;
+    height: 500px;
     display: flex;
     align-items: center;
     justify-content: center;
