@@ -3,12 +3,12 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - pip=25.1.1
-  - python=3.11.13
-  - readline=8.2
-  - setuptools=80.9.0
-  - tk=8.6.13
-  - wheel=0.45.1
+  - pip
+  - python>3.11
+  - readline
+  - setuptools
+  - tk
+  - wheel
   - pip:
       - aiobotocore==2.13.3
       - aiohappyeyeballs==2.6.1
