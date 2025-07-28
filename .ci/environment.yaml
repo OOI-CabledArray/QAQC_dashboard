@@ -2,6 +2,6 @@ name: rca-data-env
 channels:
 - conda-forge
 dependencies:
-- python=3.11
-- setuptools<59
-- wheel>=0.29.0
+- python
+- setuptools
+- wheel
