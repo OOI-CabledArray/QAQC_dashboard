@@ -39,8 +39,8 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: false
-          activate-environment: ooi-hyd-tools
-          environment-file: .ci/ooi-hyd-tools.yaml
+          activate-environment: rca-data-env
+          environment-file: .ci/environment.yaml
           use-only-tar-bz2: true
       - name: Print conda env
         run: |
