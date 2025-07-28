@@ -1,5 +1,5 @@
 name: Broadband Hydrophone (Daily)
-
+# TODO Cache pip wheels
 on:
   schedule:
   - cron: "0 11 * * *" #every day at 12:00 UTC (4:00 AM PST)
@@ -46,6 +46,8 @@ jobs:
         run: |
           conda info
           conda list
+      - name: Install runtime dependencies
+        run: apt-get 
       - name: Install package
         run: pip install git+https://github.com/ooi-data/ooi-hyd-tools.git@main
       - name: Run acoustic pipeline mseed -> spectrograms
