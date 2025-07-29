@@ -46,8 +46,6 @@ jobs:
         run: |
           conda info
           conda list
-      - name: Install runtime dependencies
-        run: apt-get 
       - name: Install package
         run: pip install git+https://github.com/ooi-data/ooi-hyd-tools.git@main
       - name: Run acoustic pipeline mseed -> spectrograms
