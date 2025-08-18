@@ -24,15 +24,12 @@ export default new Vuex.Store({
         groups: [
           { key: 'CE02SHBP', value: 'CE02SHBP' },
           { key: 'CE04OSBP', value: 'CE04OSBP' },
-          { key: 'CE04OSPD', value: 'CE04OSPD' },
           { key: 'CE04OSPS', value: 'CE04OSPS' },
-          { key: 'RS01SBPD', value: 'RS01SBPD' },
           { key: 'RS01SBPS', value: 'RS01SBPS' },
           { key: 'RS01SLBS', value: 'RS01SLBS' },
           { key: 'RS01SUM1', value: 'RS01SUM1' },
           { key: 'RS01SUM2', value: 'RS01SUM2' },
           { key: 'RS03AXBS', value: 'RS03AXBS' },
-          { key: 'RS03AXPD', value: 'RS03AXPD' },
           { key: 'RS03AXPS', value: 'RS03AXPS' },
           { key: 'RS03INT1', value: 'RS03INT1' },
           { key: 'RS03INT2', value: 'RS03INT2' },
@@ -48,7 +45,6 @@ export default new Vuex.Store({
         hitl: 'Platforms',
         groups: [
           { key: 'BP-', value: 'BEP' },
-          { key: 'PD-', value: 'Deep Profilers' },
           { key: 'PS-SF0', value: 'Shallow Profilers' },
           { key: 'PS-PC0', value: 'Shallow Profiler 200 m Platform' },
           {
