@@ -215,7 +215,7 @@ export default {
       return _.keys(this.profilerPlots).length > 0;
     },
     isHydrophone() {
-      return this.keyword === 'HYDBB';
+      return this.keyword === 'HYDBB' || this.keyword === 'HYDLF';
     },
   },
 
