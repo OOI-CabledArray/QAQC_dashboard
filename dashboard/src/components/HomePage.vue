@@ -1,12 +1,13 @@
 <template>
-  <b-jumbotron
-    class="mt-5"
-    header="RCA Data QA/QC Dashboard"
-    lead="Updated daily at 0800 PST">
-    <img src="oceanographyUW.png" alt="UW Oceanography logo" class="small-logo">
-    <img src="ooilogo.png" alt="OOI logo" class="small-logo">
-    <img src="NSF.png" alt="NSF logo" class="med-logo">
-  </b-jumbotron>
+  <div class="jumbotron mt-5 p-5 mb-4 bg-light rounded-3">
+    <div class="container-fluid py-5">
+      <h1 class="display-5 fw-bold">RCA Data QA/QC Dashboard</h1>
+      <p class="col-md-8 fs-4">Updated daily at 0800 PST</p>
+      <img src="oceanographyUW.png" alt="UW Oceanography logo" class="small-logo">
+      <img src="ooilogo.png" alt="OOI logo" class="small-logo">
+      <img src="NSF.png" alt="NSF logo" class="med-logo">
+    </div>
+  </div>
 </template>
 
 <script>

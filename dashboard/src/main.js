@@ -1,24 +1,19 @@
 // Import bootstrap css
 import 'bootstrap/dist/css/bootstrap.css';
-import 'bootstrap-vue/dist/bootstrap-vue.css';
 import 'startbootstrap-sb-admin-2/css/sb-admin-2.css';
 
-import Vue from 'vue';
+import { createApp, h } from 'vue';
 import { mapActions, mapState } from 'vuex';
-import { BootstrapVue, BootstrapVueIcons } from 'bootstrap-vue';
+import BootstrapVueNext from 'bootstrap-vue-next';
 import axios from 'axios';
 import App from './App.vue';
 import router from './router';
 import store from './store';
 
-Vue.use(BootstrapVue); // letting project styling override BootstrapVue styling
-Vue.use(BootstrapVueIcons);
+// Import bootstrap-vue-next styles
+import 'bootstrap-vue-next/dist/bootstrap-vue-next.css';
 
-Vue.config.productionTip = false;
-
-new Vue({
-  router,
-  store,
+const app = createApp({
   computed: {
     ...mapState({
       allCSVs: (state) => state.hitlList,
@@ -89,5 +84,11 @@ new Vue({
   created() {
     this.getIndexes();
   },
-  render: (h) => h(App),
-}).$mount('#app');
+  render: () => h(App),
+});
+
+app.use(store);
+app.use(router);
+app.use(BootstrapVueNext);
+
+app.mount('#app');
