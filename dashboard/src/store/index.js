@@ -1,9 +1,6 @@
-import Vue from 'vue';
-import Vuex from 'vuex';
+import { createStore } from 'vuex';
 
-Vue.use(Vuex);
-
-export default new Vuex.Store({
+export default createStore({
   state: {
     plotsURL: `${process.env.BASE_URL}QAQC_plots`,
     hitlURL: `${process.env.BASE_URL}HITL_notes`,
