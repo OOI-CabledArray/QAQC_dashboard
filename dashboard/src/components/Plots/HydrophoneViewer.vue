@@ -63,7 +63,7 @@ export default {
       imageExists: {},
       imageCache: {}, // Cache structure: { instrumentId_url: boolean }
       selectedYear: currentYear,
-      availableYears: Array.from({ length: currentYear - 2018 + 1 },
+      availableYears: Array.from({ length: currentYear - 2014 + 1 },
         (_, i) => currentYear - i).sort(),
       maxDaysInRange: this.calculateMaxDays(currentYear),
       today: currentDate,
