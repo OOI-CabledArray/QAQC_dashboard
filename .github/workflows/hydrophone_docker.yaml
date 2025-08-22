@@ -40,8 +40,8 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: false
-          activate-environment: rca-data-env
-          environment-file: .ci/environment.yaml
+          activate-environment: hydrophone-env
+          environment-file: .ci/hydrophone.yaml
           use-only-tar-bz2: true
       - name: Print conda env
         run: |

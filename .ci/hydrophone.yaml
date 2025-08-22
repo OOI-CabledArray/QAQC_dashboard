@@ -1,0 +1,8 @@
+name: hydrophone-env
+channels:
+- conda-forge
+dependencies:
+- python
+- setuptools
+- wheel
+- prefect<3,>=2.20
