@@ -5,4 +5,4 @@ dependencies:
 - python
 - setuptools
 - wheel
-- prefect<3,>=2.20
+- prefect >=2.20,<3
