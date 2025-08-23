@@ -9,7 +9,7 @@ env:
   PYTHON_VERSION: 3.11
 
 jobs:
-  run-acoustic-pipeline:
+  run-acoustsic-pipeline:
     name: ${{matrix.name}} spectrograms
     runs-on: ubuntu-latest
     strategy:
@@ -39,8 +39,8 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: false
-          activate-environment: rca-data-env
-          environment-file: .ci/environment.yaml
+          activate-environment: hydrophone-env
+          environment-file: .ci/hydrophone.yaml
       - name: Print conda env
         run: |
           conda info

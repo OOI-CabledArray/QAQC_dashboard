@@ -6,7 +6,3 @@ dependencies:
 - python==3.11
 - setuptools>78.0.0
 - wheel>0.34.0
-- pip
-- pip:
-  - prefect==2.20.21
-  - pydantic==2.11.7
