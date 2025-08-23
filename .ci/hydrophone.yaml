@@ -3,7 +3,7 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- python
+- python==3.11
 - setuptools
 - wheel
-- prefect >=2.20,<3
+- prefect>=2.20,<3
