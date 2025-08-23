@@ -42,7 +42,6 @@ jobs:
           auto-activate-base: false
           activate-environment: hydrophone-env
           environment-file: .ci/hydrophone.yaml
-          use-only-tar-bz2: true
       - name: Print conda env
         run: |
           conda info

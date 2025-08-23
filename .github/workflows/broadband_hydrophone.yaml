@@ -41,7 +41,6 @@ jobs:
           auto-activate-base: false
           activate-environment: rca-data-env
           environment-file: .ci/environment.yaml
-          use-only-tar-bz2: true
       - name: Print conda env
         run: |
           conda info
