@@ -1,4 +1,4 @@
-name: hydrophone-env
+name: hydrophone-env #TODO shouldn't need this, just rebuild ooi-hyd-tools docker image...
 channels:
 - conda-forge
 - defaults
