@@ -14,6 +14,14 @@ jobs:
         include:
           - refdes: 'RS01SLBS-MJ01A-05-HYDLFA101'
             name: 'RS01SLBS-MJ01A-05-HYDLFA101'
+          - refdes: 'RS01SUM1-LJ01B-05-HYDLFA104'
+            name: 'RS01SUM1-LJ01B-05-HYDLFA104'
+          - refdes: 'RS03AXBS-MJ03A-05-HYDLFA301'
+            name: 'RS03AXBS-MJ03A-05-HYDLFA301'
+          - refdes: 'RS03ECAL-MJ03E-09-HYDLFA304'
+            name: 'RS03ECAL-MJ03E-09-HYDLFA304'
+          - refdes: 'RS03CCAL-MJ03F-06-HYDLFA305'
+            name: 'RS03CCAL-MJ03F-06-HYDLFA305'
     defaults:
       run:
         shell: bash -l {0}
