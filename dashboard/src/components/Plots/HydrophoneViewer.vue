@@ -51,7 +51,7 @@ export default {
   props: {
     instruments: {
       type: Array,
-      default: () => ['HYDBBA102', 'HYDBBA105', 'HYDBBA106', 'HYDBBA302', 'HYDLFA101'], // 'HYDBBA303'
+      default: () => ['HYDBBA102', 'HYDBBA105', 'HYDBBA106', 'HYDBBA302', 'HYDLFA101', 'HYDLFA104', 'HYDLFA301', 'HYDLFA304', 'HYDLFA305'], // 'HYDBBA303'
     },
   },
   data() {
