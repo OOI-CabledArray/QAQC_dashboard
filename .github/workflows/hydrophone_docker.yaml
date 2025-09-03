@@ -42,5 +42,5 @@ jobs:
           # Authenticate with prefect2 cloud 
           prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
           # Run full acoustic pipeline mseed -> spectrograms
-          acoustic-pipeline --hyd-refdes ${{matrix.refdes}} --fudge-factor 0.021 --apply-cals true --s3-sync true --stages all --parallel-in-cloud true
+          acoustic-pipeline --hyd-refdes ${{matrix.refdes}} --fudge-factor 0.021 --apply-cals true --s3-sync true --flag all --parallel-in-cloud true
   # TODO update these args when rebuild container
