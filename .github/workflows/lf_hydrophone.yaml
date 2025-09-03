@@ -1,0 +1,39 @@
+name: LF Hydrophones (Docker Image)
+on:
+  schedule:
+  - cron: "0 11 * * *" #every day at 12:00 UTC (4:00 AM PST)
+  workflow_dispatch:
+
+jobs:
+  run-acoustic-pipeline:
+    name: ${{matrix.name}} spectrograms
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - refdes: 'RS01SLBS-MJ01A-05-HYDLFA101'
+            name: 'RS01SLBS-MJ01A-05-HYDLFA101'
+    defaults:
+      run:
+        shell: bash -l {0}
+    container:
+      image: jdduprey/ooi-hyd-tools:latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GH_PAT }}
+      - name: Run acoustic pipeline mseed -> spectrograms
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          TASK_ROLE_ARN: ${{ secrets.TASK_ROLE_ARN }}
+          EXECUTION_ROLE_ARN: ${{ secrets.EXECUTION_ROLE_ARN }}
+          PREFECT_WORKSPACE: jdupreyuwedu/ooi-rca-prefect2
+          PREFECT_KEY: ${{ secrets.PREFECT_KEY }}
+          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          # Authenticate with prefect2 cloud 
+          prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
+          # Run full acoustic pipeline with LF flag ooipy -> spectrograms
+          acoustic-pipeline --hyd-refdes ${{matrix.refdes}} --flag low_freq --s3-sync true --parallel-in-cloud true
