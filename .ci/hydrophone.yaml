@@ -1,8 +1,0 @@
-name: hydrophone-env #TODO shouldn't need this, just rebuild ooi-hyd-tools docker image...
-channels:
-- conda-forge
-- defaults
-dependencies:
-- python==3.11
-- setuptools>78.0.0
-- wheel>0.34.0
