@@ -21,7 +21,7 @@
     <b-nav-item-dropdown>
       <template #button-content>
         <i class="fas fa-chalkboard"></i>
-        <span>APL Status Dashboards</span>
+        <span>APL+RCA Links</span>
       </template>
       <b-dropdown-item
         v-for="site in aplSites"

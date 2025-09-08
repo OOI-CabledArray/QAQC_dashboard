@@ -280,6 +280,11 @@ export default new Vuex.Store({
         route: 'https://orca.ooirsn.uw.edu/opod/',
         external: true,
       },
+      {
+        title: 'QAQC HITL Notes Interface',
+        route: 'https://www.appsheet.com/Account/Login?appName=RCA%20HITL%20Notes%20Interface&FullScope=False&provider=google&returnUrl=https%3A%2F%2Fwww.appsheet.com%2Fstart%2F8a3bfde2-1806-4155-847c-b10e555ddea1%3Fplatform%3Ddesktop#appName=SensorNotesTracker-59462577&vss=H4sIAAAAAAAAA6WOvQrCMBRGX0W-OU-QVRxE6lJxMR1icwvBNilNqpaQd_fWHzqr4_0u53ASrpZuZdT1BfKUlmtHEySSwmHqSUEqrL2Lg28VhMJed6-xmFYlueCHoJCRK_ExRAqQ6VuB_LdAwBpy0TaWhtk2s2x5k_yeOR4WClmgG6M-t_TMZipn3hpfj4HMkXN-yghbt7n32pnCG5Y2ug2UH3J6VTNvAQAA&view=My%20Sensors',
+        external: true,
+      },
     ],
   },
   mutations: {
