@@ -73,11 +73,6 @@
         role="tabpanel"
       >
         <b-list-group>
-          <b-list-group-item>
-            <b-link :to="{ path: `/status/${item.hitl}`}">
-              HITL Status
-            </b-link>
-          </b-list-group-item>
           <b-list-group-item v-for="group in item.groups" :key="group.key">
             <b-link
               v-if="!group.groups"
