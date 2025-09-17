@@ -235,6 +235,7 @@ export default {
 
   .spectrogram-display img {
     width: 100%;
+    height: auto;
     border: 1px solid #ccc;
     border-radius: 4px;
   }
@@ -248,7 +249,7 @@ export default {
   }
 
   .no-data-message {
-    height: 400px;
+    aspect-ratio: 2/1;
     display: flex;
     align-items: center;
     justify-content: center;
