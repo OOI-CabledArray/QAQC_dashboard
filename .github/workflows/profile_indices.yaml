@@ -1,4 +1,4 @@
-name: Index Profiles (daily)
+name: Index Profiles (Daily)
 # generate new profile indices and push to the remote indices repo
 on:
 #   schedule:
