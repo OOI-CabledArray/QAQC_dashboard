@@ -10,14 +10,14 @@ env:
 
 jobs:
   generate-profile-indices:
-    name: generate profile indices
+    name: Generate profile indices
     runs-on: ubuntu-latest
     steps:
        - name: Check out repo
          uses: actions/checkout@v4
          with:
           repository: jdduprey/profileIndices
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT_JD }}
        - name: Setup python
          uses: actions/setup-python@v5
          with:
