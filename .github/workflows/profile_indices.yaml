@@ -38,18 +38,15 @@ jobs:
          run: pip install git+https://github.com/jdduprey/profileIndices.git@main
        - name: Generate profile indices
          run: |
-           cd profileIndices
            index-profiles --profiler 'RS03AXPS' --dataSource 'zarr' --fileCreation 'append'
            index-profiles --profiler 'RS01SBPS' --dataSource 'zarr' --fileCreation 'append'
            index-profiles --profiler 'CE040SPS' --dataSource 'zarr' --fileCreation 'append'
        - name: Configure git
          run: |
-           cd profileIndices
            git config user.name "github-actions[bot]"
            git config user.email "github-actions[bot]@users.noreply.github.com"
        - name: Commit and push updates to index CSVs
          run: |
-           cd profileIndices
            git add -A
            git commit -m "Automated CSV update" || echo "No changes"
            git push
