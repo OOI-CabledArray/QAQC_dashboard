@@ -1,0 +1,58 @@
+name: Index Profiles (daily)
+# generate new profile indices and push to the remote indices repo
+on:
+#   schedule:
+#   - cron: "0 11 * * 2-5" 
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: 3.11
+
+jobs:
+  generate-profile-indices:
+    name: generate profile indices
+    runs-on: ubuntu-latest
+    steps:
+       - name: Check out repo
+         uses: actions/checkout@v4
+         with:
+          repository: jdduprey/profileIndices
+          token: ${{ secrets.GH_PAT }}
+       - name: Setup python
+         uses: actions/setup-python@v5
+         with:
+           python-version: ${{ env.PYTHON_VERSION }}
+       - name: Setup miniconda
+         uses: conda-incubator/setup-miniconda@v3
+         with:
+           auto-activate-base: false
+           activate-environment: rca-data-env
+           channel-priority: strict
+           environment-file: .ci/environment.yaml
+           use-only-tar-bz2: true
+       - name: Print conda env
+         run: |
+           conda info
+           conda list
+       - name: Install package
+         run: pip install git+https://github.com/jdduprey/profileIndices.git@main
+       - name: Generate profile indices
+         run: |
+           cd profileIndices
+           index-profiles --profiler 'RS03AXPS' --dataSource 'zarr' --fileCreation 'append'
+           index-profiles --profiler 'RS01SBPS' --dataSource 'zarr' --fileCreation 'append'
+           index-profiles --profiler 'CE040SPS' --dataSource 'zarr' --fileCreation 'append'
+       - name: Configure git
+         run: |
+           cd profileIndices
+           git config user.name "github-actions[bot]"
+           git config user.email "github-actions[bot]@users.noreply.github.com"
+       - name: Commit and push updates to index CSVs
+         run: |
+           cd profileIndices
+           git add -A
+           git commit -m "Automated CSV update" || echo "No changes"
+           git push
+       
+
+       
