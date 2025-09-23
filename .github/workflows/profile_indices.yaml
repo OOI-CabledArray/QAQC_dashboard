@@ -40,7 +40,7 @@ jobs:
          run: |
            index-profiles --profiler 'RS03AXPS' --dataSource 'zarr' --fileCreation 'append'
            index-profiles --profiler 'RS01SBPS' --dataSource 'zarr' --fileCreation 'append'
-           index-profiles --profiler 'CE040SPS' --dataSource 'zarr' --fileCreation 'append'
+           index-profiles --profiler 'CE04OSPS' --dataSource 'zarr' --fileCreation 'append'
        - name: Configure git
          run: |
            git config user.name "github-actions[bot]"
