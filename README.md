@@ -8,6 +8,9 @@
 
 [![Low Freq Hydrophone](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/lf_hydrophone.yaml/badge.svg)](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/lf_hydrophone.yaml)
 
+[![Profiler Indices](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/profile_indices.yaml/badge.svg)](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/profile_indices.yaml)
+
+
 
 Wendi's awesome QAQC Dashboard that will display all the information you need for RCA QAQC Data!
 
