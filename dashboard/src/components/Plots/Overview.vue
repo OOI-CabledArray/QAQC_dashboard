@@ -1,83 +1,136 @@
 <template>
-  <div class="text-left pt-3">
+  <div class="text-left q-pt-md">
     <h1 v-if="filteredPlots.length === 0 && !isHydrophone">
         No Plots found.
     </h1>
-    <b-card no-body v-if="filteredPlots.length > 0 || isHydrophone">
-    <b-tabs card>
-    <b-tab title="Fixed Depths and Colormap Profiles" active v-if=!isHydrophone>
-      <template
-      v-for="url in profilePlots">
-        <b-img
-        v-if="isPNG(url)"
-        :key="url"
-        :src="url"
-        fluid
-        lazy
-        ></b-img>
-        <object
-        v-if="isSVG(url)"
-        :key="url"
-        :data="url"
-        fluid
-        lazy
-        type="image/svg+xml"
-        class="svg-object"
-        ></object>
-      </template>
-    </b-tab>
-    <b-tab title="Spectrogram Viewer" v-if="isHydrophone">
-      <HydrophoneViewer/>
-    </b-tab>
-    <b-tab title="Depth Binned Profiler Data" v-if="hasBinned">
-        <div v-for="(vars, key) in binnedPlots" :key="key">
-            <h5>
-                {{key}}
-            </h5>
-            <b-card no-body>
-                <b-tabs pills card vertical>
-                    <b-tab
-                      :title="toTitle(varkey)"
-                      v-for="(plots, varkey) in vars"
-                      :key="varkey"
-                    >
-                      <BinnedViewer
-                        :plots="plots"
-                        :variable="varkey"
-                        :refdes="key"
-                      />
-                    </b-tab>
-                </b-tabs>
-            </b-card>
-            <hr/>
-        </div>
-    </b-tab>
-    <b-tab title="Profiles" v-if="hasProfiles">
-        <div v-for="(vars, key) in profilerPlots" :key="key">
-            <h5>
-                {{key}}
-            </h5>
-            <b-card no-body>
-                <b-tabs pills card vertical>
-                    <b-tab
-                      :title="toTitle(varkey)"
-                      v-for="(plots, varkey) in vars"
-                      :key="varkey"
-                    >
-                      <!--NOTE component imported below-->
-                      <ProfileViewer
-                        :plots="plots"
-                        :variable="varkey"
-                        :refdes="key"
-                      />
-                    </b-tab>
-                </b-tabs>
-            </b-card>
-            <hr/>
-        </div>
-    </b-tab>
-    </b-tabs>
-    </b-card>
+    <q-card v-if="filteredPlots.length > 0 || isHydrophone" class="q-mt-md">
+      <q-tabs
+        v-model="tab"
+        dense
+        class="text-grey"
+        active-color="primary"
+        indicator-color="primary"
+        align="justify"
+        narrow-indicator
+      >
+        <q-tab name="profiles" label="Fixed Depths and Colormap Profiles" v-if="!isHydrophone" />
+        <q-tab name="spectrogram" label="Spectrogram Viewer" v-if="isHydrophone" />
+        <q-tab name="binned" label="Depth Binned Profiler Data" v-if="hasBinned" />
+        <q-tab name="profiler" label="Profiles" v-if="hasProfiles" />
+      </q-tabs>
+
+      <q-separator />
+
+      <q-tab-panels v-model="tab" animated>
+        <q-tab-panel name="profiles" v-if="!isHydrophone">
+          <div v-for="url in profilePlots" :key="url">
+            <q-img
+              v-if="isPNG(url)"
+              :src="url"
+              class="q-mb-md"
+              fit="contain"
+              loading="lazy"
+            />
+            <object
+              v-if="isSVG(url)"
+              :data="url"
+              type="image/svg+xml"
+              class="svg-object q-mb-md"
+            />
+          </div>
+        </q-tab-panel>
+
+        <q-tab-panel name="spectrogram" v-if="isHydrophone">
+          <HydrophoneViewer/>
+        </q-tab-panel>
+
+        <q-tab-panel name="binned" v-if="hasBinned">
+          <div v-for="(vars, key) in binnedPlots" :key="key">
+            <h5>{{ key }}</h5>
+            <q-card class="q-mb-md">
+              <q-tabs
+                v-model="binnedTab[key]"
+                vertical
+                class="text-teal"
+              >
+                <q-tab
+                  v-for="(plots, varkey) in vars"
+                  :key="varkey"
+                  :name="varkey"
+                  :label="toTitle(varkey)"
+                />
+              </q-tabs>
+
+              <q-separator vertical />
+
+              <q-tab-panels
+                v-model="binnedTab[key]"
+                animated
+                vertical
+                transition-prev="jump-up"
+                transition-next="jump-down"
+              >
+                <q-tab-panel
+                  v-for="(plots, varkey) in vars"
+                  :key="varkey"
+                  :name="varkey"
+                >
+                  <BinnedViewer
+                    :plots="plots"
+                    :variable="varkey"
+                    :refdes="key"
+                  />
+                </q-tab-panel>
+              </q-tab-panels>
+            </q-card>
+            <q-separator class="q-my-md" />
+          </div>
+        </q-tab-panel>
+
+        <q-tab-panel name="profiler" v-if="hasProfiles">
+          <div v-for="(vars, key) in profilerPlots" :key="key">
+            <h5>{{ key }}</h5>
+            <q-card class="q-mb-md">
+              <q-tabs
+                v-model="profilerTab[key]"
+                vertical
+                class="text-teal"
+              >
+                <q-tab
+                  v-for="(plots, varkey) in vars"
+                  :key="varkey"
+                  :name="varkey"
+                  :label="toTitle(varkey)"
+                />
+              </q-tabs>
+
+              <q-separator vertical />
+
+              <q-tab-panels
+                v-model="profilerTab[key]"
+                animated
+                vertical
+                transition-prev="jump-up"
+                transition-next="jump-down"
+              >
+                <q-tab-panel
+                  v-for="(plots, varkey) in vars"
+                  :key="varkey"
+                  :name="varkey"
+                >
+                  <ProfileViewer
+                    :plots="plots"
+                    :variable="varkey"
+                    :refdes="key"
+                  />
+                </q-tab-panel>
+              </q-tab-panels>
+            </q-card>
+            <q-separator class="q-my-md" />
+          </div>
+        </q-tab-panel>
+      </q-tab-panels>
+    </q-card>
   </div>
 </template>
 
@@ -123,6 +176,9 @@ export default {
       filteredPlotList: [],
       depthUnit: 'meters',
       profUnit: 'profile',
+      tab: 'profiles', // Default tab
+      binnedTab: {}, // Dynamic tabs for binned data
+      profilerTab: {}, // Dynamic tabs for profiler data
     };
   },
   mounted() {
@@ -132,6 +188,17 @@ export default {
       // once plots are loaded, perform filtering or other logic
       this.filterPlotList();
     });
+
+    // Set default main tab based on what's available
+    if (this.isHydrophone) {
+      this.tab = 'spectrogram';
+    } else if (this.hasBinned) {
+      this.tab = 'binned';
+    } else if (this.hasProfiles) {
+      this.tab = 'profiler';
+    } else {
+      this.tab = 'profiles';
+    }
   },
   computed: {
     ...mapState({
@@ -286,6 +353,30 @@ export default {
     overlays: 'filterPlotList',
     dataRange: 'filterPlotList',
     timeSpan: 'filterPlotList',
+    binnedPlots: {
+      handler(newVal) {
+        // Initialize tabs for each binned plot group
+        Object.keys(newVal).forEach((key) => {
+          const firstVar = Object.keys(newVal[key])[0];
+          if (firstVar && !this.binnedTab[key]) {
+            this.$set(this.binnedTab, key, firstVar);
+          }
+        });
+      },
+      immediate: true,
+    },
+    profilerPlots: {
+      handler(newVal) {
+        // Initialize tabs for each profiler plot group
+        Object.keys(newVal).forEach((key) => {
+          const firstVar = Object.keys(newVal[key])[0];
+          if (firstVar && !this.profilerTab[key]) {
+            this.$set(this.profilerTab, key, firstVar);
+          }
+        });
+      },
+      immediate: true,
+    },
   },
 };
 </script>

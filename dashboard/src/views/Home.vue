@@ -1,7 +1,7 @@
 <template>
-  <b-container fluid>
+  <div class="q-pa-md">
     <HomePage />
-  </b-container>
+  </div>
 </template>
 
 <script>

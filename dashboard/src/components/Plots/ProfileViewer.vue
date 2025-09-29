@@ -1,23 +1,29 @@
 <template>
   <div>
-    <b-form-input
-        :id="`${refdes}--${variable}--selector`"
-        type="range"
-        v-model="profileIdx"
-        min="0"
-        :max="maxProfileIdx"
-    >
-    </b-form-input>
-    <b-img
-     v-if="isPNG(currentPlot.url)"
-     :src="currentPlot.url" lazy fluid>
-    </b-img>
-    <object v-if="isSVG(currentPlot.url)"
+    <q-slider
+      :id="`${refdes}--${variable}--selector`"
+      v-model="profileIdx"
+      :min="0"
+      :max="maxProfileIdx"
+      :step="1"
+      markers
+      label
+      class="q-mb-md"
+    />
+    <q-img
+      v-if="isPNG(currentPlot.url)"
+      :src="currentPlot.url"
+      loading="lazy"
+      fit="contain"
+      class="q-mb-md"
+    />
+    <object
+      v-if="isSVG(currentPlot.url)"
       :key="currentPlot.url"
       :data="currentPlot.url"
       type="image/svg+xml"
       class="svg-object"
-    ></object>
+    />
   </div>
 </template>
 

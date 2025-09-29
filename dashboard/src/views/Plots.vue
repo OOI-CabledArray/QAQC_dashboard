@@ -1,9 +1,9 @@
 <template>
   <div>
   <TopNavBar />
-  <b-container fluid>
-    <b-row>
-      <b-col>
+  <div class="q-pa-md">
+    <div class="row">
+      <div class="col">
         <PlotsOverview
           :keyword="keyword"
           :subkey="subkey"
@@ -11,9 +11,9 @@
           :timeSpan="timeSpan"
           :overlays="overlays"
         />
-      </b-col>
-    </b-row>
-  </b-container>
+      </div>
+    </div>
+  </div>
   </div>
 </template>
 

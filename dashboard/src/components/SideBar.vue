@@ -1,107 +1,139 @@
 <template>
   <!-- Sidebar -->
-  <ul
-    class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion"
-    id="accordionSidebar"
+  <q-drawer
+    v-model="drawer"
+    :width="280"
+    :breakpoint="1024"
+    elevated
+    class="bg-gradient-primary text-white"
   >
     <!-- Sidebar - Brand -->
-    <a
-      class="sidebar-brand d-flex align-items-center justify-content-center"
-      href="/"
-    >
-      <div class="sidebar-brand-icon rotate-n-15">
-        <i class="fas fa-fish"></i>
-      </div>
-      <div class="sidebar-brand-text mx-3">Data QA/QC</div>
-    </a>
+    <div class="sidebar-brand q-pa-md text-center">
+      <router-link to="/" class="text-white text-decoration-none">
+        <div class="row items-center justify-center q-gutter-sm">
+          <q-icon name="fas fa-fish" size="md" class="rotate-n-15" />
+          <div class="text-h6">Data QA/QC</div>
+        </div>
+      </router-link>
+    </div>
 
     <!-- Divider -->
-    <hr class="sidebar-divider my-0" />
+    <q-separator color="white" />
 
-    <b-nav-item-dropdown>
-      <template #button-content>
-        <i class="fas fa-chalkboard"></i>
-        <span>APL+RCA Links</span>
-      </template>
-      <b-dropdown-item
-        v-for="site in aplSites"
-        :key="site.route"
-        :href="site.route"
-        target="_blank"
+    <q-list class="text-white">
+      <!-- APL+RCA Links Dropdown -->
+      <q-expansion-item
+        icon="fas fa-chalkboard"
+        label="APL+RCA Links"
+        text-color="white"
+        header-class="text-white"
       >
-        {{ site.title }}
-        <i class="fas fa-external-link-alt" v-if="site.external"></i>
-      </b-dropdown-item>
-    </b-nav-item-dropdown>
+        <q-list>
+          <q-item
+            v-for="site in aplSites"
+            :key="site.route"
+            clickable
+            :href="site.route"
+            target="_blank"
+            class="text-white"
+          >
+            <q-item-section>
+              <q-item-label>{{ site.title }}</q-item-label>
+            </q-item-section>
+            <q-item-section side v-if="site.external">
+              <q-icon name="fas fa-external-link-alt" />
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </q-expansion-item>
 
-    <!-- Divider -->
-    <hr class="sidebar-divider" />
+      <!-- Divider -->
+      <q-separator color="white" class="q-my-md" />
 
-    <!-- Heading -->
-    <div class="sidebar-heading">Views</div>
+      <!-- Heading -->
+      <q-item-label header class="text-white text-weight-bold">Views</q-item-label>
 
-    <li class="nav-item" v-for="item in navList" :key="item.route"
-      v-on:click="updateHITLStatus(item.hitl)">
-      <a
-        class="nav-link"
-        v-if="!item.external && item.groups"
-        v-b-toggle="`${item.route}`"
-        href="#"
-      >
-        {{ item.title }}</a
-      >
-      <a
-        class="nav-link"
-        v-if="!item.external && !item.groups"
-        :href="item.route"
-      >
-        {{ item.title }}</a
-      >
-      <a
-        class="nav-link"
-        v-if="item.external"
-        :href="item.route"
-        target="_blank"
-      >
-        {{ item.title }}
-        <i class="fas fa-external-link-alt"></i>
-      </a>
-      <b-collapse
-        v-if="!item.external && item.groups"
-        :id="item.route"
-        accordion="my-accordion"
-        role="tabpanel"
-      >
-        <b-list-group>
-          <b-list-group-item v-for="group in item.groups" :key="group.key">
-            <b-link
-              v-if="!group.groups"
-              :to="{ path: `/plots?keyword=${group.key}&subkey=-` }"
-              >{{ group.value }}</b-link>
-            <b-dropdown
-              dropright
-              v-if="group.groups"
-              :text="group.value"
-              variant="primary"
-              class="m-2"
-              block
-            >
-              <b-dropdown-item
-                v-for="innerGroup in group.groups"
-                :key="innerGroup.key"
-                :to="{ path: `/plots?keyword=${group.key}&subkey=${innerGroup.key}` }"
+      <!-- Navigation Items -->
+      <div v-for="item in navList" :key="item.route">
+        <!-- Items with groups (expandable) -->
+        <q-expansion-item
+          v-if="!item.external && item.groups"
+          :label="item.title"
+          text-color="white"
+          header-class="text-white"
+          @click="updateHITLStatus(item.hitl)"
+        >
+          <q-list>
+            <div v-for="group in item.groups" :key="group.key">
+              <!-- Simple group items -->
+              <q-item
+                v-if="!group.groups"
+                clickable
+                :to="{ path: `/plots?keyword=${group.key}&subkey=-` }"
+                class="text-white"
               >
-                {{ innerGroup.value }}
-              </b-dropdown-item>
-            </b-dropdown>
-          </b-list-group-item>
-        </b-list-group>
-      </b-collapse>
-    </li>
+                <q-item-section>
+                  <q-item-label>{{ group.value }}</q-item-label>
+                </q-item-section>
+              </q-item>
 
-    <!-- Divider -->
-    <hr class="sidebar-divider d-none d-md-block" />
-  </ul>
+              <!-- Nested groups -->
+              <q-expansion-item
+                v-if="group.groups"
+                :label="group.value"
+                text-color="white"
+                header-class="text-white q-pl-md"
+              >
+                <q-list>
+                  <q-item
+                    v-for="innerGroup in group.groups"
+                    :key="innerGroup.key"
+                    clickable
+                    :to="{ path: `/plots?keyword=${group.key}&subkey=${innerGroup.key}` }"
+                    class="text-white q-pl-lg"
+                  >
+                    <q-item-section>
+                      <q-item-label>{{ innerGroup.value }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-expansion-item>
+            </div>
+          </q-list>
+        </q-expansion-item>
+
+        <!-- Items without groups -->
+        <q-item
+          v-else-if="!item.external && !item.groups"
+          clickable
+          :href="item.route"
+          class="text-white"
+          @click="updateHITLStatus(item.hitl)"
+        >
+          <q-item-section>
+            <q-item-label>{{ item.title }}</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <!-- External items -->
+        <q-item
+          v-else-if="item.external"
+          clickable
+          :href="item.route"
+          target="_blank"
+          class="text-white"
+          @click="updateHITLStatus(item.hitl)"
+        >
+          <q-item-section>
+            <q-item-label>{{ item.title }}</q-item-label>
+          </q-item-section>
+          <q-item-section side>
+            <q-icon name="fas fa-external-link-alt" />
+          </q-item-section>
+        </q-item>
+      </div>
+    </q-list>
+  </q-drawer>
   <!-- End of Sidebar -->
 </template>
 
@@ -111,6 +143,20 @@ import { mapActions, mapState } from 'vuex';
 export default {
   name: 'SideBar',
   props: ['navList'],
+  data() {
+    return {
+      drawer: true, // Drawer is open by default
+    };
+  },
+  mounted() {
+    // Listen for sidebar toggle events
+    this.$root.$on('toggle-sidebar', () => {
+      this.drawer = !this.drawer;
+    });
+  },
+  beforeDestroy() {
+    this.$root.$off('toggle-sidebar');
+  },
   computed: {
     ...mapState({
       aplSites: (state) => state.aplSites,
