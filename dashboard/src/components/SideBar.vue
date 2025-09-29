@@ -117,7 +117,6 @@ export default {
       // DataRange: (state) => state.DataRange,
       // TimeSpan: (state) => state.TimeSpan,
       // Overlay: (state) => state.Overlay,
-
     }),
   },
   methods: {
