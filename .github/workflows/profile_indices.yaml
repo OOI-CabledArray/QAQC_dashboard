@@ -16,14 +16,14 @@ jobs:
        - name: Check out repo
          uses: actions/checkout@v4
          with:
-          repository: jdduprey/profileIndices
+          repository: OOI-CabledArray/profileIndices
           token: ${{ secrets.GH_PAT_JD }}
        - name: Setup python
          uses: actions/setup-python@v5
          with:
            python-version: ${{ env.PYTHON_VERSION }}
        - name: Install package
-         run: pip install git+https://github.com/jdduprey/profileIndices.git@main
+         run: pip install git+https://github.com/OOI-CabledArray/profileIndices.git@main
        - name: Generate profile indices
          run: |
            index-profiles --profiler 'RS03AXPS' --dataSource 'zarr' --fileCreation 'append'
