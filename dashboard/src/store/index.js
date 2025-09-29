@@ -300,15 +300,6 @@ export default new Vuex.Store({
     STORE_HITL_STATUS: (state, hitlStatus) => {
       state.hitlStatus = hitlStatus;
     },
-    STORE_DATARANGE: (state, datarange) => {
-      state.DataRange = datarange;
-    },
-    STORE_TIMESPAN: (state, timespan) => {
-      state.TimeSpan = timespan;
-    },
-    STORE_OVERLAY: (state, overlay) => {
-      state.Overlay = overlay;
-    },
   },
   actions: {
     storePlots: ({ commit }, { plots }) => { // commits plots to STORE_PLOTS
@@ -322,15 +313,6 @@ export default new Vuex.Store({
     },
     storeHITLStatus: ({ commit }, { hitlStatus }) => {
       commit('STORE_HITL_STATUS', hitlStatus);
-    },
-    storeDatarange: ({ commit }, { datarange }) => {
-      commit('STORE_DATARANGE', datarange);
-    },
-    storeTimespan: ({ commit }, { timespan }) => {
-      commit('STORE_TIMESPAN', timespan);
-    },
-    storeOverlay: ({ commit }, { overlay }) => {
-      commit('STORE_OVERLAY', overlay);
     },
   },
   modules: {
