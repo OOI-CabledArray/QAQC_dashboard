@@ -1,14 +1,14 @@
 <template>
   <div id="app">
-    <div id="wrapper">
+    <q-layout view="lHh Lpr lFf">
       <SideBar :navList="sidebarNav" />
-      <div id="content-wrapper" class="d-flex flex-column">
-        <!-- Main Content -->
-        <div id="content">
+
+      <q-page-container>
+        <q-page class="q-pa-md">
           <router-view/>
-        </div>
-      </div>
-    </div>
+        </q-page>
+      </q-page-container>
+    </q-layout>
   </div>
 </template>
 

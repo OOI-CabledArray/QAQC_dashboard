@@ -1,18 +1,19 @@
-// Import bootstrap css
-import 'bootstrap/dist/css/bootstrap.css';
-import 'bootstrap-vue/dist/bootstrap-vue.css';
-import 'startbootstrap-sb-admin-2/css/sb-admin-2.css';
+// Import Quasar css
+import '@quasar/extras/material-icons/material-icons.css';
+import '@quasar/extras/fontawesome-v6/fontawesome-v6.css';
+import 'quasar/dist/quasar.css';
 
 import Vue from 'vue';
 import { mapActions, mapState } from 'vuex';
-import { BootstrapVue, BootstrapVueIcons } from 'bootstrap-vue';
+import Quasar from 'quasar';
 import axios from 'axios';
 import App from './App.vue';
 import router from './router';
 import store from './store';
 
-Vue.use(BootstrapVue); // letting project styling override BootstrapVue styling
-Vue.use(BootstrapVueIcons);
+Vue.use(Quasar, {
+  config: {},
+});
 
 Vue.config.productionTip = false;
 

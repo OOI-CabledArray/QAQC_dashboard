@@ -1,28 +1,37 @@
 <template>
-  <b-navbar toggleable="lg" type="dark" variant="dark">
-    <b-navbar-toggle target="accordionSidebar"></b-navbar-toggle>
+  <q-toolbar class="bg-dark text-white">
+    <q-btn
+      flat
+      round
+      dense
+      icon="menu"
+      @click="toggleSidebar"
+    />
+    <q-space />
     <!-- Right aligned nav items -->
-    <b-navbar-nav class="ml-auto">
-      <b-nav-item-dropdown
+    <div class="row q-gutter-sm">
+      <q-btn-dropdown
         v-for="filter in navFilters"
         :key="filter.key"
-        right
+        color="primary"
+        :label="filter.title"
       >
-        <!-- Using 'button-content' slot -->
-        <template #button-content>
-          {{ filter.title }}
-        </template>
-        <!-- @click = on click performs following functions -->
-        <b-dropdown-item
-          v-for="item in filter.filters"
-          :key="item.key"
-          @click="getPath(filter.key, item.key); checkFilterItem(item) "
-        >
-          {{ item.value }}
-        </b-dropdown-item>
-      </b-nav-item-dropdown>
-    </b-navbar-nav>
-  </b-navbar>
+        <q-list>
+          <q-item
+            v-for="item in filter.filters"
+            :key="item.key"
+            clickable
+            v-close-popup
+            @click="getPath(filter.key, item.key); checkFilterItem(item)"
+          >
+            <q-item-section>
+              <q-item-label>{{ item.value }}</q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </q-btn-dropdown>
+    </div>
+  </q-toolbar>
 </template>
 
 <script>
@@ -78,6 +87,10 @@ export default {
       'storeTimespan',
       'storeOverlay',
     ]),
+    toggleSidebar() {
+      // Emit event to root to toggle sidebar
+      this.$root.$emit('toggle-sidebar');
+    },
     checkFilterItem(item) {
       console.log(item);
       switch (item.key) {
