@@ -41,7 +41,7 @@ The code for the infrastructure, backend, and frontend are hosted in 3 separate 
     conda activate qaqcdev
     npm install -g @vue/cli
     ```
-3. Download a subset of qaqc images, and the image index from the RCA QAQC s3 bucket
+3. Download a subset of qaqc images, and the image index from the RCA QAQC s3 bucket. Images should live at `QAQC_dashboad/dashboard/public/QAQC_plots/`
    
     ```bash
     python ./dev/setup_dev_images.py
