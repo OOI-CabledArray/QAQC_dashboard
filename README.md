@@ -27,21 +27,6 @@ The code for the infrastructure, backend, and frontend are hosted in 3 separate 
 - [`cloud-infrastructure`](https://github.com/OOI-CabledArray/cloud-infrastructure): contains terraform code for deploying the underlying infrastructure such as Virtual Private Cloud (VPC), CDN, Elastic Container Service (ECS) Tasks, Identity Access Management (IAM), and S3 Buckets.
 
 
-## Running the png creation script
-
-1. Install the conda environment.
-
-    ```bash
-    conda env create -f environment.yaml
-    ```
-
-2. Run the script based on the choices. Below example will display the docs for the script.
-
-    ```bash
-    conda activate qaqcdev
-    qaqc_pipeline --help
-    ```
-
 ## Setup (Will need conda to be installed)
 
 1. Install the conda environment. **This will include nodejs and yarn.**
@@ -56,8 +41,13 @@ The code for the infrastructure, backend, and frontend are hosted in 3 separate 
     conda activate qaqcdev
     npm install -g @vue/cli
     ```
-
-3. Go to the dashboard folder, install app and serve.
+3. Download a subset of qaqc images, and the image index from the RCA QAQC s3 bucket
+   
+    ```bash
+    python ./dev/setup_dev_images.py
+    ```
+  
+4. Go to the dashboard folder, install app and serve.
 
     ```bash
     cd dashboard
