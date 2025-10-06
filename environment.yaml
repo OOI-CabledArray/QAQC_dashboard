@@ -10,6 +10,7 @@ dependencies:
 - fsspec
 - cmocean
 - s3fs
+- tqdm
 # Frontend stuff
 - yarn
 - nodejs

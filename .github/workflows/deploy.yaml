@@ -59,6 +59,7 @@ jobs:
             --exclude 'QAQC_plots/*' \
             --exclude 'HITL_notes/*' \
             --exclude 'spectrograms/*' \
+            --exclude 'dev/*' \
             --delete \
             ./dist \
             s3://ooi-rca-qaqc-prod
