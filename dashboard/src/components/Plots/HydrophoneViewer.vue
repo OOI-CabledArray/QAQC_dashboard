@@ -246,6 +246,7 @@ export default {
     font-size: 0.9rem;
     margin-top: 5px;
     margin-bottom: 0;
+    width: 140px;
   }
 
   .no-data-message {
