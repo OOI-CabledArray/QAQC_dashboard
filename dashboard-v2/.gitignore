@@ -1,0 +1,12 @@
+# Project
+/public/QAQC_plots/
+
+# Node
+npm-debug.log*
+node_modules/
+dist/
+
+# Editors
+.vscode
+.idea
+.zed
