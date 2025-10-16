@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import PlotsOverview from '@/components/Plots/Overview.vue'
 import TopNavBar from '@/components/TopNavBar.vue'
+import PlotsOverview from '@/components/plots/Overview.vue'
 
 const {
   dataRange = 'full',

@@ -7,7 +7,7 @@ import HydrophoneViewer from '@/components/plots/HydrophoneViewer.vue'
 import ProfileViewer from '@/components/plots/ProfileViewer.vue'
 import { useStore, type CSVFile } from '@/store'
 
-type BinnedPlot = {
+type BinnedPlotDataValues = {
   ref: string
   variable: string
   depthString: string
@@ -16,13 +16,25 @@ type BinnedPlot = {
   dataRange: string
 }
 
-type ProfilerPlot = {
+type BinnedPlot = BinnedPlotDataValues & {
+  url: string
+  depth: number
+  depthUnit: string
+}
+
+type ProfilerPlotDataValues = {
   ref: string
   variable: string
   profilerString: string
   timeSpan: string
   overlays: string
   dataRange: string
+}
+
+type ProfilerPlot = ProfilerPlotDataValues & {
+  url: string
+  profile: number
+  profUnit: string
 }
 
 const {
@@ -44,7 +56,7 @@ const store = useStore()
 let filteredPlotList = $ref<string[]>([])
 
 const depthUnit = 'meters'
-const profileUnit = 'profile'
+const profUnit = 'profile'
 
 onMounted(async () => {
   // Load plots even when user doesn't navigate to the home page first.
@@ -66,30 +78,27 @@ const csvTables = $computed(() =>
   }),
 )
 
-const binnedPlots: Record<string, Record<string, BinnedPlot>> = $computed(() => {
+const binnedPlots: Record<string, Record<string, BinnedPlot[]>> = $computed(() => {
   const binnedPlotLines = filteredPlotList.filter((plot) => plot.includes(depthUnit))
   const binnedCollections = binnedPlotLines.map((line) => {
     const names = (line.split('/').at(-1) as string).replace('.png', '').split('_')
     const plot = zipObject(
       ['ref', 'variable', 'depthString', 'timeSpan', 'overlays', 'dataRange'],
       names,
-    ) as BinnedPlot
+    ) as BinnedPlotDataValues
 
     return {
       ...plot,
       url: getURL(line),
       depth: parseDepth(plot.depthString),
       depthUnit: depthUnit,
-    }
+    } satisfies BinnedPlot
   })
 
   const groupedByRef = groupBy(binnedCollections, (current) => current.ref)
-  const groupedByVariable: Record<string, Record<string, BinnedPlot>> = {}
+  const groupedByVariable: Record<string, Record<string, BinnedPlot[]>> = {}
   forEach(groupedByRef, (value, key) => {
-    groupedByVariable[key] = groupBy(value, (current) => current.variable) as unknown as Record<
-      string,
-      BinnedPlot
-    >
+    groupedByVariable[key] = groupBy(value, (current) => current.variable)
   })
 
   return groupedByVariable
@@ -100,7 +109,7 @@ const profilePlots = $computed(() => {
     (plot) =>
       (plot.endsWith('.png') || plot.endsWith('.svg')) &&
       !plot.includes(depthUnit) &&
-      !plot.includes(profileUnit),
+      !plot.includes(profUnit),
   )
   console.log('profile plots:', createPlotURL(profilePlots).sort())
   return createPlotURL(profilePlots).sort()
@@ -108,30 +117,27 @@ const profilePlots = $computed(() => {
 
 const hasBinned = $computed(() => Object.keys(binnedPlots).length > 0)
 
-const profilerPlots: Record<string, Record<string, ProfilerPlot>> = $computed(() => {
-  const profilerPlots = filteredPlotList.filter((plot) => plot.includes(profileUnit))
+const profilerPlots: Record<string, Record<string, ProfilerPlot[]>> = $computed(() => {
+  const profilerPlots = filteredPlotList.filter((plot) => plot.includes(profUnit))
   const profilerCollections = profilerPlots.map((line) => {
     const names = (line.split('/').at(-1) as string).replace('.png', '').split('_')
     const plot = zipObject(
       ['ref', 'variable', 'profilerString', 'timeSpan', 'overlays', 'dataRange'],
       names,
-    ) as ProfilerPlot
+    ) as ProfilerPlotDataValues
 
     return {
       ...plot,
       url: getURL(line),
       profile: parseProfile(plot.profilerString),
-      profUnit: profileUnit,
-    }
+      profUnit: profUnit,
+    } satisfies ProfilerPlot
   })
 
   const groupedByRef = groupBy(profilerCollections, (current) => current.ref)
-  const groupedByVariable: Record<string, Record<string, ProfilerPlot>> = {}
+  const groupedByVariable: Record<string, Record<string, ProfilerPlot[]>> = {}
   forEach(groupedByRef, (value, key) => {
-    groupedByVariable[key] = groupBy(value, (current) => current.variable) as unknown as Record<
-      string,
-      ProfilerPlot
-    >
+    groupedByVariable[key] = groupBy(value, (current) => current.variable)
   })
 
   return groupedByVariable
@@ -183,7 +189,7 @@ function parseDepth(depthString: string) {
 }
 
 function parseProfile(profileString: string) {
-  const str = profileString.replace(profileUnit, '')
+  const str = profileString.replace(profUnit, '')
   return toNumber(str)
 }
 
