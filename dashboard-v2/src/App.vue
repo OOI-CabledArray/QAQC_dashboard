@@ -1,30 +1,35 @@
-<script setup lang="ts">
-import HelloWorld from '@/components/HelloWorld.vue'
+<script lang="ts" setup>
+import SideBar from '@/components/SideBar.vue'
 </script>
 
 <template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img alt="Vite logo" class="logo" src="/vite.svg" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img alt="Vue logo" class="logo vue" src="./assets/vue.svg" />
-    </a>
+  <div id="app">
+    <div id="wrapper">
+      <side-bar />
+      <div id="content-wrapper" class="d-flex flex-column">
+        <!-- Main Content -->
+        <div id="content">
+          <router-view />
+        </div>
+      </div>
+    </div>
   </div>
-  <HelloWorld msg="Vite + Vue" />
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+<style>
+html,
+body {
+  height: 100%;
+  width: 100%;
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+
+#app {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+  height: 100%;
+  width: 100%;
 }
 </style>

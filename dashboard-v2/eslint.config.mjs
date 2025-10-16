@@ -12,7 +12,7 @@ import typescript from 'typescript-eslint'
 export default defineConfig([
   eslint.configs.recommended,
   typescript.configs.recommended,
-  ...vue.configs['flat/recommended'],
+  vue.configs['flat/recommended'],
   prettier,
   imports.flatConfigs.recommended,
   {
@@ -31,14 +31,17 @@ export default defineConfig([
       },
     },
     rules: {
+      'no-undef': 'off', // Handled by TypeScript.
       'max-len': ['warn', 100, 2],
       '@typescript-eslint/ban-ts-comment': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': 'warn',
       '@typescript-eslint/restrict-template-expressions': 'off',
-      'import/order': ['error', { 'newlines-between': 'always', alphabetize: { order: 'asc' } }],
       'import/no-unresolved': 'off',
-      'unused-imports/no-unused-imports': 'error',
+      'import/order': ['warn', { 'newlines-between': 'always', alphabetize: { order: 'asc' } }],
+      'unused-imports/no-unused-imports': 'warn',
       'vue/attributes-order': ['warn', { alphabetical: true }],
+      'vue/block-order': ['warn', { order: ['script', 'template', 'style'] }],
       'vue/multi-word-component-names': 'off',
       'vue/no-setup-props-destructure': 'off',
       'vue/no-template-shadow': 'off',
