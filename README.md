@@ -10,7 +10,7 @@
 
 [![Profiler Indices](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/profile_indices.yaml/badge.svg)](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/profile_indices.yaml)
 
-
+[![Refresh S3 Image Index](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/create_index.yaml/badge.svg)](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/create_index.yaml)
 
 Wendi's awesome QAQC Dashboard that will display all the information you need for RCA QAQC Data!
 
