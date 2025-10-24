@@ -3,7 +3,7 @@ import HomePage from '@/components/HomePage.vue'
 </script>
 
 <template>
-  <b-container fluid>
+  <div class="h-svh">
     <home-page />
-  </b-container>
+  </div>
 </template>

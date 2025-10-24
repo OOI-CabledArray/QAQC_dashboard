@@ -3,15 +3,12 @@ import SideBar from '@/components/SideBar.vue'
 </script>
 
 <template>
-  <div id="app">
-    <div id="wrapper">
+  <div class="app flex">
+    <div class="flex-none h-svh md:w-[224px] w-[104px]">
       <side-bar />
-      <div id="content-wrapper" class="d-flex flex-column">
-        <!-- Main Content -->
-        <div id="content">
-          <router-view />
-        </div>
-      </div>
+    </div>
+    <div class="flex-auto">
+      <router-view />
     </div>
   </div>
 </template>
@@ -19,17 +16,14 @@ import SideBar from '@/components/SideBar.vue'
 <style>
 html,
 body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: white;
   height: 100%;
   width: 100%;
 }
 
-#app {
+.app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  height: 100%;
-  width: 100%;
 }
 </style>

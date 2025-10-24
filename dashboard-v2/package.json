@@ -6,14 +6,17 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview",
+    "serve": "vite preview",
     "lint": "vue-tsc --noEmit && eslint --ext .js,.ts,.vue . && prettier --ignore-path .gitignore --check .",
     "fix": "eslint --ext .js,.ts,.vue --fix . && prettier --ignore-path .gitignore --write ."
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.1.0",
+    "@primeuix/themes": "^1.2.5",
     "@tailwindcss/vite": "^4.1.14",
     "lodash-es": "^4.17.21",
     "pinia": "^3.0.3",
+    "primevue": "^4.4.1",
     "tailwindcss": "^4.1.14",
     "tailwindcss-primeui": "^0.6.1",
     "vue": "^3.5.22",
