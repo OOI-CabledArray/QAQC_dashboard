@@ -45,6 +45,7 @@ export default defineConfig([
       'vue/multi-word-component-names': 'off',
       'vue/no-setup-props-destructure': 'off',
       'vue/no-template-shadow': 'off',
+      'vue/require-default-prop': 'off',
       'vue/static-class-names-order': 'warn',
     },
   },

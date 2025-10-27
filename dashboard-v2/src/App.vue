@@ -4,7 +4,7 @@ import SideBar from '@/components/SideBar.vue'
 
 <template>
   <div class="app flex">
-    <div class="flex-none h-svh md:w-[224px] w-[104px]">
+    <div class="flex-none h-svh sm:w-[224px] w-[104px]">
       <side-bar />
     </div>
     <div class="flex-auto">
