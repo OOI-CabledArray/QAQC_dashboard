@@ -2,9 +2,8 @@
 import { capitalize, forEach, groupBy, sortBy, toNumber, zipObject } from 'lodash-es'
 import { onMounted, watch } from 'vue'
 
-import BinnedViewer from '@/components/plots/BinnedViewer.vue'
+import { Card } from '@/components/base'
 import HydrophoneViewer from '@/components/plots/HydrophoneViewer.vue'
-import ProfileViewer from '@/components/plots/ProfileViewer.vue'
 import { useStore, type CSVFile } from '@/store'
 
 type BinnedPlotDataValues = {
@@ -213,9 +212,10 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, timeSpan], 
 <template>
   <div class="pt-3 text-left">
     <h1 v-if="filteredPlots.length === 0 && !isHydrophone">No Plots found.</h1>
-    <b-card v-if="filteredPlots.length > 0 || isHydrophone" no-body>
-      <b-tabs card>
-        <b-tab v-if="!isHydrophone" active title="Fixed Depths and Colormap Profiles">
+    <Card v-if="filteredPlots.length > 0 || isHydrophone" no-body>
+      <Tabs value="0">
+        <Tab v-if="!isHydrophone" active value="0">
+          Fixed Depths and Colormap Profiles
           <template v-for="url in profilePlots">
             <b-img v-if="isPNG(url)" :key="url" fluid lazy :src="url" />
             <object
@@ -228,11 +228,11 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, timeSpan], 
               type="image/svg+xml"
             />
           </template>
-        </b-tab>
+        </Tab>
         <b-tab v-if="isHydrophone" title="Spectrogram Viewer">
           <HydrophoneViewer />
         </b-tab>
-        <b-tab v-if="hasBinned" title="Depth Binned Profiler Data">
+        <!-- <b-tab v-if="hasBinned" title="Depth Binned Profiler Data">
           <div v-for="(vars, key) in binnedPlots" :key="key">
             <h5>
               {{ key }}
@@ -246,8 +246,8 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, timeSpan], 
             </b-card>
             <hr />
           </div>
-        </b-tab>
-        <b-tab v-if="hasProfiles" title="Profiles">
+        </b-tab> -->
+        <!-- <b-tab v-if="hasProfiles" title="Profiles">
           <div v-for="(vars, key) in profilerPlots" :key="key">
             <h5>
               {{ key }}
@@ -255,16 +255,15 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, timeSpan], 
             <b-card no-body>
               <b-tabs card pills vertical>
                 <b-tab v-for="(plots, varkey) in vars" :key="varkey" :title="toTitle(varkey)">
-                  <!--NOTE component imported below-->
                   <ProfileViewer :plots="plots" :refdes="key" :variable="varkey" />
                 </b-tab>
               </b-tabs>
             </b-card>
             <hr />
           </div>
-        </b-tab>
-      </b-tabs>
-    </b-card>
+        </b-tab> -->
+      </Tabs>
+    </Card>
   </div>
 </template>
 

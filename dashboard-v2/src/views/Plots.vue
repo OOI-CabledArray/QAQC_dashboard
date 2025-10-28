@@ -17,19 +17,17 @@ const {
 
 <template>
   <div>
-    <top-nav-bar />
-    <b-container fluid>
-      <b-row>
-        <b-col>
-          <plots-overview
-            :data-range="dataRange"
-            :keyword="keyword"
-            :overlays="overlays"
-            :subkey="subkey"
-            :time-span="timeSpan"
-          />
-        </b-col>
-      </b-row>
-    </b-container>
+    <TopNavBar />
+    <div class="flex flex-row justify-center">
+      <div class="not-sm:w-full p-8 sm:w-[1200px]">
+        <plots-overview
+          :data-range="dataRange"
+          :keyword="keyword"
+          :overlays="overlays"
+          :subkey="subkey"
+          :time-span="timeSpan"
+        />
+      </div>
+    </div>
   </div>
 </template>

@@ -1,7 +1,1 @@
-export { default as Accordion } from 'primevue/accordion'
-export { default as AccordionContent } from 'primevue/accordioncontent'
-export { default as AccordionHeader } from 'primevue/accordionheader'
-export { default as AccordionPanel } from 'primevue/accordionpanel'
-export { default as Button } from 'primevue/button'
-export { default as Popover } from 'primevue/popover'
-export { default as Listbox } from 'primevue/listbox'
+export * from 'primevue'

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { createReusableTemplate } from '@vueuse/core'
+import { useRouter } from 'vue-router'
 
 import { useBreakpoints } from '@/breakpoints'
 import {
@@ -13,6 +14,7 @@ import {
 import { useStore } from '@/store'
 
 const store = useStore()
+const router = useRouter()
 const breakpoints = useBreakpoints()
 const isWide = $(breakpoints.greaterOrEqual('sm'))
 
@@ -40,7 +42,18 @@ const [DefineLinksTemplate, LinksTemplate] = createReusableTemplate()
     <!-- Top Links -->
     <div>
       <Button
-        class="cursor-pointer flex flex-row hover:opacity-100 items-center justify-center not-sm:flex-col not-sm:pl-1 not-sm:space-y-1 opacity-80"
+        :class="[
+          'cursor-pointer',
+          'flex',
+          'flex-row',
+          'hover:opacity-100',
+          'items-center',
+          'justify-center',
+          'not-sm:flex-col',
+          'not-sm:pl-1',
+          'not-sm:space-y-1',
+          'opacity-80',
+        ]"
         fluid
         text
         unstyled

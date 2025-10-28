@@ -2,10 +2,17 @@
 import { isEqual } from 'lodash-es'
 import { useRoute, useRouter } from 'vue-router'
 
+import { Button, Popover } from '@/components/base'
+
 const route = useRoute()
 const router = useRouter()
 
-const navFilters = [
+let selectedFilterGroup: FilterGroup | null = $ref(null)
+let popover = $ref<InstanceType<typeof Popover> | null>(null)
+
+type FilterGroup = (typeof filterGroups)[number]
+type Filter = FilterGroup['filters'][number]
+const filterGroups = [
   {
     title: 'Data Range',
     key: 'dataRange',
@@ -40,12 +47,13 @@ const navFilters = [
   },
 ] as const
 
-function setPath(key: string, value: string) {
+function setFilter(group: FilterGroup, filter: Filter) {
+  selectedFilterGroup = group
   const query = {
     ...route.query,
   }
 
-  query[key] = value
+  query[group.key] = filter.key
   if (!isEqual(route.query, query)) {
     router.push({
       path: route.path,
@@ -56,16 +64,46 @@ function setPath(key: string, value: string) {
 </script>
 
 <template>
-  <b-navbar toggleable="lg" type="dark" variant="dark">
-    <b-navbar-toggle target="accordionSidebar" />
-    <!-- Right aligned nav items -->
-    <b-navbar-nav class="ml-auto">
+  <div class="bg-gray-500 flex flex-row justify-end px-2 py-4">
+    <div v-for="group in filterGroups" :key="group.key" class="mx-0.5">
+      <Button
+        @click="
+          (event) => {
+            selectedFilterGroup = group
+            popover?.toggle(event)
+          }
+        "
+      >
+        {{ group.title }}
+        <i class="fa-caret-down fas ml-[-2px]" />
+      </Button>
+    </div>
+    <Popover ref="popover">
+      <template v-if="selectedFilterGroup != null">
+        <div v-for="filter in selectedFilterGroup.filters" :key="filter.key" class="mb-2">
+          <Button
+            class="block px-4 py-2 text-left w-full"
+            text
+            @click="
+              () => {
+                if (selectedFilterGroup != null) {
+                  setFilter(selectedFilterGroup, filter)
+                  popover?.hide()
+                }
+              }
+            "
+          >
+            {{ filter.value }}
+          </Button>
+        </div>
+      </template>
+    </Popover>
+
+    <!-- <b-navbar-nav class="ml-auto">
       <b-nav-item-dropdown v-for="filter in navFilters" :key="filter.key" right>
-        <!-- Using 'button-content' slot -->
         <template #button-content>
           {{ filter.title }}
         </template>
-        <!-- @click = on click performs following functions -->
         <b-dropdown-item
           v-for="item in filter.filters"
           :key="item.key"
@@ -74,6 +112,6 @@ function setPath(key: string, value: string) {
           {{ item.value }}
         </b-dropdown-item>
       </b-nav-item-dropdown>
-    </b-navbar-nav>
-  </b-navbar>
+    </b-navbar-nav> -->
+  </div>
 </template>
