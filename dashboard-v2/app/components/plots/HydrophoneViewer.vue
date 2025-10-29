@@ -26,11 +26,11 @@ const currentDate = new Date()
 const currentYear = currentDate.getFullYear()
 const store = useStore()
 
-let currentDays = $ref<Record<string, number>>({})
-let imageExists = $ref<Record<string, boolean>>({})
-let imageCache = $ref<Record<string, boolean>>({})
-let selectedYear = $ref(currentYear)
-let availableYears = $ref(
+const currentDays = $ref<Record<string, number>>({})
+const imageExists = $ref<Record<string, boolean>>({})
+const imageCache = $ref<Record<string, boolean>>({})
+const selectedYear = $ref(currentYear)
+const availableYears = $ref(
   Array.from({ length: currentYear - 2014 + 1 }, (_, i) => currentYear - i).sort(),
 )
 let maxDaysInRange = $ref(calculateMaxDays(currentYear))

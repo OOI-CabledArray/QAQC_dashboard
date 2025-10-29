@@ -1,34 +1,17 @@
 // @ts-check
 
-import eslint from '@eslint/js'
 import prettier from '@vue/eslint-config-prettier'
-import { defineConfig } from 'eslint/config'
 import imports from 'eslint-plugin-import'
 import unusedImports from 'eslint-plugin-unused-imports'
-import vue from 'eslint-plugin-vue'
-import globals from 'globals'
-import typescript from 'typescript-eslint'
 
-export default defineConfig([
-  eslint.configs.recommended,
-  typescript.configs.recommended,
-  vue.configs['flat/recommended'],
+import withNuxt from './.nuxt/eslint.config.mjs'
+
+export default withNuxt([
   prettier,
-  imports.flatConfigs.recommended,
-  {
-    ignores: ['**/.*', './node_modules/**/*', './dist/**/*'],
-  },
   {
     plugins: {
+      imports: imports,
       'unused-imports': unusedImports,
-    },
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      globals: globals.browser,
-      parserOptions: {
-        parser: typescript.parser,
-      },
     },
     rules: {
       'no-undef': 'off', // Handled by TypeScript.
@@ -37,8 +20,8 @@ export default defineConfig([
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': 'warn',
       '@typescript-eslint/restrict-template-expressions': 'off',
-      'import/no-unresolved': 'off',
-      'import/order': ['warn', { 'newlines-between': 'always', alphabetize: { order: 'asc' } }],
+      'imports/no-unresolved': 'off',
+      'imports/order': ['warn', { 'newlines-between': 'always', alphabetize: { order: 'asc' } }],
       'unused-imports/no-unused-imports': 'warn',
       'vue/attributes-order': ['warn', { alphabetical: true }],
       'vue/block-order': ['warn', { order: ['script', 'template', 'style'] }],
