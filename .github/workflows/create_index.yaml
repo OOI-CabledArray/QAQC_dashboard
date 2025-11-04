@@ -1,4 +1,4 @@
-name: Update QAQC Index
+name: Update QAQC Viz Index
 
 on:
   schedule:

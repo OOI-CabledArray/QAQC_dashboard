@@ -25,6 +25,9 @@ jobs:
        - name: Install package
          run: pip install git+https://github.com/OOI-CabledArray/profileIndices.git@main
        - name: Generate profile indices
+         env:
+           AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+           AWS_SECRET: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
          run: |
            index-profiles --profiler 'RS03AXPS' --dataSource 'zarr' --fileCreation 'append'
            index-profiles --profiler 'RS01SBPS' --dataSource 'zarr' --fileCreation 'append'
