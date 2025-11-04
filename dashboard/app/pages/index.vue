@@ -1,6 +1,6 @@
 <template>
   <div class="h-svh">
-    <div class="flex flex-col h-full items-center justify-center m-auto pt-10 space-y-8">
+    <div class="flex flex-col h-full items-center justify-center m-auto pt-10 px-8 space-y-8">
       <div>
         <h1 class="text-[70px] text-center text-gray-700">RCA Data QA/QC Dashboard</h1>
         <h2 class="font-light my-4 text-center text-lg">Updated daily at 08:00 PST</h2>
