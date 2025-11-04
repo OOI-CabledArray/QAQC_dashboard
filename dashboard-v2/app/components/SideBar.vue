@@ -164,7 +164,7 @@ const accordionItems = $computed(() => {
 
 <style scoped>
 .root {
-  background-color: #1862b2;
+  background-color: #1f73a3;
   background-image: linear-gradient(180deg, #1f73a3 10%, #040f30 100%);
   background-size: cover;
 }

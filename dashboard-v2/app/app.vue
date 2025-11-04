@@ -1,9 +1,13 @@
 <template>
   <u-app>
     <div class="app flex flex-row">
-      <div class="flex-none h-svh sm:w-56 w-[104px]">
+      <!-- Fixed Position Sidebar -->
+      <div class="fixed h-svh left-0 overflow-y-scroll sm:w-56 top-0 w-[104px]">
         <side-bar />
       </div>
+      <!-- Sidebar Spacer -->
+      <div class="flex-none h-full sm:w-56 w-[104px]" />
+      <!-- Page Container -->
       <div class="flex-auto">
         <suspense>
           <nuxt-page />
