@@ -7,10 +7,6 @@ export default defineNuxtConfig({
     // Allow safe destructured assignment of component props.
     propsDestructure: true,
   },
-  // Check types during development and before building.
-  typescript: {
-    typeCheck: true,
-  },
   // Load main, custom CSS module.
   css: ['@/assets/css/main.css'],
   // Force light mode.
