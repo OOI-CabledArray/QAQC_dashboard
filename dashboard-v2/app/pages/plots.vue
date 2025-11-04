@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 definePageMeta({
-  props: true,
+  props: (route) => ({ ...route.query }),
 })
 
 const {
@@ -17,16 +17,18 @@ const {
 </script>
 
 <template>
-  <div>
-    <top-nav-bar />
-    <div class="p-4">
-      <plots-overview
-        :data-range="dataRange"
-        :keyword="keyword"
-        :overlays="overlays"
-        :subkey="subkey"
-        :time-span="timeSpan"
-      />
+  <client-only>
+    <div>
+      <top-nav-bar />
+      <div class="p-4">
+        <overview
+          :data-range="dataRange"
+          :keyword="keyword"
+          :overlays="overlays"
+          :subkey="subkey"
+          :time-span="timeSpan"
+        />
+      </div>
     </div>
-  </div>
+  </client-only>
 </template>

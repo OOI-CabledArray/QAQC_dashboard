@@ -1,6 +1,5 @@
 {
   "extends": "./.nuxt/tsconfig.json",
-  // "include": ["./app/**/*.ts", "./auto-imports.d.ts", "./components.d.ts"],
   "compilerOptions": {
     "paths": { "@/*": ["./app/*"] }
   },

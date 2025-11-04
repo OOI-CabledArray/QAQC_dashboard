@@ -5,7 +5,9 @@
         <side-bar />
       </div>
       <div class="flex-auto">
-        <nuxt-page />
+        <suspense>
+          <nuxt-page />
+        </suspense>
       </div>
     </div>
   </u-app>

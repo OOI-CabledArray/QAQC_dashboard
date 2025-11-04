@@ -7,12 +7,12 @@ export type CSVFile = {
 }
 
 export const useStore = defineStore('store', () => {
-  const base = import.meta.env.BASE_URL
+  const base = ''
   const state = reactive({
     // TODO: Move these out of the store. They don't change.
-    plotsURL: `${base}QAQC_plots`,
-    hitlURL: `${base}HITL_notes`,
-    spectrogramsURL: `${base}spectrograms`,
+    plotsURL: `${base}/QAQC_plots`,
+    hitlURL: `${base}/HITL_notes`,
+    spectrogramsURL: `${base}/spectrograms`,
 
     plotList: [] as string[],
     hitlList: [] as string[],
@@ -317,11 +317,11 @@ export const useStore = defineStore('store', () => {
 
   async function getPlots() {
     const plotsIndex = `${state.plotsURL}/index.json`
-    console.log('plotsURL:', state.plotsURL)
-    console.log(plotsIndex)
     try {
       const response = await fetch(plotsIndex)
-      storePlots(await response.json())
+      const plots = await response.json()
+      storePlots(plots)
+      console.log(`Got ${plots.length} plot images.`)
     } catch (error) {
       console.log(error)
     }

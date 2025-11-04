@@ -7,8 +7,8 @@
     "dev": "nuxi dev",
     "build": "nuxi build",
     "generate": "nuxi generate",
-    "start": "nuxi preview",
-    "postinstall": "nuxt prepare",
+    "serve": "nuxi preview",
+    "postinstall": "nuxi prepare",
     "lint": "nuxi typecheck && eslint . && prettier --check .",
     "fix": "eslint --fix . && prettier --write ."
   },

@@ -156,27 +156,40 @@ function checkImageExists(instrument: string) {
 </script>
 
 <template>
-  <div class="spectrograms-container">
-    <!-- Year selector dropdown -->
-    <div class="year-selector">
-      <label for="year-select">Select Year:</label>
-      <select id="year-select" v-model="selectedYear" class="year-dropdown" @change="onYearChange">
-        <option v-for="year in availableYears" :key="year" :value="year">
-          {{ year }}
-        </option>
-      </select>
+  <div class="m-0 max-w-[1200px] w-full">
+    <!-- Year Selector -->
+    <div class="flex flex-row items-center mb-4 space-x-1">
+      <label class="font-bold text-md" for="year-select">Select Year:</label>
+      <u-select
+        id="year-select"
+        v-model="selectedYear"
+        :items="availableYears"
+        @change="onYearChange"
+      />
     </div>
 
-    <!-- Loop through each instrument -->
-    <div v-for="instrument in instruments" :key="instrument" class="instrument-container">
-      <h3 class="instrument-title">
+    <!-- Instruments -->
+    <div
+      v-for="instrument in instruments"
+      :key="instrument"
+      class="border-b border-b-[#eee] last:border-b-transparent mb-10 pb-5 w-full"
+    >
+      <h3 class="font-bold mb-2.5 text-[#333] text-[1.2rem]">
         {{ instrument }}
       </h3>
 
-      <div v-if="imageExists[instrument]" class="spectrogram-display">
-        <img alt="Spectrogram" :src="getSpectrogramUrl(instrument)" />
+      <div v-if="imageExists[instrument]" class="mb-4">
+        <img
+          alt="Spectrogram"
+          class="h-auto w-full"
+          :src="getSpectrogramUrl(instrument)"
+          style="border: 1px solid #ccc; border-radius: 4px"
+        />
       </div>
-      <div v-else class="no-data-message">
+      <div
+        v-else
+        class="aspect-2/1 bg-[#f5f5f5] flex items-center justify-center mb-4 rounded-[4px]"
+      >
         <p>
           No spectrogram found for {{ instrument }} on
           {{ formatDate(getDayForInstrument(instrument)) }}
@@ -184,107 +197,20 @@ function checkImageExists(instrument: string) {
       </div>
 
       <!-- Individual slider controls for each instrument -->
-      <div class="slider-controls">
-        <span>{{ formatDate(getStartDate()) }}</span>
-        <input
-          v-model.number="currentDays[instrument]"
-          class="date-slider"
+      <div class="flex flex-nowrap flex-row items-center space-x-4 text-nowrap">
+        <span class="text-xs">{{ formatDate(getStartDate()) }}</span>
+        <u-slider
+          v-model="currentDays[instrument]"
+          class="grow"
           :max="maxDaysInRange"
           :min="1"
-          type="range"
+          size="sm"
         />
-        <span>{{ formatDate(getEndDate()) }}</span>
-        <p class="date-display">
+        <span class="text-xs">{{ formatDate(getEndDate()) }}</span>
+        <p class="font-bold ml-4 mr-8 text-[16px] text-center w-[140px]">
           {{ formatDate(getDayForInstrument(instrument)) }}
         </p>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.spectrograms-container {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0;
-}
-
-.year-selector {
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.year-dropdown {
-  padding: 8px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
-}
-
-.instrument-container {
-  margin-bottom: 40px;
-  width: 100%;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #eee;
-}
-
-.instrument-container:last-child {
-  border-bottom: none;
-}
-
-.instrument-title {
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: #333;
-}
-
-.spectrogram-display {
-  width: 100%;
-  margin-bottom: 15px;
-}
-
-.spectrogram-display img {
-  width: 100%;
-  height: auto;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.date-display {
-  text-align: center;
-  font-weight: bold;
-  font-size: 0.9rem;
-  margin-top: 5px;
-  margin-bottom: 0;
-  width: 140px;
-}
-
-.no-data-message {
-  aspect-ratio: 2/1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f5f5f5;
-  width: 100%;
-  border-radius: 4px;
-  margin-bottom: 15px;
-}
-
-.slider-controls {
-  width: 100%;
-  font-size: 0.7rem;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-.date-slider {
-  flex-grow: 1;
-}
-</style>

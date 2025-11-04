@@ -1,8 +1,11 @@
 <script lang="ts" setup>
+import type { TabsItem } from '@nuxt/ui'
 import { capitalize, forEach, groupBy, sortBy, toNumber, zipObject } from 'lodash-es'
-import { onMounted, watch } from 'vue'
+import { watch } from 'vue'
 
+import { useBreakpoints } from '@/breakpoints'
 import { useStore, type CSVFile } from '@/store'
+import { isPNG, isSVG } from '@/utilities'
 
 type BinnedPlotDataValues = {
   ref: string
@@ -48,12 +51,44 @@ const {
   overlays?: string
 }>()
 
+console.log(keyword, subkey)
 const store = useStore()
+const breakpoints = useBreakpoints()
+
+const isWide = $computed(() => (import.meta.client ? breakpoints.greaterOrEqual('lg').value : true))
 
 let filteredPlotList = $ref<string[]>([])
 
 const depthUnit = 'meters'
 const profUnit = 'profile'
+const tabs = $computed(() => {
+  const tabs: TabsItem[] = []
+  if (isHydrophone) {
+    tabs.push({
+      slot: 'spectrograms' as const,
+      label: 'Spectrogram Viewer',
+    })
+  } else {
+    tabs.push({
+      slot: 'fixed' as const,
+      label: 'Fixed Depths and Colormap Profiles',
+    })
+  }
+  if (hasBinned) {
+    tabs.push({
+      slot: 'binned' as const,
+      label: 'Depth Binned Profiler Data',
+    })
+  }
+  if (hasProfiles) {
+    tabs.push({
+      slot: 'profiles' as const,
+      label: 'Profiles',
+    })
+  }
+
+  return tabs
+})
 
 onMounted(async () => {
   // Load plots even when user doesn't navigate to the home page first.
@@ -190,96 +225,81 @@ function parseProfile(profileString: string) {
   return toNumber(str)
 }
 
-function toTitle(text: string) {
-  return capitalize(text)
-}
-
-function isSVG(url: string) {
-  return url.toLowerCase().endsWith('.svg')
-}
-
-function isPNG(url: string) {
-  return url.toLowerCase().endsWith('.png')
-}
-
-watch([() => keyword, () => subkey, () => overlays, () => dataRange, timeSpan], () => {
+watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeSpan], () => {
   filterPlotList()
 })
 </script>
 
 <template>
   <div class="text-left">
-    <h1 v-if="filteredPlots.length === 0 && !isHydrophone">No Plots found.</h1>
-    <u-card v-if="filteredPlots.length > 0 || isHydrophone" no-body>
-      <u-tabs value="0">
-        <!-- <TabList>
-          <Tab v-if="!isHydrophone" value="0">Fixed Depths and Colormap Profiles</Tab>
-          <Tab v-if="isHydrophone" value="1">Spectrogram Viewer</Tab>
-          <Tab v-if="hasProfiles" value="2">Profiles</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel value="0">
-            <div v-for="(vars, key) in binnedPlots" :key="key">
-              <h5>
-                {{ key }}
-              </h5>
-              <Card no-body>
-                <Tabs :value="0">
-                  <b-tab v-for="(plots, varkey) in vars" :key="varkey" :title="toTitle(varkey)">
-                    <BinnedViewer :plots="plots" :refdes="key" :variable="varkey" />
-                  </b-tab>
-                </Tabs>
-              </Card>
-              <hr />
-            </div>
-          </TabPanel>
-          <TabPanel value="1">
-            <HydrophoneViewer />
-          </TabPanel>
-          <TabPanel value="1">
-            <HydrophoneViewer />
-          </TabPanel>
-        </TabPanels> -->
+    <h1 v-if="filteredPlots.length === 0 && !isHydrophone">No plots found.</h1>
+    <u-card v-if="filteredPlots.length > 0 || isHydrophone">
+      <u-tabs :items="tabs" :size="isWide ? 'md' : 'xs'">
+        <template #fixed>
+          <template v-for="url in profilePlots" :key="url">
+            <img v-if="isPNG(url)" class="h-auto max-w-full" loading="lazy" :src="url" />
+            <object
+              v-if="isSVG(url)"
+              class="h-auto max-w-[1500px] w-100"
+              :data="url"
+              type="image/svg+xml"
+            />
+          </template>
+        </template>
+        <template #spectrograms>
+          <hydrophone-viewer />
+        </template>
+        <template #binned>
+          <div v-for="(vars, key) in binnedPlots" :key="key" class="mb-8">
+            <h2 class="mb-1 md:text-lg mt-2 text-sm">
+              {{ key }}
+            </h2>
+            <u-card class="p-0">
+              <u-tabs
+                :items="
+                  Object.entries(vars).map(([varkey, plots]) => ({
+                    label: capitalize(varkey),
+                    varkey,
+                    plots,
+                  }))
+                "
+                :orientation="isWide ? 'vertical' : 'horizontal'"
+                :size="isWide ? 'md' : 'xs'"
+              >
+                <template #content="{ item }">
+                  <div class="px-2">
+                    <binned-viewer :plots="item.plots" :refdes="key" :variable="item.varkey" />
+                  </div>
+                </template>
+              </u-tabs>
+            </u-card>
+          </div>
+        </template>
+        <template #profiles>
+          <div v-for="(vars, key) in profilerPlots" :key="key" class="mb-8">
+            <h2 class="mb-1 md:text-lg mt-2 text-sm">
+              {{ key }}
+            </h2>
+            <u-card class="p-0">
+              <u-tabs
+                :items="
+                  Object.entries(vars).map(([varkey, plots]) => ({
+                    label: capitalize(varkey),
+                    varkey,
+                    plots,
+                  }))
+                "
+                :orientation="isWide ? 'vertical' : 'horizontal'"
+                :size="isWide ? 'md' : 'xs'"
+              >
+                <template #content="{ item }">
+                  <profile-viewer :plots="item.plots" :refdes="key" :variable="item.varkey" />
+                </template>
+              </u-tabs>
+            </u-card>
+          </div>
+        </template>
       </u-tabs>
-
-      <!-- <b-tab v-if="hasBinned" title="Depth Binned Profiler Data">
-          <div v-for="(vars, key) in binnedPlots" :key="key">
-            <h5>
-              {{ key }}
-            </h5>
-            <b-card no-body>
-              <b-tabs card pills vertical>
-                <b-tab v-for="(plots, varkey) in vars" :key="varkey" :title="toTitle(varkey)">
-                  <BinnedViewer :plots="plots" :refdes="key" :variable="varkey" />
-                </b-tab>
-              </b-tabs>
-            </b-card>
-            <hr />
-          </div>
-        </b-tab> -->
-      <!-- <b-tab v-if="hasProfiles" title="Profiles">
-          <div v-for="(vars, key) in profilerPlots" :key="key">
-            <h5>
-              {{ key }}
-            </h5>
-            <b-card no-body>
-              <b-tabs card pills vertical>
-                <b-tab v-for="(plots, varkey) in vars" :key="varkey" :title="toTitle(varkey)">
-                  <ProfileViewer :plots="plots" :refdes="key" :variable="varkey" />
-                </b-tab>
-              </b-tabs>
-            </b-card>
-            <hr />
-          </div>
-        </b-tab> -->
     </u-card>
   </div>
 </template>
-
-<style>
-.svg-object {
-  width: 100%;
-  max-width: 1500px;
-  height: auto; /* This will maintain the aspect ratio */
-}
-</style>

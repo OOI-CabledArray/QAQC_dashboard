@@ -9,7 +9,7 @@ import { useStore } from '@/store'
 const store = useStore()
 const route = useRoute()
 const breakpoints = useBreakpoints()
-const isWide = $(breakpoints.greaterOrEqual('sm'))
+const isWide = $computed(() => (import.meta.client ? breakpoints.greaterOrEqual('sm').value : true))
 
 const isShowingTopLinksPopover = $ref(false)
 
@@ -93,7 +93,7 @@ const accordionItems = $computed(() => {
         <template v-for="(group, index) in item.groups" :key="index">
           <template v-if="!group.groups">
             <nuxt-link
-              class="block px-4 py-1 text-[17px] text-center text-sky-800"
+              class="block px-4 py-1 text-[17px] text-center text-primary-800"
               :to="`/plots?keyword=${group.key}&subkey=-`"
             >
               {{ group.value }}
@@ -101,7 +101,7 @@ const accordionItems = $computed(() => {
           </template>
           <div v-else class="flex justify-center py-2 row">
             <u-popover>
-              <u-button class="bg-sky-800 block hover:bg-sky-900 px-2 py-0.5 text-[17px]">
+              <u-button class="bg-primary-700 block px-2 py-0.5 text-[17px]">
                 {{ group.value }}
                 <i class="fa-caret-down fa-sharp fas text-sm" />
               </u-button>
