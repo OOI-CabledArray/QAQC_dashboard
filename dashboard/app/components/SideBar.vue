@@ -109,7 +109,7 @@ const accordionItems = $computed(() => {
                 <div v-for="subgroup in group.groups ?? []" :key="subgroup.key" class="mb-2 px-4">
                   <nuxt-link
                     class="block py-1 text-center text-sm"
-                    :to="`/plots?keyword=${subgroup.key}&subkey=${subgroup.key}`"
+                    :to="`/plots?keyword=${group.key}&subkey=${subgroup.key}`"
                   >
                     {{ subgroup.value }}
                   </nuxt-link>
