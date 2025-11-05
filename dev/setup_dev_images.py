@@ -25,11 +25,13 @@ def download_dev_images(bucket, prefix, local_dir, dev_instruments):
 
     # do not grab any overlay plots, only grab CTD and PH instruments
     print("copying subset of pngs from rca s3...")
-    all_pngs = fs.glob(f"s3://{bucket}/{prefix}/**/*.png")
+    pngs = fs.glob(f"s3://{bucket}/{prefix}/**/*.png")
+    svgs = fs.glob(f"s3://{bucket}/{prefix}/**/*.svg")
+    all_images = pngs + svgs
     files = [
-        f for f in all_pngs
-        if "none" in Path(f).name.lower()
-        and any(dev.lower() in Path(f).name.lower() for dev in dev_instruments)
+        f for f in all_images
+        if (("none" in Path(f).name.lower() or  "anno" in Path(f).name.lower())
+        and any(instrument.lower() in Path(f).name.lower() for instrument in dev_instruments))
     ]
 
     for s3_path in tqdm.tqdm(files, desc="downloading dev pngs", unit="file"):
