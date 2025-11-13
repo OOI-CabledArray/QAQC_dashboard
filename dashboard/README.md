@@ -1,24 +1,37 @@
-# dashboard
+# Dashboard
 
-## Project setup
-```
-yarn install
-```
+## Project Setup
 
-### Compiles and hot-reloads for development
-```
-yarn serve
+```sh
+npm install
 ```
 
-### Compiles and minifies for production
-```
-yarn build
+### Development
+
+```sh
+npm dev # This will run a development server with hot-reload enabled.
 ```
 
-### Lints and fixes files
-```
-yarn lint
+### Build for Production
+
+```sh
+npm run build
 ```
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+### Serve Production Build
+
+```sh
+npm run serve [--port <port>]
+```
+
+### Type-check and Lint Code
+
+```sh
+npm run lint
+```
+
+### Autofix and Format Code
+
+```sh
+npm run fix
+```

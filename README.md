@@ -14,69 +14,76 @@
 
 Wendi's awesome QAQC Dashboard that will display all the information you need for RCA QAQC Data!
 
-**The vue based frontend code can be found in `dashboard` directory.**
+**The Vue based frontend code can be found in `dashboard` directory.**
 
 See the [documentation](https://github.com/OOI-CabledArray/rca-data-tools/blob/main/docs/src/qaqc-dashboard.md) for all the components/repository to deploy the QAQC Dashboard.
 
-## The repositories
+## Repositories
 
-The code for the infrastructure, backend, and frontend are hosted in 3 separate repositories: `rca-data-tools`, `QAQC_dashboard`, and `cloud-infrastructure` (*private*) within the `OOI-CabledArray` organization.
+The code for the infrastructure, backend, and frontend are hosted in 3 separate repositories: `rca-data-tools`, `QAQC_dashboard`, and `cloud-infrastructure` (_private_) within the `OOI-CabledArray` organization.
 
 - [`rca-data-tools`](https://github.com/OOI-CabledArray/rca-data-tools): contains the majority of the code to perform the creation of png plots and csv plots for the dashboard.
 - [`QAQC_dashboard`](https://github.com/OOI-CabledArray/QAQC_dashboard) contains the frontend code for the dashboard.
 - [`cloud-infrastructure`](https://github.com/OOI-CabledArray/cloud-infrastructure): contains terraform code for deploying the underlying infrastructure such as Virtual Private Cloud (VPC), CDN, Elastic Container Service (ECS) Tasks, Identity Access Management (IAM), and S3 Buckets.
 
+## Setup
 
-## Setup (Will need conda to be installed)
+1. Install [`uv`](https://docs.astral.sh/uv/getting-started/installation) and a modern version of NodeJS, with version 24 or higher being recommended.
 
-1. Install the conda environment. **This will include nodejs and yarn.**
+2. Install Python packages and create a virtual environment.
 
-    ```bash
-    conda env create -f environment.yaml
-    ```
+   ```bash
+   uv sync
+   ```
 
-2. Activate the new environment and install [Vue CLI](https://cli.vuejs.org/).
+3. Activate the new environment at `.venv`.
 
-    ```bash
-    conda activate qaqcdev
-    npm install -g @vue/cli
-    ```
-3. Download a subset of qaqc images, and the image index from the RCA QAQC s3 bucket. Images should live at `QAQC_dashboad/dashboard/public/QAQC_plots/`
-   
-    ```bash
-    python ./dev/setup_dev_images.py
-    ```
-  
-4. Go to the dashboard folder, install app and serve.
+4. Download a subset of QAQC images and the image index from the RCA QAQC s3 bucket. Images should live at `QAQC_dashboad/dashboard/public/QAQC_plots/`
 
-    ```bash
-    cd dashboard
-    yarn install
-    yarn serve
-    ```
+   ```bash
+   python ./dev/setup_dev_images.py
+   ```
 
-## Debugging 
+5. Go to the dashboard folder, install packages, build and serve.
 
-When debugging the vue app, the plot display list can be accessed via `this.$store.state.plotList` In the plots `Overview.vue` component, the filtered plot png list can be accessed via `this.filteredPlotList`.
+   ```bash
+   cd dashboard
+   npm install
+   npm run build
+   npm run serve
+   ```
 
-The following `launch.json` will hit breakpoints in the app code but not node modules: 
+## Development
+
+To run the app in development mode with hot-reloading, while in the `dashboard` directory, execute:
+
+### Running
+
+```bash
+npm run dev
+```
+
+For additional commands, see [`./dashboard/README.md`](./dashboard/README.md).
+
+### Debugging
+
+When debugging the app, the plot display list can be accessed via `useStore().plotList`.
+
+The following `launch.json` will hit breakpoints in the app code but not `node_modules`:
 
 ```
 {
-    "version": "0.2.0",
-    "configurations": [
-      {
-        "name": "Launch chrome for vue",
-        "type": "chrome",
-        "request": "launch",
-        "url": "http://localhost:8080",
-        "webRoot": "${workspaceFolder}/dashboard/src",
-        "sourceMapPathOverrides": {
-          "webpack:///src/*": "${webRoot}/*",
-          "webpack:///./node_modules/*": "${webRoot}/node_modules/*"
-        },
-        "skipFiles": ["${webRoot}/<node_internals>/**", "${webRoot}/node_modules/**"] 
-      }
-    ]
-  }
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug in Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/dashboard",
+      "sourceMaps": true,
+      "skipFiles": ["${webRoot}/node_modules/**"]
+    }
+  ]
+}
 ```

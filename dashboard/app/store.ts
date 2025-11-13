@@ -1,20 +1,29 @@
-import Vue from 'vue';
-import Vuex from 'vuex';
+import { defineStore } from 'pinia'
+import { reactive, toRefs } from 'vue'
 
-Vue.use(Vuex);
+export type CSVFile = {
+  name: string
+  data: string[][]
+}
 
-export default new Vuex.Store({
-  state: {
-    plotsURL: `${process.env.BASE_URL}QAQC_plots`,
-    hitlURL: `${process.env.BASE_URL}HITL_notes`,
-    spectrogramsURL: `${process.env.BASE_URL}spectrograms`,
-    plotList: [],
-    hitlList: [],
-    csvData: [],
+export const useStore = defineStore('store', () => {
+  const base = ''
+  const state = reactive({
+    // TODO: Move these out of the store. They don't change.
+    plotsURL: `${base}/QAQC_plots`,
+    hitlURL: `${base}/HITL_notes`,
+    spectrogramsURL: `${base}/spectrograms`,
+
+    plotList: [] as string[],
+    hitlList: [] as string[],
+    csvData: [] as CSVFile[],
+
     hitlStatus: '',
+
     DataRange: '', // TODO new state properties
     TimeSpan: '', // hopefully we can use these to filter
     Overlay: '', // instead of the props in each file
+
     mainNav: [
       {
         title: 'Data: by Site',
@@ -282,39 +291,97 @@ export default new Vuex.Store({
       },
       {
         title: 'QAQC HITL Notes Interface',
-        route: 'https://www.appsheet.com/Account/Login?appName=RCA%20HITL%20Notes%20Interface&FullScope=False&provider=google&returnUrl=https%3A%2F%2Fwww.appsheet.com%2Fstart%2F8a3bfde2-1806-4155-847c-b10e555ddea1%3Fplatform%3Ddesktop#appName=SensorNotesTracker-59462577&vss=H4sIAAAAAAAAA6WOvQrCMBRGX0W-OU-QVRxE6lJxMR1icwvBNilNqpaQd_fWHzqr4_0u53ASrpZuZdT1BfKUlmtHEySSwmHqSUEqrL2Lg28VhMJed6-xmFYlueCHoJCRK_ExRAqQ6VuB_LdAwBpy0TaWhtk2s2x5k_yeOR4WClmgG6M-t_TMZipn3hpfj4HMkXN-yghbt7n32pnCG5Y2ug2UH3J6VTNvAQAA&view=My%20Sensors',
+        route:
+          // eslint-disable-next-line max-len
+          'https://www.appsheet.com/Account/Login?appName=RCA%20HITL%20Notes%20Interface&FullScope=False&provider=google&returnUrl=https%3A%2F%2Fwww.appsheet.com%2Fstart%2F8a3bfde2-1806-4155-847c-b10e555ddea1%3Fplatform%3Ddesktop#appName=SensorNotesTracker-59462577&vss=H4sIAAAAAAAAA6WOvQrCMBRGX0W-OU-QVRxE6lJxMR1icwvBNilNqpaQd_fWHzqr4_0u53ASrpZuZdT1BfKUlmtHEySSwmHqSUEqrL2Lg28VhMJed6-xmFYlueCHoJCRK_ExRAqQ6VuB_LdAwBpy0TaWhtk2s2x5k_yeOR4WClmgG6M-t_TMZipn3hpfj4HMkXN-yghbt7n32pnCG5Y2ug2UH3J6VTNvAQAA&view=My%20Sensors',
         external: true,
       },
     ],
-  },
-  mutations: {
-    STORE_PLOTS: (state, plots) => { // updates the state.plotList with current selections
-      state.plotList = plots;
-    },
-    STORE_HITL_NOTES: (state, notes) => {
-      state.hitlList = notes;
-    },
-    APPEND_CSV: (state, data) => {
-      state.csvData.push(data);
-    },
-    STORE_HITL_STATUS: (state, hitlStatus) => {
-      state.hitlStatus = hitlStatus;
-    },
-  },
-  actions: {
-    storePlots: ({ commit }, { plots }) => { // commits plots to STORE_PLOTS
-      commit('STORE_PLOTS', plots);
-    },
-    storeHITLNotes: ({ commit }, { notes }) => {
-      commit('STORE_HITL_NOTES', notes);
-    },
-    appendCSVData: ({ commit }, { data }) => {
-      commit('APPEND_CSV', data);
-    },
-    storeHITLStatus: ({ commit }, { hitlStatus }) => {
-      commit('STORE_HITL_STATUS', hitlStatus);
-    },
-  },
-  modules: {
-  },
-});
+  })
+
+  function storePlots(plots: string[]) {
+    state.plotList = plots
+  }
+
+  function storeHITLNotes(notes: string[]) {
+    state.hitlList = notes
+  }
+
+  function storeHITLStatus(hitlStatus: string) {
+    state.hitlStatus = hitlStatus
+  }
+
+  function appendCSVData(data: CSVFile) {
+    state.csvData.push(data)
+  }
+
+  async function getPlots() {
+    const plotsIndex = `${state.plotsURL}/index.json`
+    try {
+      const response = await fetch(plotsIndex)
+      const plots = await response.json()
+      storePlots(plots)
+      console.log(`Got ${plots.length} plot images.`)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  async function getHITLNotes() {
+    const hitlIndex = `${state.hitlURL}/index.json`
+    try {
+      const response = await fetch(hitlIndex)
+      storeHITLNotes(await response.json())
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  async function readCSV(url: string) {
+    try {
+      const response = await fetch(url)
+      const text = await response.text()
+      const name = url.split('/').at(-1)?.replace('.csv', '') || 'unknown'
+      const data = {
+        name,
+        data: text
+          .trim()
+          .split('\n')
+          .map((line) => line.split(',')),
+      }
+
+      appendCSVData(data)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  async function loadCSVs() {
+    const csvURLs = state.hitlList.map((csv) => `${state.hitlURL}/${csv}`)
+    const results = await Promise.all(csvURLs.map((url) => readCSV(url)))
+    if (results.length === csvURLs.length) {
+      console.log('All CSVs Loaded.')
+    }
+  }
+
+  async function getIndexes() {
+    const results = await Promise.all([getPlots(), getHITLNotes()])
+    if (results.length === 2) {
+      console.log('Fetch completed.')
+      loadCSVs()
+    }
+  }
+
+  return {
+    ...toRefs(state),
+    storePlots,
+    storeHITLNotes,
+    storeHITLStatus,
+    appendCSVData,
+    getPlots,
+    getHITLNotes,
+    getIndexes,
+    loadCSVs,
+    readCSV,
+  }
+})
