@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  NODE_VERSION: 16
+  NODE_VERSION: 24
 jobs:
   build_and_deploy:
     name: build-deploy
@@ -19,9 +19,9 @@ jobs:
         working-directory: dashboard
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup node
-        uses: actions/setup-node@v2
+        uses: actions/checkout@v5
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Configure AWS Credentials
@@ -32,27 +32,22 @@ jobs:
           aws-region: us-west-2
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-duration-seconds: 900
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-
       - uses: actions/cache@v4
-        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
         with:
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-yarn-
-      - name: Install dependencies
-        run: yarn install --ignore-engines
-      
-      - name: Run linter
-        run: yarn lint
-      
-      - name: Create Build
-        run: yarn build
-      
-      - name: Deploy Dashboard to s3 # s3 bucket is the key link here
+            ${{ runner.os }}-node-
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Linter
+        run: npm run lint
+
+      - name: Generate Static Files
+        run: npm run generate
+
+      - name: Deploy Dashboard to S3
         run: |
           aws s3 sync \
             --acl public-read \
