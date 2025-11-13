@@ -7,6 +7,7 @@ export default defineNuxtConfig({
     // Allow safe destructured assignment of component props.
     propsDestructure: true,
   },
+  ssr: false,
   // Load main, custom CSS module.
   css: ['@/assets/css/main.css'],
   // Force light mode.
