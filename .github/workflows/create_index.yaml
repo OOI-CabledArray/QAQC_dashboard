@@ -50,7 +50,6 @@ jobs:
       - name: Install package
         run: pip install git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
       - name: Index update
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-        run: |
+        run: | # update the prod index and the staging/test index
           qaqc_index --cloud
+          qaqc_index --cloud --bucket ooi-rca-qaqc-test 
