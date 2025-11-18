@@ -50,3 +50,4 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           generate_hitl_tables --s3-sync --service-json-path ${{ secrets.SERVICE_JSON_PATH }}
+          generate_hitl_tables --s3-sync --service-json-path ${{ secrets.SERVICE_JSON_PATH }} --bucket ooi-rca-qaqc-test
