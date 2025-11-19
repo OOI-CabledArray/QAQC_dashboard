@@ -1,8 +1,9 @@
 name: Update QAQC HITL Notes
-
+# NOTE the whole HITL notes process is pretty much deprecated with the new appsheet 
+# however the front end hasn't been updated so lets still run this once a week for prod/test
 on:
   schedule:
-  - cron: "0 12 * * *" 
+  - cron: "0 12 * * 0" 
   workflow_dispatch:
 
 env:
@@ -46,10 +47,9 @@ jobs:
       - name: Install package
         run: pip install git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
       - name: Notes update
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-        # generate_hitl_tables --s3-sync --service-json-path ${{ secrets.SERVICE_JSON_PATH }}
-        # generate_hitl_tables --s3-sync --service-json-path ${{ secrets.SERVICE_JSON_PATH }} --bucket ooi-rca-qaqc-test 
         run: |
-          generate_hitl_tables --s3-sync --service-json-path ${{ secrets.SERVICE_JSON_PATH }} --bucket ooi-rca-qaqc-test 
+          generate_hitl_tables --s3-sync --service-json-path ${{ secrets.SERVICE_JSON_PATH }}
+          echo "sleeping 60 seconds to avoid Google Sheets rate limit..."
+          sleep 60
+          generate_hitl_tables --s3-sync --service-json-path ${{ secrets.SERVICE_JSON_PATH }} --bucket ooi-rca-qaqc-test
           
