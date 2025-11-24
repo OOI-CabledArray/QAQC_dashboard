@@ -99,7 +99,7 @@ const accordionItems = $computed(() => {
               {{ group.value }}
             </nuxt-link>
           </template>
-          <div v-else class="flex justify-center py-2 row">
+          <div v-else class="flex justify-center p-2 row">
             <u-popover>
               <u-button class="bg-primary-700 block px-2 py-0.5 text-[17px]">
                 {{ group.value }}
