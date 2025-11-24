@@ -1,12 +1,17 @@
 <template>
   <u-app>
-    <div class="app flex flex-row">
+    <div class="app flex flex-row h-0">
       <!-- Fixed Position Sidebar -->
-      <div class="fixed h-svh left-0 overflow-y-scroll sm:w-56 top-0 w-[104px]">
+      <div
+        :class="[
+          '-side-bar-container fixed h-svh left-0 overflow-x-hidden overflow-y-auto sm:w-56 top-0',
+          'w-[104px]',
+        ]"
+      >
         <side-bar />
       </div>
       <!-- Sidebar Spacer -->
-      <div class="flex-none h-full sm:w-56 w-[104px]" />
+      <div class="flex-none h-lvh overscroll-none sm:w-56 w-[104px]" />
       <!-- Page Container -->
       <div class="flex-auto">
         <suspense>
@@ -26,5 +31,15 @@ body {
   height: 100%;
   width: 100%;
   font-family: Avenir, Helvetica, Arial, sans-serif;
+}
+</style>
+
+<style scoped>
+.-side-bar-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+.-side-bar-container {
+  scrollbar-width: none; /* Firefox */
 }
 </style>
