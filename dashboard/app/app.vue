@@ -1,17 +1,17 @@
 <template>
   <u-app>
-    <div class="app flex flex-row h-0">
+    <div class="app flex flex-row">
       <!-- Fixed Position Sidebar -->
       <div
         :class="[
-          '-side-bar-container fixed h-svh left-0 overflow-x-hidden overflow-y-auto sm:w-56 top-0',
-          'w-[104px]',
+          '-side-bar-container fixed h-lvh left-0 overflow-x-hidden overflow-y-auto',
+          'overscroll-none sm:w-56 top-0 w-[104px]',
         ]"
       >
         <side-bar />
       </div>
       <!-- Sidebar Spacer -->
-      <div class="flex-none h-lvh overscroll-none sm:w-56 w-[104px]" />
+      <div class="flex-none h-lvh sm:w-56 w-[104px]" />
       <!-- Page Container -->
       <div class="flex-auto">
         <suspense>
