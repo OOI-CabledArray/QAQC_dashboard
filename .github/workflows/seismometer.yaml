@@ -1,0 +1,76 @@
+name: Seismometers
+on:
+  schedule:
+  - cron: "0 11 * * *" 
+  workflow_dispatch:
+
+jobs:
+  run-acoustic-pipeline:
+    name: ${{matrix.name}} waveform plots
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - refdes: "RS03ASHS-MJ03B-06-OBSSPA301"
+            name: "RS03ASHS-MJ03B-06-OBSSPA301"
+          - refdes: "RS03ASHS-MJ03B-05-OBSSPA302"
+            name: "RS03ASHS-MJ03B-05-OBSSPA302"
+          - refdes: "RS03AXBS-MJ03A-05-OBSBBA303"
+            name: "RS03AXBS-MJ03A-05-OBSBBA303"
+          - refdes: "RS03CCAL-MJ03F-06-OBSBBA301"
+            name: "RS03CCAL-MJ03F-06-OBSBBA301"
+          - refdes: "RS03ECAL-MJ03E-05-OBSSPA303"
+            name: "RS03ECAL-MJ03E-05-OBSSPA303"
+          - refdes: "RS03ECAL-MJ03E-09-OBSBBA302"
+            name: "RS03ECAL-MJ03E-09-OBSBBA302"
+          - refdes: "RS03ECAL-MJ03E-08-OBSSPA304"
+            name: "RS03ECAL-MJ03E-08-OBSSPA304"
+          - refdes: "RS03INT2-MJ03D-05-OBSSPA305"
+            name: "RS03INT2-MJ03D-05-OBSSPA305"
+          - refdes: "RS01SUM1-LJ01B-08-OBSSPA101"
+            name: "RS01SUM1-LJ01B-08-OBSSPA101"
+          - refdes: "RS01SUM1-LJ01B-07-OBSSPA102"
+            name: "RS01SUM1-LJ01B-07-OBSSPA102"
+          - refdes: "RS01SUM1-LJ01B-06-OBSSPA103"
+            name: "RS01SUM1-LJ01B-06-OBSSPA103"
+          - refdes: "RS01SUM1-LJ01B-05-OBSBBA101"
+            name: "RS01SUM1-LJ01B-05-OBSBBA101"
+          - refdes: "RS01SLBS-MJ01A-05-OBSBBA102"
+            name: "RS01SLBS-MJ01A-05-OBSBBA102"
+    defaults:
+      run:
+        shell: bash -l {0}
+    container:
+      image: jdduprey/ooi-hyd-tools:latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GH_PAT }}
+      - name: Run seismometer waveform plots
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          TASK_ROLE_ARN: ${{ secrets.TASK_ROLE_ARN }}
+          EXECUTION_ROLE_ARN: ${{ secrets.EXECUTION_ROLE_ARN }}
+          PREFECT_WORKSPACE: jdupreyuwedu/ooi-rca-prefect2
+          PREFECT_KEY: ${{ secrets.PREFECT_KEY }}
+          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+            DOW=$(date +%u)   # 1=Monday ... 7=Sunday
+
+            if [ "$DOW" -eq 1 ]; then
+                OBS_RUN_TYPE="weekly"
+            else
+                OBS_RUN_TYPE="daily"
+            fi
+
+            cd /tmp/ooi-hyd-tools
+            prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
+
+            acoustic-pipeline \
+                --hyd-refdes ${{ matrix.refdes }} \
+                --flag obs \
+                --s3-sync true \
+                --parallel-in-cloud true \
+                --obs-run-type "${OBS_RUN_TYPE}"
