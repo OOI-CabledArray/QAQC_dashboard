@@ -1,7 +1,7 @@
-name: Seismometers Daily
+name: Seismometers Weekly
 on:
   schedule:
-  - cron: "0 11 * * 2-5"
+  - cron: "0 11 * * 1" 
   workflow_dispatch:
 
 jobs:
@@ -65,4 +65,4 @@ jobs:
                 --flag obs \
                 --s3-sync true \
                 --parallel-in-cloud true \
-                --obs-run-type daily
+                --obs-run-type weekly
