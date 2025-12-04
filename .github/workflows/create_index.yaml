@@ -16,17 +16,20 @@ jobs:
   qaqc-index:
     name: Run QAQC Index Update
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
+
     steps:
       - uses: actions/checkout@v3
         with:
           token: ${{ secrets.GH_PAT }}
-      - name: Setup python
+
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -35,21 +38,12 @@ jobs:
           aws-region: us-west-2
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-duration-seconds: 900
-      - name: Setup miniconda
-        uses: conda-incubator/setup-miniconda@v3
-        with:
-          auto-activate-base: false
-          activate-environment: rca-data-env
-          channel-priority: strict
-          environment-file: .ci/environment.yaml
-          use-only-tar-bz2: true
-      - name: Print conda env
+
+      - name: Install rca-data-tools with uv
         run: |
-          conda info
-          conda list
-      - name: Install package
-        run: pip install git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
+          uv pip install git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
+
       - name: Index update
-        run: | # update the prod index and the staging/test index
+        run: |  # update the prod index and the staging/test index
           qaqc_index --cloud
-          qaqc_index --cloud --bucket ooi-rca-qaqc-test 
+          qaqc_index --cloud --bucket ooi-rca-qaqc-test
