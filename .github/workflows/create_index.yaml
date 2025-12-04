@@ -41,7 +41,7 @@ jobs:
 
       - name: Install rca-data-tools with uv
         run: |
-          uv pip install git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
+          uv pip install --system git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
 
       - name: Index update
         run: |  # update the prod index and the staging/test index
