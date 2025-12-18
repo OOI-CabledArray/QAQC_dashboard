@@ -1,13 +1,29 @@
+import { uniq } from 'lodash-es'
 import { parse } from 'papaparse'
 import { defineStore } from 'pinia'
 
 type RawSample = Record<string, string>
-type Sample = Record<string, SampleValue>
-type SampleValue = string | number | null
-type SampleValueType = 'text' | 'number'
 
-type SampleSchema = Record<string, SampleSchemaFieldDefinition>
-type SampleSchemaFieldDefinition = {
+export const fields = {
+  cruise: 'Cruise',
+  station: 'Station',
+  asset: 'Target Asset',
+  time: 'Start Time [UTC]',
+} as const
+
+export type SampleKnownFields = {
+  [fields.cruise]: string
+  [fields.station]: string
+  [fields.asset]: string
+  [fields.time]: string
+}
+
+export type Sample = SampleKnownFields & Record<string, SampleValue>
+export type SampleValue = string | number | null
+export type SampleValueType = 'text' | 'number' | 'timestamp'
+
+export type SampleSchema = Record<string, SampleSchemaFieldDefinition>
+export type SampleSchemaFieldDefinition = {
   type: SampleValueType
 }
 
@@ -15,6 +31,8 @@ type CsvFile = {
   name: string
   content: string
 }
+
+const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/
 
 /** Fill value, converted to `null` when parsing sample values. */
 const fill = -9999999
@@ -54,6 +72,15 @@ export const useDiscrete = defineStore('discrete', () => {
     index: computed(() => index),
     samples: computed(() => samples),
     schema: computed(() => schema),
+    fields: computed(() => Object.keys(schema)),
+    plottableFields: computed(() =>
+      Object.entries(schema)
+        .filter(([, definition]) => definition.type !== 'text')
+        .map(([name]) => name),
+    ),
+    stations: computed(() => uniq(samples.map((sample) => sample[fields.station])).sort()),
+    assets: computed(() => uniq(samples.map((sample) => sample[fields.asset])).sort()),
+    cruises: computed(() => uniq(samples.map((sample) => sample[fields.cruise])).sort()),
   }
 })
 
@@ -90,33 +117,69 @@ function parseRawSamples(csv: CsvFile): RawSample[] {
 
 function extractSamples(raw: RawSample[]): [Sample[], SampleSchema] {
   const schema = inferSchema(raw)
-  const samples = [...raw] as Sample[]
+  const samples = raw.flatMap((raw) => {
+    // If there are multiple assets in this raw sample's asset field, split them into multiple
+    // parsed samples for each defined asset.
+    const assets = raw[fields.asset]?.split(',')?.map((current) => current.trim())
+    if (assets == null) {
+      return []
+    }
 
-  for (const sample of samples) {
-    for (const [name, value] of Object.entries(sample)) {
-      const field = schema[name]
-      if (field == null) {
-        continue
+    return assets.map((asset) => {
+      const sample = { [fields.asset]: asset } as Sample
+      for (const [name, value] of Object.entries(raw)) {
+        const field = schema[name]
+        if (field == null || name in sample) {
+          continue
+        }
+
+        sample[name] = convertValue(value as string, field)
       }
 
-      sample[name] = convertValue(value as string, field)
-    }
-  }
+      return sample
+    })
+  })
 
   return [samples, schema]
 }
 
 function inferSchema(raw: RawSample[]): SampleSchema {
-  const schema: SampleSchema = {}
+  let schema: SampleSchema = {}
 
   for (const sample of raw) {
     for (const [name, value] of Object.entries(sample)) {
       const type = inferValueType(value)
-      if (type === 'text' || (type === 'number' && !(name in schema))) {
-        if (schema[name]?.type !== type) {
+      if (type == null) {
+        continue
+      }
+
+      // Current field definition.
+      const current = schema[name]
+
+      if (type === 'text') {
+        // Once a field is inferred as text, it remains text.
+        schema[name] = { type }
+      } else {
+        if (current != null) {
+          // If the current type conflicts with the new type, set to text.
+          if (current.type !== type) {
+            current.type = 'text'
+          }
+        } else {
+          // Otherwise, create a new field definition for this specific type.
           schema[name] = { type }
         }
       }
+    }
+  }
+
+  // Ensure timestamp field is first.
+  const timestamp = schema[fields.time]
+  if (timestamp != null) {
+    delete schema[fields.time]
+    schema = {
+      [fields.time]: timestamp,
+      ...schema,
     }
   }
 
@@ -133,6 +196,11 @@ function inferValueType(raw: string): SampleValueType | null {
     return 'number'
   }
 
+  // If the value looks like an ISO date, treat it as a date value.
+  if (timestampRegex.test(raw)) {
+    return 'timestamp'
+  }
+
   return 'text'
 }
 
@@ -147,6 +215,8 @@ function convertValue(raw: string, field: SampleSchemaFieldDefinition): SampleVa
     if (Number.isNaN(number) || number === fill) {
       return null
     }
+
+    return number
   }
 
   return raw
