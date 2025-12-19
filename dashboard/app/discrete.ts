@@ -8,14 +8,14 @@ export const fields = {
   cruise: 'Cruise',
   station: 'Station',
   asset: 'Target Asset',
-  time: 'Start Time [UTC]',
+  timestamp: 'Start Time [UTC]',
 } as const
 
 export type SampleKnownFields = {
   [fields.cruise]: string
   [fields.station]: string
   [fields.asset]: string
-  [fields.time]: string
+  [fields.timestamp]: string
 }
 
 export type Sample = SampleKnownFields & Record<string, SampleValue>
@@ -148,7 +148,7 @@ function inferSchema(raw: RawSample[]): SampleSchema {
 
   for (const sample of raw) {
     for (const [name, value] of Object.entries(sample)) {
-      const type = inferValueType(value)
+      const type = inferValueType(name, value)
       if (type == null) {
         continue
       }
@@ -174,11 +174,11 @@ function inferSchema(raw: RawSample[]): SampleSchema {
   }
 
   // Ensure timestamp field is first.
-  const timestamp = schema[fields.time]
+  const timestamp = schema[fields.timestamp]
   if (timestamp != null) {
-    delete schema[fields.time]
+    delete schema[fields.timestamp]
     schema = {
-      [fields.time]: timestamp,
+      [fields.timestamp]: timestamp,
       ...schema,
     }
   }
@@ -186,7 +186,11 @@ function inferSchema(raw: RawSample[]): SampleSchema {
   return schema
 }
 
-function inferValueType(raw: string): SampleValueType | null {
+function inferValueType(name: string, raw: string): SampleValueType | null {
+  if (name.toLowerCase().includes('flag')) {
+    return 'text'
+  }
+
   raw = raw.trim()
   if (raw === '') {
     return null

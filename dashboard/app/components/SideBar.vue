@@ -166,7 +166,7 @@ const accordionItems = $computed(() => {
       to="/discrete"
       variant="link"
     >
-      Discrete
+      Discrete Data
     </u-button>
   </div>
 </template>

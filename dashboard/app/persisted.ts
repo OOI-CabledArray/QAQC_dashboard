@@ -160,13 +160,13 @@ function readFromUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema
     } else if (isFieldOfType(schema, field, ZodNumber)) {
       data[field] = Number(value)
     } else if (isFieldOfType(schema, field, ZodEnum)) {
-      data[field] = value.toUpperCase().replace(/-/g, '_')
+      data[field] = value
     } else if (isArrayFieldOfType(schema, field, ZodBoolean)) {
       data[field] = value.split(',').map(Boolean)
     } else if (isArrayFieldOfType(schema, field, ZodNumber)) {
       data[field] = value.split(',').map(Number)
     } else if (isArrayFieldOfType(schema, field, ZodEnum)) {
-      data[field] = value.split(',').map((value) => value.toUpperCase().replace(/-/g, '_'))
+      data[field] = value.split(',')
     } else if (isFieldOfType(schema, field, ZodArray)) {
       data[field] = value.split(',')
     } else {
@@ -175,6 +175,7 @@ function readFromUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema
   })
 
   try {
+    console.log('Loaded persisted data from', data?.['display'])
     return schema.partial().parse(data) as Partial<TData>
   } catch (error) {
     console.error(error)
@@ -207,13 +208,13 @@ function writeToUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema>
     }
 
     if (isFieldOfType(schema, field, ZodEnum)) {
-      search.set(key, String(value).replace(/_/g, '-').toLowerCase())
+      search.set(key, String(value))
       continue
     }
 
     if (isArrayFieldOfType(schema, field, ZodEnum)) {
       if (isArray(value) && value.length > 0) {
-        search.set(key, value.map((value: any) => value.replace(/_/g, '-').toLowerCase()).join(','))
+        search.set(key, value.join(','))
       }
 
       continue

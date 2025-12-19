@@ -6,13 +6,13 @@
         <div
           :class="[
             '-side-bar-container fixed h-lvh left-0 overflow-x-hidden overflow-y-auto',
-            'overscroll-contain sm:w-56 top-0 w-[104px]',
+            'overscroll-contain sm:w-56 top-0 w-26',
           ]"
         >
           <side-bar />
         </div>
         <!-- Sidebar Spacer -->
-        <div class="flex-none h-lvh sm:w-56 w-[104px]" />
+        <div class="flex-none h-lvh sm:w-56 w-26" />
         <!-- Page Container -->
         <div class="flex-auto">
           <suspense>
