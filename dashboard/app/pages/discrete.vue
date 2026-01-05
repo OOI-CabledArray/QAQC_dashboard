@@ -369,25 +369,36 @@ const option = $computed(() => {
               'lg:col-start-2 lg:col-end-3 md:col-start-1 md:col-end-3',
             ]"
           >
-            <u-form-field class="flex-2" label="Year">
-              <u-input
-                v-model="state.year"
-                class="w-full"
-                :default-value="null"
-                :placeholder="yearPlaceholder"
-              />
-            </u-form-field>
-            <u-form-field class="flex-1" label="Month">
-              <u-input
-                v-model="state.month"
-                class="w-full"
-                :default-value="null"
-                :placeholder="monthPlaceholder"
-              />
-            </u-form-field>
-            <u-form-field class="flex-1" label="Day">
-              <u-input v-model="state.day" class="w-full" :default-value="null" />
-            </u-form-field>
+            <u-tooltip
+              :text="
+                'Use hyphens for ranges, and commas for multiple selectors. ' +
+                'Example: \'2016-2018, 2020, 2023-\''
+              "
+            >
+              <u-form-field class="flex-2" label="Year">
+                <u-input
+                  v-model="state.year"
+                  class="w-full"
+                  :default-value="null"
+                  :placeholder="yearPlaceholder"
+                />
+              </u-form-field>
+            </u-tooltip>
+            <u-tooltip text="Use hyphens for ranges, and commas for multiple selectors.">
+              <u-form-field class="flex-1" label="Month">
+                <u-input
+                  v-model="state.month"
+                  class="w-full"
+                  :default-value="null"
+                  :placeholder="monthPlaceholder"
+                />
+              </u-form-field>
+            </u-tooltip>
+            <u-tooltip text="Use hyphens for ranges, and commas for multiple selectors.">
+              <u-form-field class="flex-1" label="Day">
+                <u-input v-model="state.day" class="w-full" :default-value="null" />
+              </u-form-field>
+            </u-tooltip>
           </div>
         </div>
       </div>
