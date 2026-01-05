@@ -1,24 +1,28 @@
 <template>
   <u-app>
-    <div class="app flex flex-row">
-      <!-- Fixed Position Sidebar -->
-      <div
-        :class="[
-          '-side-bar-container fixed h-lvh left-0 overflow-x-hidden overflow-y-auto',
-          'overscroll-none sm:w-56 top-0 w-[104px]',
-        ]"
-      >
-        <side-bar />
+    <u-main>
+      <div class="app flex flex-row">
+        <!-- Fixed Position Sidebar -->
+        <div
+          :class="[
+            '-side-bar-container fixed h-lvh left-0 overflow-x-hidden overflow-y-auto',
+            'overscroll-contain sm:w-56 top-0 w-26',
+          ]"
+        >
+          <side-bar />
+        </div>
+        <!-- Sidebar Spacer -->
+        <div class="flex-none h-lvh sm:w-56 w-26" />
+        <!-- Page Container -->
+        <div class="flex-auto">
+          <suspense>
+            <nuxt-layout>
+              <nuxt-page />
+            </nuxt-layout>
+          </suspense>
+        </div>
       </div>
-      <!-- Sidebar Spacer -->
-      <div class="flex-none h-lvh sm:w-56 w-[104px]" />
-      <!-- Page Container -->
-      <div class="flex-auto">
-        <suspense>
-          <nuxt-page />
-        </suspense>
-      </div>
-    </div>
+    </u-main>
   </u-app>
 </template>
 

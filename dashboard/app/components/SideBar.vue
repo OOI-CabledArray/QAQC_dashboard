@@ -159,7 +159,15 @@ const accordionItems = $computed(() => {
         </u-popover>
       </div>
     </template>
+
     <div class="bg-white h-px opacity-20" />
+    <u-button
+      class="hover:text-white mt-1 px-0 sm:text-[16px] text-[13px] text-gray-300"
+      to="/discrete"
+      variant="link"
+    >
+      Discrete Data
+    </u-button>
   </div>
 </template>
 

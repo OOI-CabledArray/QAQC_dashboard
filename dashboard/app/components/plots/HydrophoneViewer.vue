@@ -156,7 +156,7 @@ function checkImageExists(instrument: string) {
 </script>
 
 <template>
-  <div class="m-0 max-w-[1200px] w-full">
+  <div class="m-0 max-w-300 w-full">
     <!-- Year Selector -->
     <div class="flex flex-row items-center mb-4 space-x-1">
       <label class="font-bold text-md" for="year-select">Select Year:</label>
@@ -207,7 +207,7 @@ function checkImageExists(instrument: string) {
           size="sm"
         />
         <span class="text-xs">{{ formatDate(getEndDate()) }}</span>
-        <p class="font-bold ml-4 mr-8 text-[16px] text-center w-[140px]">
+        <p class="font-bold ml-4 mr-8 text-[16px] text-center w-35">
           {{ formatDate(getDayForInstrument(instrument)) }}
         </p>
       </div>
