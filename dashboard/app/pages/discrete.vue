@@ -248,7 +248,6 @@ const option = $computed(() => {
   const ySeriesType = computeSeriesType(ySchemaFieldDefinition.type)
 
   return {
-    animation: false,
     grid: {
       top: '24px',
       left: '24px',
