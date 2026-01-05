@@ -371,7 +371,7 @@ const option = $computed(() => {
           >
             <u-tooltip
               :text="
-                'Use hyphens for ranges, and commas for multiple selectors. ' +
+                'Use hyphens for ranges, and commas for multiple options. ' +
                 'Example: \'2016-2018, 2020, 2023-\''
               "
             >
@@ -384,7 +384,7 @@ const option = $computed(() => {
                 />
               </u-form-field>
             </u-tooltip>
-            <u-tooltip text="Use hyphens for ranges, and commas for multiple selectors.">
+            <u-tooltip text="Use hyphens for ranges, and commas for multiple options.">
               <u-form-field class="flex-1" label="Month">
                 <u-input
                   v-model="state.month"
@@ -394,7 +394,7 @@ const option = $computed(() => {
                 />
               </u-form-field>
             </u-tooltip>
-            <u-tooltip text="Use hyphens for ranges, and commas for multiple selectors.">
+            <u-tooltip text="Use hyphens for ranges, and commas for multiple options.">
               <u-form-field class="flex-1" label="Day">
                 <u-input v-model="state.day" class="w-full" :default-value="null" />
               </u-form-field>
