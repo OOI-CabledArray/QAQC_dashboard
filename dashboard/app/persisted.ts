@@ -175,10 +175,9 @@ function readFromUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema
   })
 
   try {
-    console.log('Loaded persisted data from', data?.['display'])
     return schema.partial().parse(data) as Partial<TData>
   } catch (error) {
-    console.error(error)
+    console.error('Failed to parse persisted data.', error)
     return null
   }
 }
