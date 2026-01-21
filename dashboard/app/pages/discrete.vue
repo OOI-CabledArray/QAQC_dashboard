@@ -15,17 +15,33 @@ await discrete.load()
 
 const state = usePersisted({
   schema: Zod.object({
-    station: Zod.string().array().optional().catch(undefined),
-    assets: Zod.string().array().optional().catch(undefined),
-    cruise: Zod.string().array().optional().catch(undefined),
-    x: Zod.string().default(fields.timestamp),
-    y: Zod.string().optional(),
+    stations: Zod.string()
+      .array()
+      .catch(() => []),
+    assets: Zod.string()
+      .array()
+      .catch(() => []),
+    x: Zod.string().optional(),
+    y: Zod.string().optional().default(fields.depth),
     display: Zod.enum(['scatter', 'line']).catch('scatter'),
     year: Zod.string().optional().catch(undefined),
     month: Zod.string().optional().catch(undefined),
     day: Zod.string().optional().catch(undefined),
   }),
   methods: [{ type: 'url' }],
+})
+
+const selectableAssets = $computed(() =>
+  discrete.assets.filter(
+    (asset) =>
+      asset !== 'PI_REQUEST' &&
+      (state.stations.length === 0 ||
+        state.stations.some((station) => discrete.stationToAssets[station]?.includes(asset))),
+  ),
+)
+
+watchEffect(() => {
+  state.assets = state.assets.filter((asset) => selectableAssets.includes(asset))
 })
 
 type NumericFilter = {
@@ -86,15 +102,11 @@ const timestampFilters = $computed(() => {
 })
 
 function matches(sample: Sample) {
-  if (state.station != null && !state.station.includes(sample[fields.station])) {
+  if (state.stations.length > 0 && !state.stations.includes(sample[fields.station])) {
     return false
   }
 
-  if (state.cruise != null && !state.cruise.includes(sample[fields.cruise])) {
-    return false
-  }
-
-  if (state.assets != null && !state.assets.includes(sample[fields.asset])) {
+  if (state.assets.length > 0 && !state.assets.includes(sample[fields.asset])) {
     return false
   }
 
@@ -120,7 +132,7 @@ function matches(sample: Sample) {
 }
 
 const samples = $computed(() => {
-  if (state.y == null) {
+  if (state.x == null || state.y == null) {
     return null
   }
 
@@ -179,14 +191,6 @@ const yearPlaceholder = $computed(() => {
   return undefined
 })
 
-const monthPlaceholder = $computed(() => {
-  if (extents.month.earliest != null && extents.month.latest != null) {
-    return `${extents.month.earliest} - ${extents.month.latest}`
-  }
-
-  return undefined
-})
-
 const sampleGroups = $computed(() => {
   if (samples == null) {
     return null
@@ -196,10 +200,9 @@ const sampleGroups = $computed(() => {
 
   for (const sample of samples) {
     const asset = sample[fields.asset] ?? 'Unknown Asset'
-    const cruise = sample[fields.cruise] ?? 'Unknown Cruise'
     const { year, month, day } = parseAbsolute(sample[fields.timestamp], 'UTC')
 
-    const groupName = `${asset} (${cruise}, ${year}-${month}-${day})`
+    const groupName = `${asset} (${year}-${month}-${day})`
     let group = groups[groupName] ?? undefined
     if (group == null) {
       group = []
@@ -224,7 +227,7 @@ function computeSeriesType(schemaType: SampleValueType) {
 }
 
 const chartTitle = $computed(() => {
-  if (state.y == null) {
+  if (state.x == null || state.y == null) {
     return ''
   }
 
@@ -238,8 +241,8 @@ const option = $computed(() => {
     return null
   }
 
-  const xSchemaFieldDefinition = discrete.schema[state.x]
-  const ySchemaFieldDefinition = state.y != null ? discrete.schema[state.y] : null
+  const xSchemaFieldDefinition = discrete.schema[state.x ?? '']
+  const ySchemaFieldDefinition = discrete.schema[state.y ?? '']
   if (xSchemaFieldDefinition == null || ySchemaFieldDefinition == null) {
     return null
   }
@@ -275,6 +278,16 @@ const option = $computed(() => {
         type: 'slider',
         bottom: 80,
       },
+      {
+        type: 'inside',
+        yAxisIndex: 0,
+      },
+      {
+        type: 'slider',
+        yAxisIndex: 0,
+        right: 31,
+        showDataShadow: false,
+      },
     ],
     legend: {
       show: Object.keys(sampleGroups).length <= 20,
@@ -283,10 +296,12 @@ const option = $computed(() => {
     series: Object.entries(sampleGroups).map(([name, samples]) => ({
       name,
       type: state.display,
-      data: samples.map((sample) => [sample[state.x], sample[state.y as string]]),
+      data: samples.map((sample) => [sample[state.x as string], sample[state.y as string]]),
       emphasis: {
         focus: 'series',
       },
+      large: true,
+      largeThreshold: 100,
     })),
   } satisfies Option
 })
@@ -300,49 +315,60 @@ const option = $computed(() => {
         <div class="gap-2 grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2">
           <u-form-field label="Station">
             <u-select-menu
+              v-model="state.stations"
               class="w-full"
               :items="discrete.stations"
-              :model-value="state.station"
               multiple
-              @update:model-value="
-                (value: string[]) => (state.station = value.length > 0 ? value : undefined)
-              "
             >
               <template #trailing>
-                <clear-button v-if="state.station != null" v-model="state.station" />
+                <clear-button
+                  v-if="state.stations.length > 0"
+                  v-model="state.stations"
+                  :clear-value="() => []"
+                />
               </template>
             </u-select-menu>
           </u-form-field>
           <u-form-field label="Asset">
             <u-select-menu
+              v-model="state.assets"
               class="w-full"
-              :items="discrete.assets"
-              :model-value="state.assets"
-              multiple
-              @update:model-value="
-                (value: string[]) => (state.assets = value.length > 0 ? value : undefined)
+              :items="
+                selectableAssets.map((asset) => ({
+                  label:
+                    discrete.assetToStation[asset] == null || state.stations.length === 1
+                      ? asset
+                      : `${asset} (${discrete.assetToStation[asset]})`,
+                  value: asset,
+                }))
               "
+              multiple
+              value-key="value"
             >
               <template #trailing>
-                <clear-button v-if="state.assets != null" v-model="state.assets" />
+                <clear-button
+                  v-if="state.assets.length > 0"
+                  v-model="state.assets"
+                  :clear-value="() => []"
+                />
               </template>
             </u-select-menu>
           </u-form-field>
-          <u-form-field label="Cruise">
-            <u-select-menu
-              class="w-full"
-              :items="discrete.cruises"
-              :model-value="state.cruise"
-              multiple
-              @update:model-value="
-                (value: string[]) => (state.cruise = value.length > 0 ? value : undefined)
-              "
-            >
-              <template #trailing>
-                <clear-button v-if="state.cruise != null" v-model="state.cruise" />
-              </template>
-            </u-select-menu>
-          </u-form-field>
+          <u-tooltip
+            :text="
+              'Use hyphens for ranges, and commas for multiple options. ' +
+              'Example: \'2016-2018, 2020, 2023-\''
+            "
+          >
+            <u-form-field label="Year">
+              <u-input
+                v-model="state.year"
+                class="w-full"
+                :default-value="null"
+                :placeholder="yearPlaceholder"
+              />
+            </u-form-field>
+          </u-tooltip>
           <u-form-field class="" label="X-Axis">
             <u-select-menu v-model="state.x" class="w-full" :items="discrete.plottableFields" />
           </u-form-field>
@@ -363,43 +389,6 @@ const option = $computed(() => {
               value-key="value"
             />
           </u-form-field>
-          <div
-            :class="[
-              'flex flex-row justify-center space-x-2',
-              'lg:col-start-2 lg:col-end-3 md:col-start-1 md:col-end-3',
-            ]"
-          >
-            <u-tooltip
-              :text="
-                'Use hyphens for ranges, and commas for multiple options. ' +
-                'Example: \'2016-2018, 2020, 2023-\''
-              "
-            >
-              <u-form-field class="flex-2" label="Year">
-                <u-input
-                  v-model="state.year"
-                  class="w-full"
-                  :default-value="null"
-                  :placeholder="yearPlaceholder"
-                />
-              </u-form-field>
-            </u-tooltip>
-            <u-tooltip text="Use hyphens for ranges, and commas for multiple options.">
-              <u-form-field class="flex-1" label="Month">
-                <u-input
-                  v-model="state.month"
-                  class="w-full"
-                  :default-value="null"
-                  :placeholder="monthPlaceholder"
-                />
-              </u-form-field>
-            </u-tooltip>
-            <u-tooltip text="Use hyphens for ranges, and commas for multiple options.">
-              <u-form-field class="flex-1" label="Day">
-                <u-input v-model="state.day" class="w-full" :default-value="null" />
-              </u-form-field>
-            </u-tooltip>
-          </div>
         </div>
       </div>
       <template v-if="option != null">

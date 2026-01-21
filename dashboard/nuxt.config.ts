@@ -1,6 +1,9 @@
 import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
+  devtools: {
+    enabled: false,
+  },
   compatibilityDate: '2025-10-29',
   modules: ['@nuxt/ui', '@vue-macros/nuxt', '@nuxt/eslint', '@pinia/nuxt'],
   vue: {

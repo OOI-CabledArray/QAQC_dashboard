@@ -5,14 +5,13 @@ import { defineStore } from 'pinia'
 type RawSample = Record<string, string>
 
 export const fields = {
-  cruise: 'Cruise',
   station: 'Station',
   asset: 'Target Asset',
   timestamp: 'Start Time [UTC]',
+  depth: 'CTD Depth [m]',
 } as const
 
 export type SampleKnownFields = {
-  [fields.cruise]: string
   [fields.station]: string
   [fields.asset]: string
   [fields.timestamp]: string
@@ -67,6 +66,24 @@ export const useDiscrete = defineStore('discrete', () => {
     return [...index]
   }
 
+  const assetsToStation = $computed<Record<string, string>>(() =>
+    Object.fromEntries(samples.map((sample) => [sample[fields.asset], sample[fields.station]])),
+  )
+
+  const stationToAssets = $computed(() => {
+    const mapping: Record<string, string[]> = {}
+    for (const sample of samples) {
+      const station = sample[fields.station]
+      const asset = sample[fields.asset]
+      const assets = (mapping[station] ??= [])
+      if (!assets.includes(asset)) {
+        assets.push(asset)
+      }
+    }
+
+    return mapping
+  })
+
   return {
     load,
     index: computed(() => index),
@@ -80,7 +97,8 @@ export const useDiscrete = defineStore('discrete', () => {
     ),
     stations: computed(() => uniq(samples.map((sample) => sample[fields.station])).sort()),
     assets: computed(() => uniq(samples.map((sample) => sample[fields.asset])).sort()),
-    cruises: computed(() => uniq(samples.map((sample) => sample[fields.cruise])).sort()),
+    assetToStation: computed(() => assetsToStation),
+    stationToAssets: computed(() => stationToAssets),
   }
 })
 
@@ -118,25 +136,30 @@ function parseRawSamples(csv: CsvFile): RawSample[] {
 function extractSamples(raw: RawSample[]): [Sample[], SampleSchema] {
   const schema = inferSchema(raw)
   const samples = raw.flatMap((raw) => {
-    // If there are multiple assets in this raw sample's asset field, split them into multiple
-    // parsed samples for each defined asset.
-    const assets = raw[fields.asset]?.split(',')?.map((current) => current.trim())
-    if (assets == null) {
-      return []
-    }
+    // If there are multiple values in a raw sample's station or asset field, split them into
+    // multiple parsed samples for each defined station x asset.
+    const stations = raw[fields.station]?.split(',')?.map((current) => current.trim()) ?? []
 
-    return assets.map((asset) => {
-      const sample = { [fields.asset]: asset } as Sample
-      for (const [name, value] of Object.entries(raw)) {
-        const field = schema[name]
-        if (field == null || name in sample) {
-          continue
+    return stations.flatMap((station) => {
+      const assets = raw[fields.asset]?.split(',')?.map((current) => current.trim()) ?? []
+      return assets.flatMap((asset) => {
+        station = station.split('-').map((current) => current.trim())[0] ?? ''
+        if (station === '') {
+          return []
         }
 
-        sample[name] = convertValue(value as string, field)
-      }
+        const sample = { [fields.station]: station, [fields.asset]: asset } as Sample
+        for (const [name, value] of Object.entries(raw)) {
+          const field = schema[name]
+          if (field == null || name in sample) {
+            continue
+          }
 
-      return sample
+          sample[name] = convertValue(value as string, field)
+        }
+
+        return sample
+      })
     })
   })
 

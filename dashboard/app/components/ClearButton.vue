@@ -1,6 +1,6 @@
 <script lang="ts" setup generic="T">
 const { clearValue = undefined } = defineProps<{
-  clearValue?: T
+  clearValue?: T | (() => T)
 }>()
 
 const emit = defineEmits(['click'])
@@ -8,7 +8,8 @@ const emit = defineEmits(['click'])
 const modelValue = defineModel<T>()
 
 function onClick() {
-  modelValue.value = clearValue as any
+  const assigned = typeof clearValue !== 'function' ? clearValue : (clearValue as () => T)()
+  modelValue.value = assigned
   emit('click')
 }
 </script>
