@@ -1,13 +1,11 @@
 <script lang="ts" setup>
-import type { ZonedDateTime } from '@internationalized/date'
-import { parseAbsolute } from '@internationalized/date'
 import { sortBy, upperFirst } from 'lodash-es'
 import Zod from 'zod'
 
 import type { Option } from '@/chart'
 import Chart from '@/components/Chart.vue'
 import type { Sample, SampleValueType } from '@/discrete'
-import { fields, useDiscrete } from '@/discrete'
+import { useDiscrete, KnownSampleFields } from '@/discrete'
 import { usePersisted } from '@/persisted'
 
 const discrete = useDiscrete()
@@ -21,12 +19,10 @@ const state = usePersisted({
     assets: Zod.string()
       .array()
       .catch(() => []),
-    x: Zod.string().optional(),
-    y: Zod.string().optional().default(fields.depth),
+    x: Zod.string().nullish().catch(undefined),
+    y: Zod.string().nullish().default(KnownSampleFields.Depth),
     display: Zod.enum(['scatter', 'line']).catch('scatter'),
-    year: Zod.string().optional().catch(undefined),
-    month: Zod.string().optional().catch(undefined),
-    day: Zod.string().optional().catch(undefined),
+    year: Zod.string().nullish().catch(undefined),
   }),
   methods: [{ type: 'url' }],
 })
@@ -93,38 +89,18 @@ function matchesNumericFilters(value: number, filters: NumericFilter[]) {
   return filters.length === 0 || filters.some((filter) => matchesNumericFilter(value, filter))
 }
 
-const timestampFilters = $computed(() => {
-  return {
-    year: parseNumericFilters(state.year ?? ''),
-    month: parseNumericFilters(state.month ?? ''),
-    day: parseNumericFilters(state.day ?? ''),
-  }
-})
+const yearFilters = $computed(() => parseNumericFilters(state.year ?? ''))
 
 function matches(sample: Sample) {
-  if (state.stations.length > 0 && !state.stations.includes(sample[fields.station])) {
+  if (state.stations.length > 0 && !state.stations.includes(sample.station)) {
     return false
   }
 
-  if (state.assets.length > 0 && !state.assets.includes(sample[fields.asset])) {
+  if (state.assets.length > 0 && !state.assets.includes(sample.asset)) {
     return false
   }
 
-  let timestamp: ZonedDateTime
-  try {
-    timestamp = parseAbsolute(sample[fields.timestamp], 'UTC')
-  } catch (error) {
-    console.log('Failed to parse date for sample.', error)
-    return false
-  }
-
-  if (!matchesNumericFilters(timestamp.year, timestampFilters.year)) {
-    return false
-  }
-  if (!matchesNumericFilters(timestamp.month, timestampFilters.month)) {
-    return false
-  }
-  if (!matchesNumericFilters(timestamp.day, timestampFilters.day)) {
+  if (!matchesNumericFilters(sample.timestamp.year, yearFilters)) {
     return false
   }
 
@@ -139,53 +115,25 @@ const samples = $computed(() => {
   return sortBy(discrete.samples, state.x).filter(matches)
 })
 
-const extents = $computed(() => {
-  const extents = {
-    year: {
-      earliest: undefined as number | undefined,
-      latest: undefined as number | undefined,
-    },
-    month: {
-      earliest: undefined as number | undefined,
-      latest: undefined as number | undefined,
-    },
-  }
+const yearBounds = $computed(() => {
+  let earliest: number | undefined = undefined
+  let latest: number | undefined = undefined
 
-  const samples = discrete.samples
-  if (samples == null || samples.length === 0) {
-    return extents
-  }
-
-  for (const sample of samples) {
-    let timestamp: ZonedDateTime
-    try {
-      timestamp = parseAbsolute(sample[fields.timestamp], 'UTC')
-    } catch (error) {
-      console.log('Failed to parse date for sample.', error)
-      continue
+  for (const sample of discrete.samples) {
+    if (earliest == null || sample.timestamp.year < earliest) {
+      earliest = sample.timestamp.year
     }
-
-    if (extents.year.earliest == null || timestamp.year < extents.year.earliest) {
-      extents.year.earliest = timestamp.year
-    }
-    if (extents.year.latest == null || timestamp.year > extents.year.latest) {
-      extents.year.latest = timestamp.year
-    }
-
-    if (extents.month.earliest == null || timestamp.month < extents.month.earliest) {
-      extents.month.earliest = timestamp.month
-    }
-    if (extents.month.latest == null || timestamp.month > extents.month.latest) {
-      extents.month.latest = timestamp.month
+    if (latest == null || sample.timestamp.year > latest) {
+      latest = sample.timestamp.year
     }
   }
 
-  return extents
+  return { earliest, latest }
 })
 
 const yearPlaceholder = $computed(() => {
-  if (extents.year.earliest != null && extents.year.latest != null) {
-    return `${extents.year.earliest} - ${extents.year.latest}`
+  if (yearBounds.earliest != null && yearBounds.latest != null) {
+    return `${yearBounds.earliest} - ${yearBounds.latest}`
   }
 
   return undefined
@@ -199,8 +147,10 @@ const sampleGroups = $computed(() => {
   const groups: Record<string, Sample[]> = {}
 
   for (const sample of samples) {
-    const asset = sample[fields.asset] ?? 'Unknown Asset'
-    const { year, month, day } = parseAbsolute(sample[fields.timestamp], 'UTC')
+    const {
+      asset,
+      timestamp: { year, month, day },
+    } = sample
 
     const groupName = `${asset} (${year}-${month}-${day})`
     let group = groups[groupName] ?? undefined
@@ -237,12 +187,12 @@ const chartTitle = $computed(() => {
 })
 
 const option = $computed(() => {
-  if (sampleGroups == null) {
+  if (sampleGroups == null || state.x == null || state.y == null) {
     return null
   }
 
-  const xSchemaFieldDefinition = discrete.schema[state.x ?? '']
-  const ySchemaFieldDefinition = discrete.schema[state.y ?? '']
+  const xSchemaFieldDefinition = discrete.schema[state.x]
+  const ySchemaFieldDefinition = discrete.schema[state.y]
   if (xSchemaFieldDefinition == null || ySchemaFieldDefinition == null) {
     return null
   }
@@ -253,8 +203,8 @@ const option = $computed(() => {
   return {
     grid: {
       top: '24px',
-      left: '24px',
-      right: '24px',
+      left: '40px',
+      right: '40px',
       bottom: '160px',
     },
     tooltip: {
@@ -269,23 +219,30 @@ const option = $computed(() => {
     yAxis: {
       name: state.y,
       type: ySeriesType,
+      inverse: state.y === KnownSampleFields.Depth,
     },
     dataZoom: [
       {
         type: 'inside',
       },
       {
-        type: 'slider',
-        bottom: 80,
-      },
-      {
         type: 'inside',
         yAxisIndex: 0,
       },
       {
         type: 'slider',
+        bottom: 110,
+        height: 22,
+        showDetail: false,
+        showDataShadow: false,
+      },
+      {
+        type: 'slider',
         yAxisIndex: 0,
-        right: 31,
+        width: 22,
+        top: 22,
+        right: 16,
+        showDetail: false,
         showDataShadow: false,
       },
     ],
@@ -296,12 +253,12 @@ const option = $computed(() => {
     series: Object.entries(sampleGroups).map(([name, samples]) => ({
       name,
       type: state.display,
-      data: samples.map((sample) => [sample[state.x as string], sample[state.y as string]]),
+      data: samples
+        .map((sample) => [sample.data[state.x!], sample.data[state.y!]])
+        .filter(([x, y]) => x != null && y != null),
       emphasis: {
         focus: 'series',
       },
-      large: true,
-      largeThreshold: 100,
     })),
   } satisfies Option
 })
