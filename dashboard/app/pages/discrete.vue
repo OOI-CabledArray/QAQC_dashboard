@@ -1,204 +1,178 @@
 <script lang="ts" setup>
-import { sortBy, upperFirst } from 'lodash-es'
+import { useEventListener } from '@vueuse/core'
+import type { SeriesOption } from 'echarts'
+import { cloneDeep, compact, orderBy, uniq, upperFirst } from 'lodash-es'
 import Zod from 'zod'
 
 import type { Option } from '@/chart'
 import Chart from '@/components/Chart.vue'
-import type { Sample, SampleValueType } from '@/discrete'
-import { useDiscrete, KnownSampleFields } from '@/discrete'
+import type { Sample, SampleSchemaFieldDefinition, SampleValue } from '@/discrete'
+import { useDiscrete } from '@/discrete'
 import { usePersisted } from '@/persisted'
 
 const discrete = useDiscrete()
 await discrete.load()
 
+const chartColors = [
+  '#1f77b4',
+  '#ff7f0e',
+  '#2ca02c',
+  '#d62728',
+  '#9467bd',
+  '#8c564b',
+  '#e377c2',
+  '#7f7f7f',
+  '#bcbd22',
+  '#17becf',
+] as const
+
+function getRandomColor() {
+  return (
+    '#' +
+    Math.floor(Math.random() * 16777215)
+      .toString(16)
+      .padStart(6, '0')
+  )
+}
+
+const GroupSchema = Zod.object({
+  asset: Zod.string().optional(),
+  x: Zod.string().optional(),
+  y: Zod.string().optional(),
+  year: Zod.number().optional(),
+  display: Zod.enum(['scatter', 'line']).default('scatter'),
+  enabled: Zod.boolean().default(true),
+  color: Zod.string().default(chartColors[0]),
+})
+
 const state = usePersisted({
   schema: Zod.object({
-    stations: Zod.string()
-      .array()
-      .catch(() => []),
-    assets: Zod.string()
-      .array()
-      .catch(() => []),
-    x: Zod.string().nullish().catch(undefined),
-    y: Zod.string().nullish().default(KnownSampleFields.Depth),
-    display: Zod.enum(['scatter', 'line']).catch('scatter'),
-    year: Zod.string().nullish().catch(undefined),
+    groups: GroupSchema.array().default(() => [GroupSchema.parse({})] as any),
   }),
   methods: [{ type: 'url' }],
 })
 
-const selectableAssets = $computed(() =>
-  discrete.assets.filter(
-    (asset) =>
-      asset !== 'PI_REQUEST' &&
-      (state.stations.length === 0 ||
-        state.stations.some((station) => discrete.stationToAssets[station]?.includes(asset))),
-  ),
-)
-
-watchEffect(() => {
-  state.assets = state.assets.filter((asset) => selectableAssets.includes(asset))
-})
-
-type NumericFilter = {
-  start?: number
-  end?: number
-  exact?: number
+type PossibleGroup = (typeof state)['groups'][number]
+type Group = Required<PossibleGroup> & {
+  index: number
 }
 
-function parseNumericFilters(value: string): NumericFilter[] {
-  return value
-    .split(',')
-    .map((current) => current.trim())
-    .flatMap((current) => {
-      const startRangeMatch = current.replaceAll(' ', '').match(/^(\d+) *-$/)
-      if (startRangeMatch != null) {
-        const start = parseInt(startRangeMatch[1]!)
-        if (!Number.isNaN(start)) {
-          return [{ start }]
-        }
-      }
-
-      const rangeMatch = current.replaceAll(' ', '').match(/^(\d+) *- *(\d+)$/)
-      if (rangeMatch != null) {
-        const start = parseInt(rangeMatch[1]!)
-        const end = parseInt(rangeMatch[2]!)
-        if (!Number.isNaN(start) && !Number.isNaN(end)) {
-          return [{ start, end }]
-        }
-      }
-
-      const exact = parseInt(current)
-      if (!Number.isNaN(exact)) {
-        return [{ exact } as NumericFilter]
-      }
-
-      return []
-    })
+type SeriesOptionWithData = SeriesOption & {
+  data: [SampleValue, SampleValue][]
+  itemStyle?: any
+  lineStyle?: any
 }
 
-function matchesNumericFilter(value: number, filter: NumericFilter) {
+const selectableAssets = $computed(() => discrete.assets.filter((asset) => asset !== 'PI_REQUEST'))
+
+function matches(group: Group, sample: Sample) {
   return (
-    (filter.exact == null || value === filter.exact) &&
-    (filter.start == null || value >= filter.start) &&
-    (filter.end == null || value <= filter.end)
+    sample.asset === group.asset &&
+    sample.timestamp.year === group.year &&
+    sample.data[group.x] != null &&
+    sample.data[group.y] != null
   )
 }
 
-function matchesNumericFilters(value: number, filters: NumericFilter[]) {
-  return filters.length === 0 || filters.some((filter) => matchesNumericFilter(value, filter))
-}
+const groups = $computed(
+  () =>
+    compact(
+      state.groups.map((group) =>
+        group.enabled && (group.x ?? group.y) != null && group.asset != null && group.year != null
+          ? group
+          : null,
+      ),
+    ).map((group, index) => ({
+      index,
+      ...group,
+    })) as Group[],
+)
 
-const yearFilters = $computed(() => parseNumericFilters(state.year ?? ''))
-
-function matches(sample: Sample) {
-  if (state.stations.length > 0 && !state.stations.includes(sample.station)) {
-    return false
-  }
-
-  if (state.assets.length > 0 && !state.assets.includes(sample.asset)) {
-    return false
-  }
-
-  if (!matchesNumericFilters(sample.timestamp.year, yearFilters)) {
-    return false
-  }
-
-  return true
-}
-
-const samples = $computed(() => {
-  if (state.x == null || state.y == null) {
-    return null
-  }
-
-  return sortBy(discrete.samples, state.x).filter(matches)
+const yearOptions = $computed(() => {
+  return [...new Set(discrete.samples.map((sample) => sample.timestamp.year))].sort()
 })
 
-const yearBounds = $computed(() => {
-  let earliest: number | undefined = undefined
-  let latest: number | undefined = undefined
-
-  for (const sample of discrete.samples) {
-    if (earliest == null || sample.timestamp.year < earliest) {
-      earliest = sample.timestamp.year
-    }
-    if (latest == null || sample.timestamp.year > latest) {
-      latest = sample.timestamp.year
-    }
-  }
-
-  return { earliest, latest }
-})
-
-const yearPlaceholder = $computed(() => {
-  if (yearBounds.earliest != null && yearBounds.latest != null) {
-    return `${yearBounds.earliest} - ${yearBounds.latest}`
-  }
-
-  return undefined
-})
-
-const sampleGroups = $computed(() => {
-  if (samples == null) {
-    return null
-  }
-
-  const groups: Record<string, Sample[]> = {}
-
+const series = $computed<SeriesOptionWithData[]>(() => {
+  const mapping: Record<string, SeriesOptionWithData> = {}
+  const samples = orderBy(discrete.samples, (sample) => sample.timestamp.toDate())
   for (const sample of samples) {
-    const {
-      asset,
-      timestamp: { year, month, day },
-    } = sample
+    for (const group of groups) {
+      if (!matches(group, sample)) {
+        continue
+      }
 
-    const groupName = `${asset} (${year}-${month}-${day})`
-    let group = groups[groupName] ?? undefined
-    if (group == null) {
-      group = []
-      groups[groupName] = group
+      const name = `${sample.asset} (${sample.timestamp.year})`
+      let series: SeriesOptionWithData = mapping[name]!
+      if (series == null) {
+        series = {
+          name: name,
+          type: group.display,
+          emphasis: { focus: 'series' },
+          data: [],
+        }
+
+        series.itemStyle = { color: group.color }
+        if (group.display === 'line') {
+          series.lineStyle = { color: group.color }
+        }
+
+        mapping[name] = series
+      }
+
+      const x = sample.data[group.x]
+      const y = sample.data[group.y]
+      if (x != null && y != null) {
+        series.data.push([x, y])
+        series.data = orderBy(series.data, (current) => current[0])
+      }
     }
-
-    group.push(sample)
   }
 
-  return groups
+  return Object.values(mapping)
 })
 
-function computeSeriesType(schemaType: SampleValueType) {
-  switch (schemaType) {
-    case 'timestamp':
-      return 'time'
-    case 'number':
-      return 'value'
-    case 'text':
-      return 'category'
+function computeSeriesType(definitions: SampleSchemaFieldDefinition[]) {
+  if (definitions.every((definition) => definition.type === 'timestamp')) {
+    return 'time'
   }
+  if (definitions.every((definition) => definition.type === 'number')) {
+    return 'value'
+  }
+
+  return 'category'
 }
 
-const chartTitle = $computed(() => {
-  if (state.x == null || state.y == null) {
-    return ''
+const xAxisLabel = $computed(() =>
+  upperFirst(uniq(groups.map((current) => current.x.replaceAll('_', ' '))).join(', ')),
+)
+const yAxisLabel = $computed(() =>
+  upperFirst(uniq(groups.map((current) => current.y.replaceAll('_', ' '))).join(', ')),
+)
+
+const invertYAxis = $computed(() =>
+  groups.every((group) => (group.y ?? '').toLowerCase().includes('depth')),
+)
+
+const itemLabelModifier = $computed(() => {
+  let modifier = ''
+  if (isApplyingToAll) {
+    modifier = '*'
+  } else if (isCreatingNew) {
+    modifier = '+'
   }
 
-  const yLabel = upperFirst(state.y.replaceAll('_', ' '))
-  const xLabel = upperFirst(state.x.replaceAll('_', ' '))
-  return `${yLabel} / ${xLabel}`
+  return modifier
 })
 
 const option = $computed(() => {
-  if (sampleGroups == null || state.x == null || state.y == null) {
+  const xSchemaFieldDefinitions = compact(groups.map((group) => discrete.schema[group.x]))
+  const ySchemaFieldDefinitions = compact(groups.map((group) => discrete.schema[group.y]))
+  if (xSchemaFieldDefinitions.length === 0 || ySchemaFieldDefinitions.length === 0) {
     return null
   }
 
-  const xSchemaFieldDefinition = discrete.schema[state.x]
-  const ySchemaFieldDefinition = discrete.schema[state.y]
-  if (xSchemaFieldDefinition == null || ySchemaFieldDefinition == null) {
-    return null
-  }
-
-  const xSeriesType = computeSeriesType(xSchemaFieldDefinition.type)
-  const ySeriesType = computeSeriesType(ySchemaFieldDefinition.type)
+  const xAxisType = computeSeriesType(xSchemaFieldDefinitions)
+  const yAxisType = computeSeriesType(ySchemaFieldDefinitions)
 
   return {
     grid: {
@@ -210,28 +184,29 @@ const option = $computed(() => {
     tooltip: {
       confine: true,
       enterable: true,
-      trigger: 'axis',
+      trigger: 'item',
     },
     xAxis: {
-      name: state.x,
-      type: xSeriesType,
+      name: xAxisLabel,
+      type: xAxisType,
+      nameLocation: 'middle',
+      nameTextStyle: {
+        align: 'center',
+      },
     },
     yAxis: {
-      name: state.y,
-      type: ySeriesType,
-      inverse: state.y === KnownSampleFields.Depth,
+      name: yAxisLabel,
+      type: yAxisType,
+      inverse: invertYAxis,
+      nameLocation: invertYAxis ? 'start' : 'end',
     },
     dataZoom: [
       {
         type: 'inside',
       },
       {
-        type: 'inside',
-        yAxisIndex: 0,
-      },
-      {
         type: 'slider',
-        bottom: 110,
+        bottom: 80,
         height: 22,
         showDetail: false,
         showDataShadow: false,
@@ -247,116 +222,295 @@ const option = $computed(() => {
       },
     ],
     legend: {
-      show: Object.keys(sampleGroups).length <= 20,
+      show: series.length <= 20,
       bottom: 0,
     },
-    series: Object.entries(sampleGroups).map(([name, samples]) => ({
-      name,
-      type: state.display,
-      data: samples
-        .map((sample) => [sample.data[state.x!], sample.data[state.y!]])
-        .filter(([x, y]) => x != null && y != null),
-      emphasis: {
-        focus: 'series',
-      },
-    })),
+    series,
   } satisfies Option
 })
+
+function addGroup({
+  index,
+  original,
+}: { index?: number; original?: Readonly<PossibleGroup> } = {}) {
+  if (index == null) {
+    index = state.groups.length
+  }
+  if (original == null) {
+    original = state.groups[index - 1]
+  }
+  const created = {
+    ...GroupSchema.parse(cloneDeep(original) ?? {}),
+    color: chartColors[state.groups.length] ?? getRandomColor(),
+  }
+
+  state.groups.splice(index, 0, created)
+  return created
+}
+
+function removeGroup(index?: number) {
+  if (index == null) {
+    index = state.groups.length - 1
+  }
+
+  if (index < 0 || index >= state.groups.length) {
+    return null
+  }
+
+  return state.groups.splice(index, 1)[0] ?? null
+}
+
+const inputSize = 'sm'
+
+let isShiftPressed = $ref(false)
+let isCtrlPressed = $ref(false)
+
+const isApplyingToAll = $computed(() => isShiftPressed)
+const isCreatingNew = $computed(() => isCtrlPressed)
+
+useEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key === 'Shift' || event.shiftKey) {
+    isShiftPressed = true
+  }
+  if (event.key === 'Control' || event.ctrlKey || event.key === 'Command' || event.metaKey) {
+    isCtrlPressed = true
+  }
+})
+useEventListener('keyup', (event: KeyboardEvent) => {
+  if (event.key === 'Shift' || !event.shiftKey) {
+    isShiftPressed = false
+  }
+  if (event.key === 'Control' || !event.ctrlKey || event.key === 'Command' || !event.metaKey) {
+    isCtrlPressed = false
+  }
+})
+
+function setGroupField<K extends keyof PossibleGroup>(
+  index: number,
+  field: K,
+  value: PossibleGroup[K],
+) {
+  const group = state.groups[index]
+  if (group == null) {
+    return
+  }
+
+  if (isCtrlPressed) {
+    const added = addGroup({ index: index + 1, original: group })
+    added[field] = value
+  } else if (isShiftPressed) {
+    for (const group of state.groups) {
+      group[field] = value
+    }
+  } else {
+    group[field] = value
+  }
+}
 </script>
 
 <template>
   <u-page>
-    <u-page-body class="px-8">
+    <u-page-body class="px-8 space-y-4">
       <u-page-header title="Discrete Data Plotting" />
-      <div class="space-y-2">
-        <div class="gap-2 grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2">
-          <u-form-field label="Station">
-            <u-select-menu
-              v-model="state.stations"
-              class="w-full"
-              :items="discrete.stations"
-              multiple
-            >
-              <template #trailing>
-                <clear-button
-                  v-if="state.stations.length > 0"
-                  v-model="state.stations"
-                  :clear-value="() => []"
-                />
-              </template>
-            </u-select-menu>
-          </u-form-field>
-          <u-form-field label="Asset">
-            <u-select-menu
-              v-model="state.assets"
-              class="w-full"
-              :items="
-                selectableAssets.map((asset) => ({
-                  label:
-                    discrete.assetToStation[asset] == null || state.stations.length === 1
-                      ? asset
-                      : `${asset} (${discrete.assetToStation[asset]})`,
-                  value: asset,
-                }))
-              "
-              multiple
-              value-key="value"
-            >
-              <template #trailing>
-                <clear-button
-                  v-if="state.assets.length > 0"
-                  v-model="state.assets"
-                  :clear-value="() => []"
-                />
-              </template>
-            </u-select-menu>
-          </u-form-field>
-          <u-tooltip
-            :text="
-              'Use hyphens for ranges, and commas for multiple options. ' +
-              'Example: \'2016-2018, 2020, 2023-\''
-            "
-          >
-            <u-form-field label="Year">
-              <u-input
-                v-model="state.year"
-                class="w-full"
-                :default-value="null"
-                :placeholder="yearPlaceholder"
-              />
-            </u-form-field>
-          </u-tooltip>
-          <u-form-field class="" label="X-Axis">
-            <u-select-menu v-model="state.x" class="w-full" :items="discrete.plottableFields" />
-          </u-form-field>
-          <u-form-field label="Y-Axis">
-            <u-select-menu v-model="state.y" class="w-full" :items="discrete.plottableFields" />
-          </u-form-field>
-          <u-form-field label="Chart Type">
-            <u-select-menu
-              v-model="state.display"
-              class="w-full"
-              :items="
-                ['scatter', 'line'].map((value) => ({
-                  label: upperFirst(value),
-                  value,
-                }))
-              "
-              label-key="label"
-              value-key="value"
+      <div>
+        <div class="flex items-center mb-2">
+          <h2 class="font-bold mb-0 mr-2 text-xl">Series</h2>
+          <u-popover>
+            <u-button
+              class="cursor-pointer p-1 rounded-full"
+              icon="i-lucide-help-circle"
+              label="Tips"
+              size="xs"
+              variant="subtle"
             />
-          </u-form-field>
+            <template #content>
+              <ul class="p-2 space-y-2 text-xs">
+                <li>
+                  Use the <code>+</code> and <code>−</code> buttons to add or remove a plotted
+                  series.
+                </li>
+                <li>
+                  Hold the <code>Shift</code> key while changing the value of a series to apply that
+                  change to all series. This is indicated by "<code>*</code>".
+                </li>
+                <li>
+                  Hold the <code>Ctrl</code> (or <code>Command</code>) key while changing the value
+                  of a series to create a new series with that value. This is indicated by
+                  "<code>+</code>".
+                </li>
+              </ul>
+            </template>
+          </u-popover>
+        </div>
+        <div class="space-y-1">
+          <u-card variant="subtle">
+            <template v-for="(group, i) of state.groups" :key="i">
+              <div
+                :class="[
+                  'flex flex-column flex-wrap space-x-2 space-y-1',
+                  !group.enabled && 'opacity-80',
+                ]"
+              >
+                <u-form-field class="2xl:flex-1 min-w-90 w-full" :size="inputSize">
+                  <template #label>
+                    <span class="flex items-center">
+                      <span class="cursor-pointer flex items-center">
+                        <span>Asset</span>
+                        <u-tooltip text="Toggle Shown">
+                          <u-checkbox
+                            aria-label="Toggle Shown"
+                            class="ml-2"
+                            :model-value="group.enabled"
+                            size="xs"
+                            @update:model-value="
+                              (value) => setGroupField(i, 'enabled', value && true)
+                            "
+                          />
+                        </u-tooltip>
+                      </span>
+                      <u-tooltip text="Remove">
+                        <u-button
+                          aria-label="Remove"
+                          class="ml-2"
+                          color="error"
+                          icon="i-lucide-trash-2"
+                          size="6px"
+                          variant="flat"
+                          @click="removeGroup(i)"
+                        />
+                      </u-tooltip>
+                    </span>
+                  </template>
+                  <u-select-menu
+                    class="w-full"
+                    :content="{}"
+                    :items="
+                      selectableAssets.map((asset) => ({
+                        label: `${asset} (${discrete.assetToStation[asset]})`,
+                        value: asset,
+                      }))
+                    "
+                    label-key="label"
+                    :model-value="group.asset"
+                    :size="inputSize"
+                    value-key="value"
+                    @update:model-value="(value: any) => setGroupField(i, 'asset', value)"
+                  >
+                    <template #item-label="{ item }">
+                      {{ (item as any).label }} {{ itemLabelModifier }}
+                    </template>
+                  </u-select-menu>
+                </u-form-field>
+                <u-form-field class="flex-1 min-w-80" label="X-Axis" :size="inputSize">
+                  <u-select-menu
+                    class="w-full"
+                    :items="discrete.plottableFields"
+                    :model-value="group.x"
+                    :size="inputSize"
+                    @update:model-value="(value: string) => setGroupField(i, 'x', value)"
+                  >
+                    <template #item-label="{ item }">{{ item }} {{ itemLabelModifier }}</template>
+                  </u-select-menu>
+                </u-form-field>
+                <u-form-field class="flex-1 min-w-80" label="Y-Axis" :size="inputSize">
+                  <u-select-menu
+                    class="w-full"
+                    :items="discrete.plottableFields"
+                    :model-value="group.y"
+                    :size="inputSize"
+                    @update:model-value="(value: string) => setGroupField(i, 'y', value)"
+                  >
+                    <template #item-label="{ item }">{{ item }} {{ itemLabelModifier }}</template>
+                  </u-select-menu>
+                </u-form-field>
+                <div class="flex flex-1 flex-row shrink space-x-2">
+                  <u-form-field class="grow min-w-24" label="Year" :size="inputSize">
+                    <u-select-menu
+                      class="w-full"
+                      :default-value="null"
+                      :items="yearOptions"
+                      :model-value="group.year"
+                      :size="inputSize"
+                      @update:model-value="(value: any) => setGroupField(i, 'year', value)"
+                    >
+                      <template #item-label="{ item }">{{ item }} {{ itemLabelModifier }}</template>
+                    </u-select-menu>
+                  </u-form-field>
+                  <u-form-field class="grow min-w-24" label="As" :size="inputSize">
+                    <u-select
+                      class="w-full"
+                      :items="
+                        ['scatter', 'line'].map((value) => ({
+                          label: upperFirst(value),
+                          value,
+                        }))
+                      "
+                      :model-value="group.display"
+                      :size="inputSize"
+                      @update:model-value="(val: any) => setGroupField(i, 'display', val)"
+                    >
+                      <template #item-label="{ item }">
+                        {{ upperFirst((item as any).label) }} {{ itemLabelModifier }}
+                      </template>
+                    </u-select>
+                  </u-form-field>
+                  <u-form-field class="flex-1 min-w-24 mr-2" label="Color" :size="inputSize">
+                    <u-input
+                      class="w-full"
+                      :model-value="group.color"
+                      :size="inputSize"
+                      type="color"
+                      @update:model-value="(value: string) => setGroupField(i, 'color', value)"
+                    />
+                    <template #label>
+                      <div class="flex flex-row justify-between">
+                        <span class="mr-1">Color</span>
+                        <u-button
+                          class="px-2 rounded-full"
+                          icon="i-lucide-dices"
+                          :size="5"
+                          variant="subtle"
+                          @click="setGroupField(i, 'color', getRandomColor())"
+                        />
+                      </div>
+                    </template>
+                  </u-form-field>
+                </div>
+              </div>
+              <u-separator v-if="i < state.groups.length - 1" class="my-2" />
+            </template>
+          </u-card>
+          <div class="flex flex-row justify-center mt-3 space-x-2">
+            <u-tooltip text="Add">
+              <u-button
+                class="rounded-full"
+                icon="i-lucide-plus"
+                size="sm"
+                variant="subtle"
+                @click="addGroup()"
+              />
+            </u-tooltip>
+            <u-tooltip text="Remove Last">
+              <u-button
+                class="rounded-full"
+                :disabled="state.groups.length < 2"
+                icon="i-lucide-minus"
+                size="sm"
+                variant="subtle"
+                @click="removeGroup()"
+              />
+            </u-tooltip>
+          </div>
+        </div>
+        <div class="pt-4">
+          <template v-if="option != null">
+            <chart class="h-150" :option="option" />
+          </template>
+          <p v-else-if="groups.length === 0" class="text-center text-md">
+            No data groups to display.
+          </p>
         </div>
       </div>
-      <template v-if="option != null">
-        <h2 class="mb-0 text-center text-lg">
-          {{ chartTitle }}
-        </h2>
-        <chart class="h-150" :option="option" />
-      </template>
-      <p v-else-if="state.y == null" class="text-center text-md">
-        Select a Y-Axis value to display the chart.
-      </p>
     </u-page-body>
   </u-page>
 </template>

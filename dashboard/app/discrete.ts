@@ -1,5 +1,5 @@
 import { parseAbsolute, type ZonedDateTime } from '@internationalized/date'
-import { uniq } from 'lodash-es'
+import { orderBy, uniq } from 'lodash-es'
 import { parse } from 'papaparse'
 import { defineStore } from 'pinia'
 
@@ -137,7 +137,7 @@ function parseRawSamples(csv: CsvFile): RawSample[] {
 
 function extractSamples(raw: RawSample[]): [Sample[], SampleSchema] {
   const schema = inferSchema(raw)
-  const samples = raw.flatMap((raw) => {
+  let samples = raw.flatMap((raw) => {
     // If there are multiple values in a raw sample's station or asset field, split them into
     // multiple parsed samples for each defined station/asset.
     const stations =
@@ -177,6 +177,7 @@ function extractSamples(raw: RawSample[]): [Sample[], SampleSchema] {
     })
   })
 
+  samples = orderBy(samples, [(sample) => sample.asset, (sample) => sample.timestamp.toDate()])
   return [samples, schema]
 }
 

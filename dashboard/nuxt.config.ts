@@ -1,3 +1,4 @@
+import tailwindcss from '@tailwindcss/vite'
 import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
@@ -6,6 +7,9 @@ export default defineNuxtConfig({
   },
   compatibilityDate: '2025-10-29',
   modules: ['@nuxt/ui', '@vue-macros/nuxt', '@nuxt/eslint', '@pinia/nuxt'],
+  vite: {
+    plugins: [tailwindcss()],
+  },
   vue: {
     // Allow safe destructured assignment of component props.
     propsDestructure: true,

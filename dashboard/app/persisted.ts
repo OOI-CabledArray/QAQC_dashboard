@@ -3,7 +3,7 @@ import type { MaybeRefOrGetter } from 'vue'
 import { computed, isReactive, reactive, watch, toValue } from 'vue'
 import type { Router } from 'vue-router'
 import type { ZodObject } from 'zod'
-import Zod, { ZodArray, ZodBoolean, ZodEnum, ZodNumber } from 'zod'
+import Zod, { ZodArray, ZodBoolean, ZodEnum, ZodNumber, ZodString } from 'zod'
 
 type Mapping = Record<string, any>
 export type BaseSchema = ZodObject<any>
@@ -141,47 +141,6 @@ function writeToStorage<TData extends BaseData<TSchema>, TSchema extends BaseSch
   localStorage.setItem(resolveKey(method.key), JSON.stringify(pick(data, getFields(data, method))))
 }
 
-function readFromUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema>(
-  schema: TSchema,
-): Partial<TData> | null {
-  const data: Record<string, unknown> = {}
-  const search = new URL(window.location.href).searchParams
-
-  search.forEach((value, key) => {
-    const field = camelCase(key)
-    if (field in data) {
-      return
-    }
-
-    if (value === 'null') {
-      data[field] = null
-    } else if (isFieldOfType(schema, field, ZodBoolean)) {
-      data[field] = Boolean(value)
-    } else if (isFieldOfType(schema, field, ZodNumber)) {
-      data[field] = Number(value)
-    } else if (isFieldOfType(schema, field, ZodEnum)) {
-      data[field] = value
-    } else if (isArrayFieldOfType(schema, field, ZodBoolean)) {
-      data[field] = value.split(',').map(Boolean)
-    } else if (isArrayFieldOfType(schema, field, ZodNumber)) {
-      data[field] = value.split(',').map(Number)
-    } else if (isArrayFieldOfType(schema, field, ZodEnum)) {
-      data[field] = value.split(',')
-    } else if (isFieldOfType(schema, field, ZodArray)) {
-      data[field] = value.split(',')
-    } else {
-      data[field] = value
-    }
-  })
-
-  try {
-    return schema.partial().parse(data) as Partial<TData>
-  } catch (error) {
-    console.error('Failed to parse persisted data.', error)
-    return null
-  }
-}
-
 function writeToUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema>(
   method: URLPersistenceMethod<TData>,
   data: TData,
@@ -206,12 +165,12 @@ function writeToUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema>
       continue
     }
 
-    if (isFieldOfType(schema, field, ZodEnum)) {
+    if (isPrimitiveField(schema, field)) {
       search.set(key, String(value))
       continue
     }
 
-    if (isArrayFieldOfType(schema, field, ZodEnum)) {
+    if (isPrimitiveArrayField(schema, field)) {
       if (isArray(value) && value.length > 0) {
         search.set(key, value.join(','))
       }
@@ -219,21 +178,56 @@ function writeToUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema>
       continue
     }
 
-    if (isFieldOfType(schema, field, ZodArray)) {
-      if (isArray(value) && value.length > 0) {
-        search.set(key, value.join(','))
-      }
-
-      continue
-    }
-
-    search.set(key, String(value))
+    search.set(key, JSON.stringify(value))
   }
 
   const params = url.searchParams.toString()
   const serialized = `${url.pathname}${params ? '?' + params : ''}`.replace(/%2C/g, ',')
 
   void router.replace(serialized)
+}
+
+function readFromUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema>(
+  schema: TSchema,
+): Partial<TData> | null {
+  const data: Record<string, unknown> = {}
+  const search = new URL(window.location.href).searchParams
+
+  search.forEach((value, key) => {
+    const field = camelCase(key)
+    if (field in data) {
+      return
+    }
+
+    if (value === 'null') {
+      data[field] = null
+    } else if (isFieldOfType(schema, field, ZodBoolean)) {
+      data[field] = Boolean(value)
+    } else if (isFieldOfType(schema, field, ZodNumber)) {
+      data[field] = Number(value)
+    } else if (isPrimitiveField(schema, field)) {
+      data[field] = value
+    } else if (isArrayFieldOfType(schema, field, ZodBoolean)) {
+      data[field] = value.split(',').map(Boolean)
+    } else if (isArrayFieldOfType(schema, field, ZodNumber)) {
+      data[field] = value.split(',').map(Number)
+    } else if (isPrimitiveArrayField(schema, field)) {
+      data[field] = value.split(',')
+    } else {
+      try {
+        data[field] = JSON.parse(value)
+      } catch {
+        data[field] = value
+      }
+    }
+  })
+
+  try {
+    return schema.partial().parse(data) as Partial<TData>
+  } catch (error) {
+    console.error('Failed to parse persisted data.', error)
+    return null
+  }
 }
 
 function isFieldOfType(schema: BaseSchema, field: string, type: any): boolean {
@@ -260,4 +254,22 @@ function isArrayFieldOfType(schema: BaseSchema, field: string, type: any): boole
   }
 
   return false
+}
+
+function isPrimitiveField(schema: BaseSchema, field: string): boolean {
+  return (
+    isFieldOfType(schema, field, ZodBoolean) ||
+    isFieldOfType(schema, field, ZodNumber) ||
+    isFieldOfType(schema, field, ZodString) ||
+    isFieldOfType(schema, field, ZodEnum)
+  )
+}
+
+function isPrimitiveArrayField(schema: BaseSchema, field: string): boolean {
+  return (
+    isArrayFieldOfType(schema, field, ZodBoolean) ||
+    isArrayFieldOfType(schema, field, ZodNumber) ||
+    isArrayFieldOfType(schema, field, ZodString) ||
+    isArrayFieldOfType(schema, field, ZodEnum)
+  )
 }
