@@ -49,7 +49,7 @@ const GroupSchema = Zod.object({
 
 const state = usePersisted({
   schema: Zod.object({
-    groups: GroupSchema.array().default(() => [GroupSchema.parse({})] as any),
+    series: GroupSchema.array().default(() => [GroupSchema.parse({})] as any),
   }),
   methods: [{ type: 'url' }],
 })
@@ -65,20 +65,14 @@ const history = useUndo({
   },
 })
 
-type PossibleGroup = (typeof state)['groups'][number]
-type Group = Required<PossibleGroup> & {
+type PossibleSeries = (typeof state)['series'][number]
+type Series = Required<PossibleSeries> & {
   index: number
-}
-
-type SeriesOptionWithData = SeriesOption & {
-  data: [SampleValue, SampleValue][]
-  itemStyle?: any
-  lineStyle?: any
 }
 
 const selectableAssets = $computed(() => discrete.assets.filter((asset) => asset !== 'PI_REQUEST'))
 
-function matches(group: Group, sample: Sample) {
+function matches(group: Series, sample: Sample) {
   return (
     sample.asset === group.asset &&
     sample.timestamp.year === group.year &&
@@ -87,10 +81,10 @@ function matches(group: Group, sample: Sample) {
   )
 }
 
-const groups = $computed(
+const series = $computed(
   () =>
     compact(
-      state.groups.map((group) =>
+      state.series.map((group) =>
         group.enabled && (group.x ?? group.y) != null && group.asset != null && group.year != null
           ? group
           : null,
@@ -98,24 +92,30 @@ const groups = $computed(
     ).map((group, index) => ({
       index,
       ...group,
-    })) as Group[],
+    })) as Series[],
 )
 
 const yearOptions = $computed(() => {
   return [...new Set(discrete.samples.map((sample) => sample.timestamp.year))].sort()
 })
 
-const series = $computed<SeriesOptionWithData[]>(() => {
-  const mapping: Record<string, SeriesOptionWithData> = {}
+type ChartedSeriesOptionWithData = SeriesOption & {
+  data: [SampleValue, SampleValue][]
+  itemStyle?: any
+  lineStyle?: any
+}
+
+const chartedSeries = $computed<ChartedSeriesOptionWithData[]>(() => {
+  const mapping: Record<string, ChartedSeriesOptionWithData> = {}
   const samples = orderBy(discrete.samples, (sample) => sample.timestamp.toDate())
   for (const sample of samples) {
-    for (const group of groups) {
+    for (const group of series) {
       if (!matches(group, sample)) {
         continue
       }
 
       const name = `${sample.asset} (${sample.timestamp.year})`
-      let series: SeriesOptionWithData = mapping[name]!
+      let series: ChartedSeriesOptionWithData = mapping[name]!
       if (series == null) {
         series = {
           name: name,
@@ -144,7 +144,7 @@ const series = $computed<SeriesOptionWithData[]>(() => {
   return Object.values(mapping)
 })
 
-function computeSeriesType(definitions: SampleSchemaFieldDefinition[]) {
+function computeChartedSeriesType(definitions: SampleSchemaFieldDefinition[]) {
   if (definitions.every((definition) => definition.type === 'timestamp')) {
     return 'time'
   }
@@ -156,14 +156,14 @@ function computeSeriesType(definitions: SampleSchemaFieldDefinition[]) {
 }
 
 const xAxisLabel = $computed(() =>
-  upperFirst(uniq(groups.map((current) => current.x.replaceAll('_', ' '))).join(', ')),
+  upperFirst(uniq(series.map((current) => current.x.replaceAll('_', ' '))).join(', ')),
 )
 const yAxisLabel = $computed(() =>
-  upperFirst(uniq(groups.map((current) => current.y.replaceAll('_', ' '))).join(', ')),
+  upperFirst(uniq(series.map((current) => current.y.replaceAll('_', ' '))).join(', ')),
 )
 
 const invertYAxis = $computed(() =>
-  groups.every((group) => (group.y ?? '').toLowerCase().includes('depth')),
+  series.every((series) => (series.y ?? '').toLowerCase().includes('depth')),
 )
 
 const itemLabelModifier = $computed(() => {
@@ -178,14 +178,14 @@ const itemLabelModifier = $computed(() => {
 })
 
 const option = $computed(() => {
-  const xSchemaFieldDefinitions = compact(groups.map((group) => discrete.schema[group.x]))
-  const ySchemaFieldDefinitions = compact(groups.map((group) => discrete.schema[group.y]))
+  const xSchemaFieldDefinitions = compact(series.map((group) => discrete.schema[group.x]))
+  const ySchemaFieldDefinitions = compact(series.map((group) => discrete.schema[group.y]))
   if (xSchemaFieldDefinitions.length === 0 || ySchemaFieldDefinitions.length === 0) {
     return null
   }
 
-  const xAxisType = computeSeriesType(xSchemaFieldDefinitions)
-  const yAxisType = computeSeriesType(ySchemaFieldDefinitions)
+  const xAxisType = computeChartedSeriesType(xSchemaFieldDefinitions)
+  const yAxisType = computeChartedSeriesType(ySchemaFieldDefinitions)
 
   return {
     grid: {
@@ -235,45 +235,71 @@ const option = $computed(() => {
       },
     ],
     legend: {
-      show: series.length <= 20,
+      show: chartedSeries.length <= 20,
       bottom: 0,
     },
-    series,
+    series: chartedSeries,
   } satisfies Option
 })
 
-function addGroup({
+function addSeries({
   index,
   original,
-}: { index?: number; original?: Readonly<PossibleGroup> } = {}) {
+}: { index?: number; original?: Readonly<PossibleSeries> } = {}) {
   if (index == null) {
-    index = state.groups.length
+    index = state.series.length
   }
   if (original == null) {
-    original = state.groups[index - 1]
+    original = state.series[index - 1]
   }
   const created = {
-    ...GroupSchema.parse(cloneDeep(original) ?? {}),
-    color: chartColors[state.groups.length] ?? getRandomColor(),
+    ...GroupSchema.parse(cloneDeep(original ?? {}) as any),
+    color: chartColors[state.series.length] ?? getRandomColor(),
   }
 
-  state.groups.splice(index, 0, created)
+  state.series.splice(index, 0, created)
   history.save(state)
   return created
 }
 
-function removeGroup(index?: number) {
+function removeSeries(index?: number) {
   if (index == null) {
-    index = state.groups.length - 1
+    index = state.series.length - 1
   }
 
-  if (index < 0 || index >= state.groups.length) {
+  if (index < 0 || index >= state.series.length) {
     return null
   }
 
-  const removed = state.groups.splice(index, 1)[0]
+  const removed = state.series.splice(index, 1)[0]
   history.save(state)
   return removed
+}
+
+function moveSeriesUp(index: number) {
+  const series = state.series[index]
+  const previous = state.series[index - 1]
+  if (series == null || previous == null) {
+    return
+  }
+
+  state.series[index - 1] = series
+  state.series[index] = previous
+
+  history.save(state)
+}
+
+function moveSeriesDown(index: number) {
+  const series = state.series[index]
+  const next = state.series[index + 1]
+  if (series == null || next == null) {
+    return
+  }
+
+  state.series[index + 1] = series
+  state.series[index] = next
+
+  history.save(state)
 }
 
 const inputSize = 'sm'
@@ -301,25 +327,25 @@ useEventListener('keyup', (event: KeyboardEvent) => {
   }
 })
 
-function setGroupField<K extends keyof PossibleGroup>(
+function setSeriesField<K extends keyof PossibleSeries>(
   index: number,
   field: K,
-  value: PossibleGroup[K],
+  value: PossibleSeries[K],
 ) {
-  const group = state.groups[index]
-  if (group == null) {
+  const series = state.series[index]
+  if (series == null) {
     return
   }
 
   if (isCtrlPressed) {
-    const added = addGroup({ index: index + 1, original: group })
+    const added = addSeries({ index: index + 1, original: series })
     added[field] = value
   } else if (isShiftPressed) {
-    for (const group of state.groups) {
+    for (const group of state.series) {
       group[field] = value
     }
   } else {
-    group[field] = value
+    series[field] = value
   }
 
   history.save(state)
@@ -383,11 +409,11 @@ function setGroupField<K extends keyof PossibleGroup>(
         </div>
         <div class="space-y-1">
           <u-card variant="subtle">
-            <template v-for="(group, i) of state.groups" :key="i">
+            <template v-for="(series, i) of state.series" :key="i">
               <div
                 :class="[
                   'flex flex-column flex-wrap space-x-2 space-y-1',
-                  !group.enabled && 'opacity-80',
+                  !series.enabled && 'opacity-80',
                 ]"
               >
                 <u-form-field class="2xl:flex-1 min-w-90 w-full" :size="inputSize">
@@ -399,14 +425,36 @@ function setGroupField<K extends keyof PossibleGroup>(
                           <u-checkbox
                             aria-label="Toggle Shown"
                             class="ml-2"
-                            :model-value="group.enabled"
+                            :model-value="series.enabled"
                             size="xs"
                             @update:model-value="
-                              (value) => setGroupField(i, 'enabled', value && true)
+                              (value) => setSeriesField(i, 'enabled', value && true)
                             "
                           />
                         </u-tooltip>
                       </span>
+                      <u-tooltip text="Move Up">
+                        <u-button
+                          aria-label="Move Up"
+                          class="ml-2"
+                          :disabled="i === 0"
+                          icon="i-lucide-arrow-up"
+                          size="6px"
+                          variant="flat"
+                          @click="moveSeriesUp(i)"
+                        />
+                      </u-tooltip>
+                      <u-tooltip text="Move Down">
+                        <u-button
+                          aria-label="Move Down"
+                          class="ml-2"
+                          :disabled="i === state.series.length - 1"
+                          icon="i-lucide-arrow-down"
+                          size="6px"
+                          variant="flat"
+                          @click="moveSeriesDown(i)"
+                        />
+                      </u-tooltip>
                       <u-tooltip text="Remove">
                         <u-button
                           aria-label="Remove"
@@ -415,7 +463,7 @@ function setGroupField<K extends keyof PossibleGroup>(
                           icon="i-lucide-trash-2"
                           size="6px"
                           variant="flat"
-                          @click="removeGroup(i)"
+                          @click="removeSeries(i)"
                         />
                       </u-tooltip>
                     </span>
@@ -430,10 +478,10 @@ function setGroupField<K extends keyof PossibleGroup>(
                       }))
                     "
                     label-key="label"
-                    :model-value="group.asset"
+                    :model-value="series.asset"
                     :size="inputSize"
                     value-key="value"
-                    @update:model-value="(value: any) => setGroupField(i, 'asset', value)"
+                    @update:model-value="(value: any) => setSeriesField(i, 'asset', value)"
                   >
                     <template #item-label="{ item }">
                       {{ (item as any).label }} {{ itemLabelModifier }}
@@ -444,9 +492,9 @@ function setGroupField<K extends keyof PossibleGroup>(
                   <u-select-menu
                     class="w-full"
                     :items="discrete.plottableFields"
-                    :model-value="group.x"
+                    :model-value="series.x"
                     :size="inputSize"
-                    @update:model-value="(value: string) => setGroupField(i, 'x', value)"
+                    @update:model-value="(value: string) => setSeriesField(i, 'x', value)"
                   >
                     <template #item-label="{ item }">{{ item }} {{ itemLabelModifier }}</template>
                   </u-select-menu>
@@ -455,9 +503,9 @@ function setGroupField<K extends keyof PossibleGroup>(
                   <u-select-menu
                     class="w-full"
                     :items="discrete.plottableFields"
-                    :model-value="group.y"
+                    :model-value="series.y"
                     :size="inputSize"
-                    @update:model-value="(value: string) => setGroupField(i, 'y', value)"
+                    @update:model-value="(value: string) => setSeriesField(i, 'y', value)"
                   >
                     <template #item-label="{ item }">{{ item }} {{ itemLabelModifier }}</template>
                   </u-select-menu>
@@ -468,9 +516,9 @@ function setGroupField<K extends keyof PossibleGroup>(
                       class="w-full"
                       :default-value="null"
                       :items="yearOptions"
-                      :model-value="group.year"
+                      :model-value="series.year"
                       :size="inputSize"
-                      @update:model-value="(value: any) => setGroupField(i, 'year', value)"
+                      @update:model-value="(value: any) => setSeriesField(i, 'year', value)"
                     >
                       <template #item-label="{ item }">{{ item }} {{ itemLabelModifier }}</template>
                     </u-select-menu>
@@ -484,9 +532,9 @@ function setGroupField<K extends keyof PossibleGroup>(
                           value,
                         }))
                       "
-                      :model-value="group.display"
+                      :model-value="series.display"
                       :size="inputSize"
-                      @update:model-value="(val: any) => setGroupField(i, 'display', val)"
+                      @update:model-value="(val: any) => setSeriesField(i, 'display', val)"
                     >
                       <template #item-label="{ item }">
                         {{ upperFirst((item as any).label) }} {{ itemLabelModifier }}
@@ -496,10 +544,10 @@ function setGroupField<K extends keyof PossibleGroup>(
                   <u-form-field class="flex-1 min-w-24 mr-2" label="Color" :size="inputSize">
                     <u-input
                       class="w-full"
-                      :model-value="group.color"
+                      :model-value="series.color"
                       :size="inputSize"
                       type="color"
-                      @update:model-value="(value: string) => setGroupField(i, 'color', value)"
+                      @update:model-value="(value: string) => setSeriesField(i, 'color', value)"
                     />
                     <template #label>
                       <div class="flex flex-row justify-between">
@@ -509,14 +557,14 @@ function setGroupField<K extends keyof PossibleGroup>(
                           icon="i-lucide-dices"
                           :size="5"
                           variant="subtle"
-                          @click="setGroupField(i, 'color', getRandomColor())"
+                          @click="setSeriesField(i, 'color', getRandomColor())"
                         />
                       </div>
                     </template>
                   </u-form-field>
                 </div>
               </div>
-              <u-separator v-if="i < state.groups.length - 1" class="my-2" />
+              <u-separator v-if="i < state.series.length - 1" class="my-2" />
             </template>
           </u-card>
           <div class="flex flex-row justify-center mt-3 space-x-2">
@@ -526,17 +574,17 @@ function setGroupField<K extends keyof PossibleGroup>(
                 icon="i-lucide-plus"
                 size="sm"
                 variant="subtle"
-                @click="addGroup()"
+                @click="addSeries()"
               />
             </u-tooltip>
             <u-tooltip text="Remove Last">
               <u-button
                 class="rounded-full"
-                :disabled="state.groups.length < 2"
+                :disabled="state.series.length < 2"
                 icon="i-lucide-minus"
                 size="sm"
                 variant="subtle"
-                @click="removeGroup()"
+                @click="removeSeries()"
               />
             </u-tooltip>
           </div>
@@ -545,8 +593,8 @@ function setGroupField<K extends keyof PossibleGroup>(
           <template v-if="option != null">
             <chart class="h-150" :option="option" />
           </template>
-          <p v-else-if="groups.length === 0" class="text-center text-md">
-            No data groups to display.
+          <p v-else-if="series.length === 0" class="text-center text-md">
+            No data series to display.
           </p>
         </div>
       </div>
