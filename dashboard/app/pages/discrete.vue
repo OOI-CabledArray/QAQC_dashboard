@@ -9,6 +9,8 @@ import Chart from '@/components/Chart.vue'
 import type { Sample, SampleSchemaFieldDefinition, SampleValue } from '@/discrete'
 import { useDiscrete } from '@/discrete'
 import { usePersisted } from '@/persisted'
+import { isMac } from '@/platform'
+import { useUndo } from '@/undo'
 
 const discrete = useDiscrete()
 await discrete.load()
@@ -50,6 +52,17 @@ const state = usePersisted({
     groups: GroupSchema.array().default(() => [GroupSchema.parse({})] as any),
   }),
   methods: [{ type: 'url' }],
+})
+
+const ctrlKey = isMac ? 'Command' : 'Ctrl'
+const history = useUndo({
+  initial: state,
+  onUndo(values) {
+    Object.assign(state, values)
+  },
+  onRedo(values) {
+    Object.assign(state, values)
+  },
 })
 
 type PossibleGroup = (typeof state)['groups'][number]
@@ -245,6 +258,7 @@ function addGroup({
   }
 
   state.groups.splice(index, 0, created)
+  history.save(state)
   return created
 }
 
@@ -257,7 +271,9 @@ function removeGroup(index?: number) {
     return null
   }
 
-  return state.groups.splice(index, 1)[0] ?? null
+  const removed = state.groups.splice(index, 1)[0]
+  history.save(state)
+  return removed
 }
 
 const inputSize = 'sm'
@@ -305,6 +321,8 @@ function setGroupField<K extends keyof PossibleGroup>(
   } else {
     group[field] = value
   }
+
+  history.save(state)
 }
 </script>
 
@@ -313,7 +331,7 @@ function setGroupField<K extends keyof PossibleGroup>(
     <u-page-body class="px-8 space-y-4">
       <u-page-header title="Discrete Data Plotting" />
       <div>
-        <div class="flex items-center mb-2">
+        <div class="flex items-center mb-2 space-x-2">
           <h2 class="font-bold mb-0 mr-2 text-xl">Series</h2>
           <u-popover>
             <u-button
@@ -326,21 +344,42 @@ function setGroupField<K extends keyof PossibleGroup>(
             <template #content>
               <ul class="p-2 space-y-2 text-xs">
                 <li>
-                  Use the <code>+</code> and <code>−</code> buttons to add or remove a plotted
+                  Use the <code>+</code> and <code>−</code> buttons to add or remove a plotted data
                   series.
                 </li>
                 <li>
-                  Hold the <code>Shift</code> key while changing the value of a series to apply that
-                  change to all series. This is indicated by "<code>*</code>".
+                  You can use <code>{{ ctrlKey }}-Z</code> and <code>{{ ctrlKey }}-Shift-Z</code> to
+                  undo/redo changes.
                 </li>
                 <li>
-                  Hold the <code>Ctrl</code> (or <code>Command</code>) key while changing the value
-                  of a series to create a new series with that value. This is indicated by
-                  "<code>+</code>".
+                  Hold <code>Shift</code> while changing the value of a series to apply that change
+                  to all series. This is indicated by "<code>*</code>".
+                </li>
+                <li>
+                  Hold <code>{{ ctrlKey }}</code> while changing the value of a series to create a
+                  new series with that value. This is indicated by "<code>+</code>".
                 </li>
               </ul>
             </template>
           </u-popover>
+          <u-tooltip text="Undo">
+            <u-button
+              :disabled="!history.canUndo"
+              icon="i-lucide-undo"
+              size="xs"
+              variant="subtle"
+              @click="history.undo()"
+            />
+          </u-tooltip>
+          <u-tooltip text="Redo">
+            <u-button
+              :disabled="!history.canRedo"
+              icon="i-lucide-redo"
+              size="xs"
+              variant="subtle"
+              @click="history.redo()"
+            />
+          </u-tooltip>
         </div>
         <div class="space-y-1">
           <u-card variant="subtle">
