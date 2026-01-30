@@ -284,9 +284,15 @@ const option = $computed(() => {
           const {
             seriesName,
             data: [x, y],
+            color,
           } = point
 
-          text += `<b>${seriesName}</b><br/>${yAxisLabel}: ${y}<br/>${xAxisLabel}: ${x}<br/>`
+          text +=
+            `<div class="flex items-center mb-1">` +
+            `  <div class="w-3 h-3 rounded-full mr-1.5" style="background-color: ${color}"></div>` +
+            `  <b>${seriesName}</b>` +
+            `</div>` +
+            `${yAxisLabel}: <b>${y}</b><br/>${xAxisLabel}: <b>${x}<br/>`
         }
 
         return text
