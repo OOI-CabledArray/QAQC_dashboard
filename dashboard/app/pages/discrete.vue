@@ -695,7 +695,7 @@ function setSeriesField<K extends keyof PartialSeries>(
                       </template>
                     </u-select-menu>
                   </u-form-field>
-                  <u-form-field class="grow min-w-24" label="As" size="sm">
+                  <u-form-field class="grow min-w-24" label="Display" size="sm">
                     <u-select
                       class="w-full"
                       :items="
