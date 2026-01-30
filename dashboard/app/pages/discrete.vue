@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { useEventListener } from '@vueuse/core'
 import type { SeriesOption } from 'echarts'
-import { cloneDeep, compact, orderBy, uniq, upperFirst } from 'lodash-es'
+import { cloneDeep, compact, orderBy, uniq, uniqBy, upperFirst } from 'lodash-es'
 import Zod from 'zod'
 
 import type { Option } from '@/chart'
@@ -15,6 +15,7 @@ import { useUndo } from '@/undo'
 const discrete = useDiscrete()
 await discrete.load()
 
+// Pre-defined colors for new series when first inserted.
 const chartColors = [
   '#1f77b4',
   '#ff7f0e',
@@ -28,6 +29,7 @@ const chartColors = [
   '#17becf',
 ] as const
 
+/** Generate a random color for a series.  */
 function getRandomColor() {
   return (
     '#' +
@@ -37,7 +39,7 @@ function getRandomColor() {
   )
 }
 
-const GroupSchema = Zod.object({
+const SeriesSchema = Zod.object({
   asset: Zod.string().optional(),
   x: Zod.string().optional(),
   y: Zod.string().optional(),
@@ -47,14 +49,17 @@ const GroupSchema = Zod.object({
   color: Zod.string().default(chartColors[0]),
 })
 
+// State for the page, stored as query parameters in the URL.
 const state = usePersisted({
   schema: Zod.object({
-    series: GroupSchema.array().default(() => [GroupSchema.parse({})] as any),
+    series: SeriesSchema.array().default(() => [SeriesSchema.parse({})] as any),
   }),
   methods: [{ type: 'url' }],
 })
 
 const ctrlKey = isMac ? 'Command' : 'Ctrl'
+
+// Implement undo/redo for modifying the page's state.
 const history = useUndo({
   initial: state,
   onUndo(values) {
@@ -65,28 +70,34 @@ const history = useUndo({
   },
 })
 
-type PossibleSeries = (typeof state)['series'][number]
-type Series = Required<PossibleSeries> & {
+type PartialSeries = (typeof state)['series'][number]
+type Series = Required<PartialSeries> & {
   index: number
 }
 
+type SeriesFilterFields = Pick<PartialSeries, 'asset' | 'x' | 'y' | 'year'>
+
 const selectableAssets = $computed(() => discrete.assets.filter((asset) => asset !== 'PI_REQUEST'))
 
-function matches(group: Series, sample: Sample) {
+function matches(series: SeriesFilterFields, sample: Sample) {
   return (
-    sample.asset === group.asset &&
-    sample.timestamp.year === group.year &&
-    sample.data[group.x] != null &&
-    sample.data[group.y] != null
+    (series.asset == null || sample.asset === series.asset) &&
+    (series.x == null || sample.data[series.x] != null) &&
+    (series.y == null || sample.data[series.y] != null) &&
+    (series.year == null || sample.timestamp.year === series.year)
   )
 }
 
+// All series with filter fields completely filled out.
 const series = $computed(
   () =>
     compact(
-      state.series.map((group) =>
-        group.enabled && (group.x ?? group.y) != null && group.asset != null && group.year != null
-          ? group
+      state.series.map((series) =>
+        series.enabled &&
+        (series.x ?? series.y) != null &&
+        series.asset != null &&
+        series.year != null
+          ? series
           : null,
       ),
     ).map((group, index) => ({
@@ -94,6 +105,65 @@ const series = $computed(
       ...group,
     })) as Series[],
 )
+
+const isMissingDataCache: Record<string, boolean> = {}
+
+/**
+ * Return `true` if the provided series should show an indication of missing data for the given
+ * field, and `false` otherwise. The results of this are cached for performance, considering this
+ * is run for all values in the pages select dropdown menus, and usually more than once.
+ * */
+function isNoData(series: SeriesFilterFields, field: keyof SeriesFilterFields) {
+  const key = [series.asset ?? '', series.x ?? '', series.y ?? '', series.year ?? '', field].join(
+    ',',
+  )
+  const cached = isMissingDataCache[key]
+  if (cached != null) {
+    return cached
+  }
+
+  let result: boolean
+  if (field === 'asset') {
+    result =
+      series.asset != null && discrete.samples.every((sample) => sample.asset !== series.asset)
+  } else if (field === 'x') {
+    result =
+      series.asset != null &&
+      series.x != null &&
+      discrete.samples
+        .filter((sample) => sample.asset === series.asset)
+        .every((sample) => sample.data[series.x!] == null)
+  } else if (field === 'y') {
+    result =
+      series.asset != null &&
+      series.y != null &&
+      discrete.samples
+        .filter((sample) => sample.asset === series.asset)
+        .every((sample) => sample.data[series.y!] == null)
+  } else if (field === 'year') {
+    result =
+      series.asset != null &&
+      series.x != null &&
+      series.y != null &&
+      series.year != null &&
+      !discrete.samples.some(
+        (current) =>
+          current.asset === series.asset &&
+          current.data[series.x!] != null &&
+          current.data[series.y!] != null &&
+          current.timestamp.year === series.year,
+      )
+  } else {
+    result = false
+  }
+
+  isMissingDataCache[key] = result
+  return result
+}
+
+function getNoDataIndicator(series: SeriesFilterFields, field: keyof SeriesFilterFields) {
+  return isNoData(series, field) ? ' (No Data)' : ''
+}
 
 const yearOptions = $computed(() => {
   return [...new Set(discrete.samples.map((sample) => sample.timestamp.year))].sort()
@@ -141,6 +211,12 @@ const chartedSeries = $computed<ChartedSeriesOptionWithData[]>(() => {
     }
   }
 
+  // Ensure data points are ordered and unique.
+  for (const current of Object.values(mapping)) {
+    current.data = orderBy(current.data, ([x]) => x)
+    current.data = uniqBy(current.data, ([x, y]) => x + '|' + y)
+  }
+
   return Object.values(mapping)
 })
 
@@ -162,10 +238,12 @@ const yAxisLabel = $computed(() =>
   upperFirst(uniq(series.map((current) => current.y.replaceAll('_', ' '))).join(', ')),
 )
 
+// Invert the Y axis if depth is selected.
 const invertYAxis = $computed(() =>
   series.every((series) => (series.y ?? '').toLowerCase().includes('depth')),
 )
 
+// Shown alongside select labels to show there is a modifier currently being applied.
 const itemLabelModifier = $computed(() => {
   let modifier = ''
   if (isApplyingToAll) {
@@ -177,6 +255,7 @@ const itemLabelModifier = $computed(() => {
   return modifier
 })
 
+// Rendered ECharts chart option value.
 const option = $computed(() => {
   const xSchemaFieldDefinitions = compact(series.map((group) => discrete.schema[group.x]))
   const ySchemaFieldDefinitions = compact(series.map((group) => discrete.schema[group.y]))
@@ -197,7 +276,21 @@ const option = $computed(() => {
     tooltip: {
       confine: true,
       enterable: true,
-      trigger: 'item',
+      trigger: 'axis',
+      // Show both axis values for all hovered points.
+      formatter: (points: any) => {
+        let text = ''
+        for (const point of points) {
+          const {
+            seriesName,
+            data: [x, y],
+          } = point
+
+          text += `<b>${seriesName}</b><br/>${yAxisLabel}: ${y}<br/>${xAxisLabel}: ${x}<br/>`
+        }
+
+        return text
+      },
     },
     xAxis: {
       name: xAxisLabel,
@@ -245,7 +338,7 @@ const option = $computed(() => {
 function addSeries({
   index,
   original,
-}: { index?: number; original?: Readonly<PossibleSeries> } = {}) {
+}: { index?: number; original?: Readonly<PartialSeries> } = {}) {
   if (index == null) {
     index = state.series.length
   }
@@ -253,7 +346,7 @@ function addSeries({
     original = state.series[index - 1]
   }
   const created = {
-    ...GroupSchema.parse(cloneDeep(original ?? {}) as any),
+    ...SeriesSchema.parse(cloneDeep(original ?? {}) as any),
     color: chartColors[state.series.length] ?? getRandomColor(),
   }
 
@@ -302,8 +395,6 @@ function moveSeriesDown(index: number) {
   history.save(state)
 }
 
-const inputSize = 'sm'
-
 let isShiftPressed = $ref(false)
 let isCtrlPressed = $ref(false)
 
@@ -327,10 +418,10 @@ useEventListener('keyup', (event: KeyboardEvent) => {
   }
 })
 
-function setSeriesField<K extends keyof PossibleSeries>(
+function setSeriesField<K extends keyof PartialSeries>(
   index: number,
   field: K,
-  value: PossibleSeries[K],
+  value: PartialSeries[K],
 ) {
   const series = state.series[index]
   if (series == null) {
@@ -374,7 +465,7 @@ function setSeriesField<K extends keyof PossibleSeries>(
                   series.
                 </li>
                 <li>
-                  You can use <code>{{ ctrlKey }}-Z</code> and <code>{{ ctrlKey }}-Shift-Z</code> to
+                  Use <code>{{ ctrlKey }}-Z</code> and <code>{{ ctrlKey }}-Shift-Z</code> to
                   undo/redo changes.
                 </li>
                 <li>
@@ -416,7 +507,7 @@ function setSeriesField<K extends keyof PossibleSeries>(
                   !series.enabled && 'opacity-80',
                 ]"
               >
-                <u-form-field class="2xl:flex-1 min-w-90 w-full" :size="inputSize">
+                <u-form-field class="min-[1680px]:flex-1 min-w-90 w-full" size="sm">
                   <template #label>
                     <span class="flex items-center">
                       <span class="cursor-pointer flex items-center">
@@ -473,13 +564,15 @@ function setSeriesField<K extends keyof PossibleSeries>(
                     :content="{}"
                     :items="
                       selectableAssets.map((asset) => ({
-                        label: `${asset} (${discrete.assetToStation[asset]})`,
+                        label:
+                          `${asset} (${discrete.assetToStation[asset]})` +
+                          `${getNoDataIndicator({ asset }, 'asset')}`,
                         value: asset,
                       }))
                     "
                     label-key="label"
                     :model-value="series.asset"
-                    :size="inputSize"
+                    size="sm"
                     value-key="value"
                     @update:model-value="(value: any) => setSeriesField(i, 'asset', value)"
                   >
@@ -488,42 +581,115 @@ function setSeriesField<K extends keyof PossibleSeries>(
                     </template>
                   </u-select-menu>
                 </u-form-field>
-                <u-form-field class="flex-1 min-w-80" label="X-Axis" :size="inputSize">
+                <u-form-field class="flex-1 min-w-80" label="X-Axis" size="sm">
                   <u-select-menu
                     class="w-full"
-                    :items="discrete.plottableFields"
+                    :items="
+                      discrete.plottableFields.map((field) => ({
+                        label: `${field} ${getNoDataIndicator(
+                          {
+                            asset: series.asset,
+                            x: field,
+                          },
+                          'x',
+                        )}`,
+                        value: field,
+                      }))
+                    "
+                    label-key="label"
                     :model-value="series.x"
-                    :size="inputSize"
+                    size="sm"
+                    value-key="value"
                     @update:model-value="(value: string) => setSeriesField(i, 'x', value)"
                   >
-                    <template #item-label="{ item }">{{ item }} {{ itemLabelModifier }}</template>
+                    <template #item-label="{ item }">
+                      <span
+                        :class="
+                          isNoData({ asset: series.asset, x: (item as any).value }, 'x')
+                            ? 'opacity-75'
+                            : ''
+                        "
+                      >
+                        {{ (item as any).value }}
+                        {{
+                          getNoDataIndicator({ asset: series.asset, x: (item as any).value }, 'x')
+                        }}
+                        {{ itemLabelModifier }}
+                      </span>
+                    </template>
                   </u-select-menu>
                 </u-form-field>
-                <u-form-field class="flex-1 min-w-80" label="Y-Axis" :size="inputSize">
+                <u-form-field class="flex-1 min-w-80" label="Y-Axis" size="sm">
                   <u-select-menu
                     class="w-full"
-                    :items="discrete.plottableFields"
+                    :items="
+                      discrete.plottableFields.map((field) => ({
+                        label: `${field} ${getNoDataIndicator(
+                          {
+                            asset: series.asset,
+                            y: field,
+                          },
+                          'y',
+                        )}`,
+                        value: field,
+                      }))
+                    "
+                    label-key="label"
                     :model-value="series.y"
-                    :size="inputSize"
+                    size="sm"
+                    value-key="value"
                     @update:model-value="(value: string) => setSeriesField(i, 'y', value)"
                   >
-                    <template #item-label="{ item }">{{ item }} {{ itemLabelModifier }}</template>
+                    <template #item-label="{ item }">
+                      <span
+                        :class="
+                          isNoData({ asset: series.asset, y: (item as any).value }, 'y')
+                            ? 'opacity-75'
+                            : ''
+                        "
+                      >
+                        {{ (item as any).value }}
+                        {{
+                          getNoDataIndicator({ asset: series.asset, x: (item as any).value }, 'x')
+                        }}
+                        {{ itemLabelModifier }}
+                      </span>
+                    </template>
                   </u-select-menu>
                 </u-form-field>
                 <div class="flex flex-1 flex-row shrink space-x-2">
-                  <u-form-field class="grow min-w-24" label="Year" :size="inputSize">
+                  <u-form-field class="grow min-w-24" label="Year" size="sm">
                     <u-select-menu
                       class="w-full"
                       :default-value="null"
-                      :items="yearOptions"
+                      :items="
+                        yearOptions.map((year) => ({
+                          label: `${year} ${getNoDataIndicator({ ...series, year }, 'year')}`,
+                          value: year,
+                        }))
+                      "
+                      label-key="label"
                       :model-value="series.year"
-                      :size="inputSize"
+                      size="sm"
+                      value-key="value"
                       @update:model-value="(value: any) => setSeriesField(i, 'year', value)"
                     >
-                      <template #item-label="{ item }">{{ item }} {{ itemLabelModifier }}</template>
+                      <template #item-label="{ item }">
+                        <span
+                          :class="
+                            isNoData({ ...series, year: (item as any).value }, 'year')
+                              ? 'opacity-75'
+                              : ''
+                          "
+                        >
+                          {{ (item as any).value }}
+                          {{ getNoDataIndicator({ ...series, year: (item as any).value }, 'year') }}
+                          {{ itemLabelModifier }}
+                        </span>
+                      </template>
                     </u-select-menu>
                   </u-form-field>
-                  <u-form-field class="grow min-w-24" label="As" :size="inputSize">
+                  <u-form-field class="grow min-w-24" label="As" size="sm">
                     <u-select
                       class="w-full"
                       :items="
@@ -533,7 +699,7 @@ function setSeriesField<K extends keyof PossibleSeries>(
                         }))
                       "
                       :model-value="series.display"
-                      :size="inputSize"
+                      size="sm"
                       @update:model-value="(val: any) => setSeriesField(i, 'display', val)"
                     >
                       <template #item-label="{ item }">
@@ -541,11 +707,11 @@ function setSeriesField<K extends keyof PossibleSeries>(
                       </template>
                     </u-select>
                   </u-form-field>
-                  <u-form-field class="flex-1 min-w-24 mr-2" label="Color" :size="inputSize">
+                  <u-form-field class="flex-1 min-w-24 mr-2" label="Color" size="sm">
                     <u-input
                       class="w-full"
                       :model-value="series.color"
-                      :size="inputSize"
+                      size="sm"
                       type="color"
                       @update:model-value="(value: string) => setSeriesField(i, 'color', value)"
                     />
@@ -591,7 +757,7 @@ function setSeriesField<K extends keyof PossibleSeries>(
         </div>
         <div class="pt-4">
           <template v-if="option != null">
-            <chart class="h-150" :option="option" />
+            <chart ref="chart" class="h-150" :option="option" />
           </template>
           <p v-else-if="series.length === 0" class="text-center text-md">
             No data series to display.
