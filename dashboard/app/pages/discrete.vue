@@ -12,6 +12,7 @@ import { usePersisted } from '@/persisted'
 import { isMac } from '@/platform'
 import { useUndo } from '@/undo'
 
+// Load discrete data.
 const discrete = useDiscrete()
 await discrete.load()
 
@@ -29,7 +30,7 @@ const chartColors = [
   '#17becf',
 ] as const
 
-/** Generate a random color for a series.  */
+// Generate a random color for a series.
 function getRandomColor() {
   return (
     '#' +
@@ -39,6 +40,7 @@ function getRandomColor() {
   )
 }
 
+// Schema for data series objects in form.
 const SeriesSchema = Zod.object({
   asset: Zod.string().optional(),
   x: Zod.string().optional(),
@@ -70,15 +72,18 @@ const history = useUndo({
   },
 })
 
+// Fields for series which may or may not be completely filled out.
 type PartialSeries = (typeof state)['series'][number]
-type Series = Required<PartialSeries> & {
-  index: number
-}
+// Fully defined series with included index.
+type Series = Required<PartialSeries>
 
+// Fields in series objects used for filtering samples.
 type SeriesFilterFields = Pick<PartialSeries, 'asset' | 'x' | 'y' | 'year'>
 
+// Assets that can be selected for plotting.
 const selectableAssets = $computed(() => discrete.assets.filter((asset) => asset !== 'PI_REQUEST'))
 
+// Return `true` if the filtering fields on the provided series matche the given sample.
 function matches(series: SeriesFilterFields, sample: Sample) {
   return (
     (series.asset == null || sample.asset === series.asset) &&
@@ -106,7 +111,15 @@ const series = $computed(
     })) as Series[],
 )
 
-const isMissingDataCache: Record<string, boolean> = {}
+// True if all series share the same X axis value.
+const xAxiesAreSame = $computed(() => uniq(compact(series.map((series) => series.x))).length <= 1)
+// True if all series share the same Y axis value.
+const yAxiesAreSame = $computed(() => uniq(compact(series.map((series) => series.y))).length <= 1)
+// True if all series share the same X and Y axis values.
+const allAxiesAreSame = $computed(() => xAxiesAreSame && yAxiesAreSame)
+
+// Cache of missing data checks for series fields.
+const isNoDataResultCache: Record<string, boolean> = {}
 
 /**
  * Return `true` if the provided series should show an indication of missing data for the given
@@ -117,7 +130,7 @@ function isNoData(series: SeriesFilterFields, field: keyof SeriesFilterFields) {
   const key = [series.asset ?? '', series.x ?? '', series.y ?? '', series.year ?? '', field].join(
     ',',
   )
-  const cached = isMissingDataCache[key]
+  const cached = isNoDataResultCache[key]
   if (cached != null) {
     return cached
   }
@@ -157,69 +170,105 @@ function isNoData(series: SeriesFilterFields, field: keyof SeriesFilterFields) {
     result = false
   }
 
-  isMissingDataCache[key] = result
+  isNoDataResultCache[key] = result
   return result
 }
 
+// Return a string to indicate if no data is present for the given series field.
 function getNoDataIndicator(series: SeriesFilterFields, field: keyof SeriesFilterFields) {
   return isNoData(series, field) ? ' (No Data)' : ''
 }
 
+// All years we have discrete sample for.
 const yearOptions = $computed(() => {
   return [...new Set(discrete.samples.map((sample) => sample.timestamp.year))].sort()
 })
 
-type ChartedSeriesOptionWithData = SeriesOption & {
+// An ECharts series option with data points and axis labels.
+type ChartedSeries = SeriesOption & {
   data: [SampleValue, SampleValue][]
   itemStyle?: any
   lineStyle?: any
+
+  // Store axis labels for tooltip rendering.
+  xAxisLabel: string
+  yAxisLabel: string
 }
 
-const chartedSeries = $computed<ChartedSeriesOptionWithData[]>(() => {
-  const mapping: Record<string, ChartedSeriesOptionWithData> = {}
+// Computed ECharts series options with data points.
+const chartedSeries = $computed<ChartedSeries[]>(() => {
+  // Mapping of series names to ECharts series options.
+  const mapping: Record<string, ChartedSeries> = {}
   const samples = orderBy(discrete.samples, (sample) => sample.timestamp.toDate())
+
   for (const sample of samples) {
-    for (const group of series) {
-      if (!matches(group, sample)) {
+    for (const [seriesIndex, current] of series.entries()) {
+      // If the current series does not match this sample, skip it.
+      if (!matches(current, sample)) {
         continue
       }
 
-      const name = `${sample.asset} (${sample.timestamp.year})`
-      let series: ChartedSeriesOptionWithData = mapping[name]!
-      if (series == null) {
-        series = {
-          name: name,
-          type: group.display,
-          emphasis: { focus: 'series' },
-          data: [],
-        }
-
-        series.itemStyle = { color: group.color }
-        if (group.display === 'line') {
-          series.lineStyle = { color: group.color }
-        }
-
-        mapping[name] = series
+      // We need to create unique series names depending on which axies are the same/different.
+      let name: string
+      if (allAxiesAreSame) {
+        // All axies are the same, so just specify asset and year.
+        name = `${sample.asset} (${sample.timestamp.year})`
+      } else if (xAxiesAreSame) {
+        // Only X axies are the same, so specify asset, year and the distinct Y axis.
+        name = `${sample.asset} (${sample.timestamp.year}) — ${current.y}`
+      } else if (yAxiesAreSame) {
+        // Only Y axies are the same, so specify asset, year and the distinct X axis.
+        name = `${sample.asset} (${sample.timestamp.year}) — ${current.x}`
+      } else {
+        // Both axies are the different, so specify asset, year, and both the Y and X axis.
+        name = `${sample.asset} (${sample.timestamp.year}) — ${current.y} / ${current.x}`
       }
 
-      const x = sample.data[group.x]
-      const y = sample.data[group.y]
+      // Unique key of the series to append data points to.
+      const seriesKey = `${seriesIndex}\\${name}`
+
+      let series: ChartedSeries = mapping[seriesKey]!
+      if (series == null) {
+        series = {
+          name,
+          type: current.display,
+          emphasis: { focus: 'series' },
+          data: [],
+          // Not used by ECharts, stored here for tooltip rendering.
+          xAxisLabel: current.x,
+          yAxisLabel: current.y,
+        }
+
+        series.itemStyle = { color: current.color }
+        if (current.display === 'line') {
+          series.lineStyle = { color: current.color }
+        }
+
+        mapping[seriesKey] = series
+      }
+
+      const x = sample.data[current.x]
+      const y = sample.data[current.y]
+      // Append data point if both X and Y axis values are present.
       if (x != null && y != null) {
         series.data.push([x, y])
-        series.data = orderBy(series.data, (current) => current[0])
       }
     }
   }
 
   // Ensure data points are ordered and unique.
   for (const current of Object.values(mapping)) {
+    // Order by X axis value.
     current.data = orderBy(current.data, ([x]) => x)
+    // Ensure all data points are unique.
     current.data = uniqBy(current.data, ([x, y]) => x + '|' + y)
   }
 
   return Object.values(mapping)
 })
 
+// Determine the type of an ECharts axis based on the sample field definitions which will be
+// plotted on that axis.
 function computeChartedSeriesType(definitions: SampleSchemaFieldDefinition[]) {
   if (definitions.every((definition) => definition.type === 'timestamp')) {
     return 'time'
@@ -279,23 +328,35 @@ const option = $computed(() => {
       trigger: 'axis',
       // Show both axis values for all hovered points.
       formatter: (points: any) => {
-        let text = ''
+        const content = ['<div class="space-y-2">']
         for (const point of points) {
           const {
             seriesName,
+            seriesIndex,
             data: [x, y],
             color,
           } = point
 
-          text +=
-            `<div class="flex items-center mb-1">` +
-            `  <div class="w-3 h-3 rounded-full mr-1.5" style="background-color: ${color}"></div>` +
-            `  <b>${seriesName}</b>` +
-            `</div>` +
-            `${yAxisLabel}: <b>${y}</b><br/>${xAxisLabel}: <b>${x}<br/>`
+          const series = chartedSeries[seriesIndex]
+          if (series == null) {
+            continue
+          }
+
+          content.push(`
+            <div>
+              <div class="flex items-center mb-1">
+                <div class="w-3 h-3 rounded-full mr-1.5" style="background-color: ${color}">
+              </div>
+              <b>${seriesName}</b>
+              </div>
+              ${series.yAxisLabel}: <b>${y}</b><br/>
+              ${series.xAxisLabel}: <b>${x}</b><br/>
+            </div>
+          `)
         }
 
-        return text
+        content.push('</div>')
+        return content.join('')
       },
     },
     xAxis: {
