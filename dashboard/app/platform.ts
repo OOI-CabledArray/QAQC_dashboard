@@ -1,1 +1,1 @@
-export const isMac = navigator.userAgent.includes('Max')
+export const isMac = navigator.userAgent.includes('Mac')
