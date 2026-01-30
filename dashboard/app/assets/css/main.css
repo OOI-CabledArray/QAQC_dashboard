@@ -67,9 +67,9 @@
 }
 
 @layer base {
-   button,
-   [role="button"] {
-      @apply cursor-pointer;
-      @apply disabled:cursor-not-allowed;
-   }
+  button,
+  [role='button'] {
+    @apply cursor-pointer;
+    @apply disabled:cursor-not-allowed;
+  }
 }

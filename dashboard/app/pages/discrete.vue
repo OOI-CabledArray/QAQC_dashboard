@@ -667,7 +667,6 @@ function setSeriesField<K extends keyof PartialSeries>(
                   <u-form-field class="grow min-w-24" label="Year" size="sm">
                     <u-select-menu
                       class="w-full"
-                      :default-value="null"
                       :items="
                         yearOptions.map((year) => ({
                           label: `${year} ${getNoDataIndicator({ ...series, year }, 'year')}`,
