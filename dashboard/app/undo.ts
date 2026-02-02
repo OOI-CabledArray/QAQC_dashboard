@@ -1,5 +1,5 @@
 import { useEventListener } from '@vueuse/core'
-import { cloneDeep } from 'lodash-es'
+import { cloneDeep, isEqual } from 'lodash-es'
 
 export type UndoRedoOptions<T> = {
   initial: T
@@ -42,7 +42,11 @@ export function useUndo<T>({
 
   function save(state: T) {
     history.splice(index + 1)
-    history.push(cloneDeep(state))
+    // Only save the new state if it's different from the previous saved state.
+    if (history.length === 0 || !isEqual(state, history[history.length - 1])) {
+      history.push(cloneDeep(state))
+    }
+
     index = history.length - 1
   }
 

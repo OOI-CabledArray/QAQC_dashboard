@@ -280,9 +280,11 @@ function computeChartedSeriesType(definitions: SampleSchemaFieldDefinition[]) {
   return 'category'
 }
 
+// Label to display on the X axis.
 const xAxisLabel = $computed(() =>
   upperFirst(uniq(series.map((current) => current.x.replaceAll('_', ' '))).join(', ')),
 )
+// Label to display on the Y axis.
 const yAxisLabel = $computed(() =>
   upperFirst(uniq(series.map((current) => current.y.replaceAll('_', ' '))).join(', ')),
 )
@@ -404,17 +406,26 @@ const option = $computed(() => {
 
 function addSeries({
   index,
-  original,
-}: { index?: number; original?: Readonly<PartialSeries> } = {}) {
+  copy,
+  changes,
+}: {
+  index?: number
+  copy?: Readonly<PartialSeries>
+  changes?: Record<string, any>
+} = {}) {
   if (index == null) {
     index = state.series.length
   }
-  if (original == null) {
-    original = state.series[index - 1]
+  if (copy == null) {
+    copy = state.series[index - 1]
   }
   const created = {
-    ...SeriesSchema.parse(cloneDeep(original ?? {}) as any),
+    ...SeriesSchema.parse(cloneDeep(copy ?? {}) as any),
     color: chartColors[state.series.length] ?? getRandomColor(),
+  }
+
+  if (changes != null) {
+    Object.assign(created, cloneDeep(changes))
   }
 
   state.series.splice(index, 0, created)
@@ -462,12 +473,17 @@ function moveSeriesDown(index: number) {
   history.save(state)
 }
 
+// Indicates the "Shift" key is currently held.
 let isShiftPressed = $ref(false)
+// Indicates the "Ctrl" (or "Command" on Mac) key is currently held.
 let isCtrlPressed = $ref(false)
 
+// If `true` and changes to a data series will be applied to all series.
 const isApplyingToAll = $computed(() => isShiftPressed)
+// If `true` any changes to a data series will instead create a new series with that change.
 const isCreatingNew = $computed(() => isCtrlPressed)
 
+// Update modifier key states when a key is released.
 useEventListener('keydown', (event: KeyboardEvent) => {
   if (event.key === 'Shift' || event.shiftKey) {
     isShiftPressed = true
@@ -476,6 +492,8 @@ useEventListener('keydown', (event: KeyboardEvent) => {
     isCtrlPressed = true
   }
 })
+
+// Update modifier key states when a key is released.
 useEventListener('keyup', (event: KeyboardEvent) => {
   if (event.key === 'Shift' || !event.shiftKey) {
     isShiftPressed = false
@@ -485,28 +503,41 @@ useEventListener('keyup', (event: KeyboardEvent) => {
   }
 })
 
+// Reset modifier keys when the browser tab loses focus. Otherwise, they can get stuck in the
+// pressed state if the user switches away from the page while holding them, due to the key up event
+// never being received.
+useEventListener('blur', () => {
+  isShiftPressed = false
+  isCtrlPressed = false
+})
+
+// Handler for when a field on a data series at a given index is changed by the user. The behavior
+// of this changes depending on which modifier keys are held.
 function setSeriesField<K extends keyof PartialSeries>(
   index: number,
   field: K,
   value: PartialSeries[K],
 ) {
+  // The series (possibly) being modified.
   const series = state.series[index]
   if (series == null) {
     return
   }
 
   if (isCtrlPressed) {
-    const added = addSeries({ index: index + 1, original: series })
-    added[field] = value
+    // Create a new series with the changed value.
+    addSeries({ index: index + 1, copy: series, changes: { [field]: value } })
   } else if (isShiftPressed) {
-    for (const group of state.series) {
-      group[field] = value
+    // Apply the change to all series.
+    for (const current of state.series) {
+      current[field] = value
     }
+    history.save(state)
   } else {
+    // Apply the change to just the current series.
     series[field] = value
+    history.save(state)
   }
-
-  history.save(state)
 }
 </script>
 
