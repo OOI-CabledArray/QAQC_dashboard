@@ -478,7 +478,7 @@ let isShiftPressed = $ref(false)
 // Indicates the "Ctrl" (or "Command" on Mac) key is currently held.
 let isCtrlPressed = $ref(false)
 
-// If `true` and changes to a data series will be applied to all series.
+// If `true` any changes to a data series will be applied to all series.
 const isApplyingToAll = $computed(() => isShiftPressed)
 // If `true` any changes to a data series will instead create a new series with that change.
 const isCreatingNew = $computed(() => isCtrlPressed)
