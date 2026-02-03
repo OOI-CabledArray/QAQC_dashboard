@@ -1,24 +1,25 @@
-import { uniq } from 'lodash-es'
+import { parseAbsolute, type ZonedDateTime } from '@internationalized/date'
+import { orderBy, uniq } from 'lodash-es'
 import { parse } from 'papaparse'
 import { defineStore } from 'pinia'
 
 type RawSample = Record<string, string>
 
-export const fields = {
-  cruise: 'Cruise',
-  station: 'Station',
-  asset: 'Target Asset',
-  timestamp: 'Start Time [UTC]',
-} as const
-
-export type SampleKnownFields = {
-  [fields.cruise]: string
-  [fields.station]: string
-  [fields.asset]: string
-  [fields.timestamp]: string
+export const enum KnownSampleFields {
+  Station = 'Station',
+  Asset = 'Target Asset',
+  Timestamp = 'Start Time [UTC]',
+  Depth = 'CTD Depth [m]',
 }
 
-export type Sample = SampleKnownFields & Record<string, SampleValue>
+export type Sample = {
+  station: string
+  asset: string
+  timestamp: ZonedDateTime
+  data: SampleData
+}
+
+export type SampleData = Record<string, SampleValue>
 export type SampleValue = string | number | null
 export type SampleValueType = 'text' | 'number' | 'timestamp'
 
@@ -67,6 +68,24 @@ export const useDiscrete = defineStore('discrete', () => {
     return [...index]
   }
 
+  const assetsToStation = $computed<Record<string, string>>(() =>
+    Object.fromEntries(samples.map((sample) => [sample.asset, sample.station])),
+  )
+
+  const stationToAssets = $computed(() => {
+    const mapping: Record<string, string[]> = {}
+    for (const sample of samples) {
+      const station = sample.station
+      const asset = sample.asset
+      const assets = (mapping[station] ??= [])
+      if (!assets.includes(asset)) {
+        assets.push(asset)
+      }
+    }
+
+    return mapping
+  })
+
   return {
     load,
     index: computed(() => index),
@@ -78,9 +97,10 @@ export const useDiscrete = defineStore('discrete', () => {
         .filter(([, definition]) => definition.type !== 'text')
         .map(([name]) => name),
     ),
-    stations: computed(() => uniq(samples.map((sample) => sample[fields.station])).sort()),
-    assets: computed(() => uniq(samples.map((sample) => sample[fields.asset])).sort()),
-    cruises: computed(() => uniq(samples.map((sample) => sample[fields.cruise])).sort()),
+    stations: computed(() => uniq(samples.map((sample) => sample.station)).sort()),
+    assets: computed(() => uniq(samples.map((sample) => sample.asset)).sort()),
+    assetToStation: computed(() => assetsToStation),
+    stationToAssets: computed(() => stationToAssets),
   }
 })
 
@@ -117,29 +137,47 @@ function parseRawSamples(csv: CsvFile): RawSample[] {
 
 function extractSamples(raw: RawSample[]): [Sample[], SampleSchema] {
   const schema = inferSchema(raw)
-  const samples = raw.flatMap((raw) => {
-    // If there are multiple assets in this raw sample's asset field, split them into multiple
-    // parsed samples for each defined asset.
-    const assets = raw[fields.asset]?.split(',')?.map((current) => current.trim())
-    if (assets == null) {
-      return []
-    }
+  let samples = raw.flatMap((raw) => {
+    // If there are multiple values in a raw sample's station or asset field, split them into
+    // multiple parsed samples for each defined station/asset.
+    const stations =
+      raw[KnownSampleFields.Station]?.split(',')?.map((current) => current.trim()) ?? []
 
-    return assets.map((asset) => {
-      const sample = { [fields.asset]: asset } as Sample
-      for (const [name, value] of Object.entries(raw)) {
-        const field = schema[name]
-        if (field == null || name in sample) {
-          continue
+    return stations.flatMap((station) => {
+      const assets =
+        raw[KnownSampleFields.Asset]?.split(',')?.map((current) => current.trim()) ?? []
+      return assets.flatMap((asset) => {
+        let timestamp: ZonedDateTime
+        try {
+          timestamp = parseAbsolute(raw[KnownSampleFields.Timestamp] ?? 'unknown', 'UTC')
+        } catch {
+          return []
         }
 
-        sample[name] = convertValue(value as string, field)
-      }
+        station = station.split('-').map((current) => current.trim())[0] ?? ''
+        if (station === '') {
+          return []
+        }
 
-      return sample
+        const data: SampleData = {
+          [KnownSampleFields.Station]: station,
+          [KnownSampleFields.Asset]: asset,
+        }
+        for (const [name, value] of Object.entries(raw)) {
+          const field = schema[name]
+          if (field == null || name in data) {
+            continue
+          }
+
+          data[name] = convertValue(value as string, field)
+        }
+
+        return { station, asset, timestamp, data }
+      })
     })
   })
 
+  samples = orderBy(samples, [(sample) => sample.asset, (sample) => sample.timestamp.toDate()])
   return [samples, schema]
 }
 
@@ -174,11 +212,11 @@ function inferSchema(raw: RawSample[]): SampleSchema {
   }
 
   // Ensure timestamp field is first.
-  const timestamp = schema[fields.timestamp]
+  const timestamp = schema[KnownSampleFields.Timestamp]
   if (timestamp != null) {
-    delete schema[fields.timestamp]
+    delete schema[KnownSampleFields.Timestamp]
     schema = {
-      [fields.timestamp]: timestamp,
+      [KnownSampleFields.Timestamp]: timestamp,
       ...schema,
     }
   }

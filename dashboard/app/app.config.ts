@@ -16,5 +16,10 @@ export default defineAppConfig({
         thumb: 'cursor-grab',
       },
     },
+    button: {
+      default: {
+        class: 'cursor-pointer',
+      },
+    },
   },
 })
