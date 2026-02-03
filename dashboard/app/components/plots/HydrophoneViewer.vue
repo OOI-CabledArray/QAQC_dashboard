@@ -16,7 +16,6 @@ const {
     'HYDLFA301',
     'HYDLFA304',
     'HYDLFA305',
-    // 'HYDBBA303',
   ],
 } = defineProps<{
   instruments?: string[]
