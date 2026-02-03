@@ -3,22 +3,9 @@ import { onMounted, watch } from 'vue'
 
 import { useStore } from '@/store'
 
-const {
-  instruments = [
-    'HYDBBA102',
-    'HYDBBA105',
-    'HYDBBA106',
-    'HYDBBA302',
-    'HYDBBA103',
-    'HYDBBA303',
-    'HYDLFA101',
-    'HYDLFA104',
-    'HYDLFA301',
-    'HYDLFA304',
-    'HYDLFA305',
-  ],
-} = defineProps<{
-  instruments?: string[]
+const { instruments, basePath, } = defineProps<{
+  instruments: string[]
+  basePath: string
 }>()
 
 const currentDate = new Date()
@@ -125,7 +112,7 @@ function formatDateForUrl(date: Date) {
 function getSpectrogramUrl(instrument: string) {
   const date = getDayForInstrument(instrument)
   const dateStr = formatDateForUrl(date)
-  return `${store.spectrogramsURL}/${selectedYear}/${instrument}/${instrument}_${dateStr}.png`
+  return `${basePath}/${selectedYear}/${instrument}/${instrument}_${dateStr}.png`
 }
 
 function checkImageExists(instrument: string) {

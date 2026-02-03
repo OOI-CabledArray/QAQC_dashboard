@@ -63,7 +63,7 @@ const depthUnit = 'meters'
 const profUnit = 'profile'
 const tabs = $computed(() => {
   const tabs: TabsItem[] = []
-  if (isHydrophone) {
+  if (isAcoustic) {
     tabs.push({
       slot: 'spectrograms' as const,
       label: 'Spectrogram Viewer',
@@ -176,7 +176,7 @@ const profilerPlots: Record<string, Record<string, ProfilerPlot[]>> = $computed(
 })
 
 const hasProfiles = $computed(() => Object.keys(profilerPlots).length > 0)
-const isHydrophone = $computed(() => keyword === 'HYDBB' || keyword === 'HYDLF')
+const isAcoustic = $computed(() => keyword === 'HYDBB' || keyword === 'HYDLF' || keyword === 'ZPLS')
 
 function filterCSVs_status(csvs: CSVFile[]) {
   return csvs.filter((csv) => csv.name.includes('HITL_Status'))
@@ -232,8 +232,8 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeS
 
 <template>
   <div class="text-left">
-    <h1 v-if="filteredPlots.length === 0 && !isHydrophone">No plots found.</h1>
-    <u-card v-if="filteredPlots.length > 0 || isHydrophone">
+    <h1 v-if="filteredPlots.length === 0 && !isAcoustic">No plots found.</h1>
+    <u-card v-if="filteredPlots.length > 0 || isAcoustic">
       <u-tabs :items="tabs" :size="isWide ? 'md' : 'xs'">
         <template #fixed>
           <template v-for="url in profilePlots" :key="url">
@@ -247,7 +247,7 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeS
           </template>
         </template>
         <template #spectrograms>
-          <hydrophone-viewer />
+          <hydrophone-viewer :instruments="['HYDBBA102', 'HYDBBA105', 'HYDBBA106', 'HYDBBA302', 'HYDBBA103', 'HYDBBA303', 'HYDLFA101', 'HYDLFA104', 'HYDLFA301', 'HYDLFA304', 'HYDLFA305']" :basePath="store.spectrogramsURL" />
         </template>
         <template #binned>
           <div v-for="(vars, key) in binnedPlots" :key="key" class="mb-8">
