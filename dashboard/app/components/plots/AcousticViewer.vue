@@ -3,7 +3,7 @@ import { onMounted, watch } from 'vue'
 
 import { useStore } from '@/store'
 
-const { instruments, basePath, } = defineProps<{
+const { instruments, basePath } = defineProps<{
   instruments: string[]
   basePath: string
 }>()

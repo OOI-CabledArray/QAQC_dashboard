@@ -13,6 +13,7 @@ export const useStore = defineStore('store', () => {
     plotsURL: `${base}/QAQC_plots`,
     hitlURL: `${base}/HITL_notes`,
     spectrogramsURL: `${base}/spectrograms`,
+    echogramsURL: `${base}/echograms`,
 
     plotList: [] as string[],
     hitlList: [] as string[],

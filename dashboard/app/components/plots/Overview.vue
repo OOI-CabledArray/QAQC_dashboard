@@ -66,7 +66,7 @@ const tabs = $computed(() => {
   if (isAcoustic) {
     tabs.push({
       slot: 'spectrograms' as const,
-      label: 'Spectrogram Viewer',
+      label: 'Spectrogram Viewer', // TODO dynamically label this spectrogram/echogram
     })
   } else {
     tabs.push({
@@ -176,7 +176,25 @@ const profilerPlots: Record<string, Record<string, ProfilerPlot[]>> = $computed(
 })
 
 const hasProfiles = $computed(() => Object.keys(profilerPlots).length > 0)
-const isAcoustic = $computed(() => keyword === 'HYDBB' || keyword === 'HYDLF' || keyword === 'ZPLS')
+const isAcoustic = $computed(
+  () => keyword === 'HYDBB' || keyword === 'HYDLF' || keyword === 'ZPLSC',
+)
+const isHydrophone = $computed(() => keyword === 'HYDBB' || keyword === 'HYDLF')
+const isZpls = $computed(() => keyword === 'ZPLSC')
+const hydrophones = [
+  'HYDBBA102',
+  'HYDBBA105',
+  'HYDBBA106',
+  'HYDBBA302',
+  'HYDBBA103',
+  'HYDBBA303',
+  'HYDLFA101',
+  'HYDLFA104',
+  'HYDLFA301',
+  'HYDLFA304',
+  'HYDLFA305',
+]
+const echosounders = ['ZPLSCB101', 'ZPLSCB102']
 
 function filterCSVs_status(csvs: CSVFile[]) {
   return csvs.filter((csv) => csv.name.includes('HITL_Status'))
@@ -247,7 +265,17 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeS
           </template>
         </template>
         <template #spectrograms>
-          <hydrophone-viewer :instruments="['HYDBBA102', 'HYDBBA105', 'HYDBBA106', 'HYDBBA302', 'HYDBBA103', 'HYDBBA303', 'HYDLFA101', 'HYDLFA104', 'HYDLFA301', 'HYDLFA304', 'HYDLFA305']" :basePath="store.spectrogramsURL" />
+          <acoustic-viewer
+            v-if="isHydrophone"
+            :base-path="store.spectrogramsURL"
+            :instruments="hydrophones"
+          />
+          <acoustic-viewer
+            v-else-if="isZpls"
+            :base-path="store.echogramsURL"
+            :instruments="echosounders"
+          />
+          <div v-else>No instruments selected for this viewer.</div>
         </template>
         <template #binned>
           <div v-for="(vars, key) in binnedPlots" :key="key" class="mb-8">
