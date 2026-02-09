@@ -63,10 +63,10 @@ const depthUnit = 'meters'
 const profUnit = 'profile'
 const tabs = $computed(() => {
   const tabs: TabsItem[] = []
-  if (isHydrophone) {
+  if (isAcoustic) {
     tabs.push({
       slot: 'spectrograms' as const,
-      label: 'Spectrogram Viewer',
+      label: 'Spectrogram Viewer', // TODO dynamically label this spectrogram/echogram
     })
   } else {
     tabs.push({
@@ -176,7 +176,11 @@ const profilerPlots: Record<string, Record<string, ProfilerPlot[]>> = $computed(
 })
 
 const hasProfiles = $computed(() => Object.keys(profilerPlots).length > 0)
+const isAcoustic = $computed(
+  () => keyword === 'HYDBB' || keyword === 'HYDLF' || keyword === 'ZPLSC',
+)
 const isHydrophone = $computed(() => keyword === 'HYDBB' || keyword === 'HYDLF')
+const isZpls = $computed(() => keyword === 'ZPLSC')
 
 function filterCSVs_status(csvs: CSVFile[]) {
   return csvs.filter((csv) => csv.name.includes('HITL_Status'))
@@ -232,8 +236,8 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeS
 
 <template>
   <div class="text-left">
-    <h1 v-if="filteredPlots.length === 0 && !isHydrophone">No plots found.</h1>
-    <u-card v-if="filteredPlots.length > 0 || isHydrophone">
+    <h1 v-if="filteredPlots.length === 0 && !isAcoustic">No plots found.</h1>
+    <u-card v-if="filteredPlots.length > 0 || isAcoustic">
       <u-tabs :items="tabs" :size="isWide ? 'md' : 'xs'">
         <template #fixed>
           <template v-for="url in profilePlots" :key="url">
@@ -247,7 +251,17 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeS
           </template>
         </template>
         <template #spectrograms>
-          <hydrophone-viewer />
+          <acoustic-viewer
+            v-if="isHydrophone"
+            :base-path="store.spectrogramsURL"
+            :instruments="store.hydrophones"
+          />
+          <acoustic-viewer
+            v-else-if="isZpls"
+            :base-path="store.echogramsURL"
+            :instruments="store.echosounders"
+          />
+          <div v-else>No instruments selected for this viewer.</div>
         </template>
         <template #binned>
           <div v-for="(vars, key) in binnedPlots" :key="key" class="mb-8">
