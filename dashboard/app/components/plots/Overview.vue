@@ -181,20 +181,6 @@ const isAcoustic = $computed(
 )
 const isHydrophone = $computed(() => keyword === 'HYDBB' || keyword === 'HYDLF')
 const isZpls = $computed(() => keyword === 'ZPLSC')
-const hydrophones = [
-  'HYDBBA102',
-  'HYDBBA105',
-  'HYDBBA106',
-  'HYDBBA302',
-  'HYDBBA103',
-  'HYDBBA303',
-  'HYDLFA101',
-  'HYDLFA104',
-  'HYDLFA301',
-  'HYDLFA304',
-  'HYDLFA305',
-]
-const echosounders = ['ZPLSCB101', 'ZPLSCB102']
 
 function filterCSVs_status(csvs: CSVFile[]) {
   return csvs.filter((csv) => csv.name.includes('HITL_Status'))
@@ -268,12 +254,12 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeS
           <acoustic-viewer
             v-if="isHydrophone"
             :base-path="store.spectrogramsURL"
-            :instruments="hydrophones"
+            :instruments="store.hydrophones"
           />
           <acoustic-viewer
             v-else-if="isZpls"
             :base-path="store.echogramsURL"
-            :instruments="echosounders"
+            :instruments="store.echosounders"
           />
           <div v-else>No instruments selected for this viewer.</div>
         </template>
