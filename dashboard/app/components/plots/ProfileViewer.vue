@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { sortBy } from 'lodash-es'
 
-import { isSVG, isPNG } from '@/utilities'
+import { isSVG, isPNG } from '~/utilities'
 
 type Plot = { profile: number; url: string }
 

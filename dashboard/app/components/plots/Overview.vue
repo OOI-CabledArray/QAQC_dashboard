@@ -3,9 +3,9 @@ import type { TabsItem } from '@nuxt/ui'
 import { capitalize, forEach, groupBy, sortBy, toNumber, zipObject } from 'lodash-es'
 import { watch } from 'vue'
 
-import { useBreakpoints } from '@/breakpoints'
-import { useStore, type CSVFile } from '@/store'
-import { isPNG, isSVG } from '@/utilities'
+import { useBreakpoints } from '~/breakpoints'
+import { useStore, type CSVFile } from '~/store'
+import { isPNG, isSVG } from '~/utilities'
 
 type BinnedPlotDataValues = {
   ref: string

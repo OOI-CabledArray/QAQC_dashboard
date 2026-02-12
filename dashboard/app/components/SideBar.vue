@@ -2,9 +2,9 @@
 import type { AccordionItem } from '@nuxt/ui'
 import { createReusableTemplate } from '@vueuse/core'
 
-import { useBreakpoints } from '@/breakpoints'
-import None from '@/components/None.vue'
-import { useStore } from '@/store'
+import { useBreakpoints } from '~/breakpoints'
+import None from '~/components/None.vue'
+import { useStore } from '~/store'
 
 const store = useStore()
 const route = useRoute()

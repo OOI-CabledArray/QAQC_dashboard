@@ -2,10 +2,10 @@
 import { useElementVisibility, useResizeObserver } from '@vueuse/core'
 import type { ECharts } from 'echarts'
 import { init } from 'echarts'
-import { merge } from 'lodash-es'
+import { compact, merge } from 'lodash-es'
 import { watch, watchEffect } from 'vue'
 
-import type { Option } from '@/chart'
+import type { Option } from '~/chart'
 
 const defaultOptions = Object.freeze({
   animation: true,
@@ -82,13 +82,47 @@ watch(
   [() => merged, () => instance],
   () => {
     requestAnimationFrame(() => {
-      if (merged != null) {
-        instance?.setOption(merged, { notMerge: true })
+      if (merged != null && instance != null) {
+        const alwaysReplaced = ['legend', 'xAxis', 'yAxis'] as const
+        const previous = instance.getOption() as any
+        const [added, removed] = getAddedRemovedSeriesIds(previous, merged)
+        if (added.length > 0) {
+          console.debug(`Added ${added.length} chart series. `, added)
+        }
+        if (removed.length > 0) {
+          console.debug(`Removed ${removed.length} chart series. `, removed)
+        }
+        if (removed.length > 0) {
+          instance.setOption(merged, { replaceMerge: ['series', ...alwaysReplaced] })
+        } else {
+          instance.setOption(merged, { replaceMerge: [...alwaysReplaced] })
+        }
       }
     })
   },
   { immediate: true },
 )
+
+function getAddedRemovedSeriesIds(
+  previous: Option | null | undefined,
+  next: Option,
+): [(string | number)[], (string | number)[]] {
+  previous ??= {}
+  const previousSeriesIds = compact(
+    (Array.isArray(previous.series) ? previous.series : [previous.series]).map(
+      (current, i) => current?.id ?? current?.name ?? i,
+    ),
+  )
+  const currentSeriesIds = compact(
+    (Array.isArray(next.series) ? next.series : [next.series]).map(
+      (current, i) => current?.id ?? current?.name ?? i,
+    ),
+  )
+
+  const added = currentSeriesIds.filter((current) => !previousSeriesIds.includes(current))
+  const removed = previousSeriesIds.filter((current) => !currentSeriesIds.includes(current))
+  return [added, removed]
+}
 
 defineExpose({
   getDom() {
@@ -127,6 +161,9 @@ defineExpose({
   },
   resize(...args: Parameters<ECharts['resize']>) {
     return instance?.resize(...args)
+  },
+  dispatchAction(...args: Parameters<ECharts['dispatchAction']>) {
+    instance?.dispatchAction(...args)
   },
 })
 
