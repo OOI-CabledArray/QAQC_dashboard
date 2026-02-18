@@ -55,6 +55,7 @@ jobs:
             --exclude 'QAQC_plots/*' \
             --exclude 'HITL_notes/*' \
             --exclude 'spectrograms/*' \
+            --exclude 'echograms/*' \
             --exclude 'dev/*' \
             --delete \
             ./dist \
