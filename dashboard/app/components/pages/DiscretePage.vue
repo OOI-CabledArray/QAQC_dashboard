@@ -1160,6 +1160,7 @@ async function copyToClipboard() {
               @click="
                 () => {
                   state.series = []
+                  state.seriesCollapsed = false
                   history.save(state)
                 }
               "
@@ -1517,6 +1518,28 @@ async function copyToClipboard() {
                   variant="subtle"
                   @click="resetZoom"
                 />
+                <u-tooltip text="Swap X and Y Axes">
+                  <u-button
+                    class="h-7 mt-1"
+                    color="primary"
+                    :disabled="state.series.length === 0"
+                    size="xs"
+                    variant="subtle"
+                    @click="
+                      () => {
+                        for (const series of state.series) {
+                          const { x, y } = series
+                          series.x = y
+                          series.y = x
+                        }
+
+                        history.save(state)
+                      }
+                    "
+                  >
+                    X <u-icon name="i-lucide-arrow-left-right" /> Y
+                  </u-button>
+                </u-tooltip>
               </div>
               <u-tooltip text="The R-squared value for all currently selected data.">
                 <div v-if="rSquared != null" class="mt-3 text-[14px] text-center">
