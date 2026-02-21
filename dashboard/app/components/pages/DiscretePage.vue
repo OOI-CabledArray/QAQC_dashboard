@@ -1053,6 +1053,103 @@ async function copyToClipboard() {
     <u-page-body class="mb-24 px-8 space-y-4">
       <u-page-header title="Discrete Data" />
       <div>
+        <div v-if="option != null" class="pb-10">
+          <div class="relative">
+            <chart ref="chartInstance" class="h-150" :option="option" />
+            <div class="-bottom-12 absolute flex justify-center left-0 right-0 space-x-2">
+              <u-form-field class="flex items-center" size="sm">
+                <template #label><div class="pt-1 text-xs">Bounds =</div></template>
+                <u-tooltip
+                  text="Choose how the min and max values on the X and Y axes are calculated."
+                >
+                  <u-select
+                    v-model="state.bounds"
+                    class="min-w-50 ml-1"
+                    :items="[
+                      { label: 'Selected Data Min/Max', value: 'selected-data' },
+                      { label: 'Data Min/Max', value: 'all-data' },
+                      { label: 'From Zero', value: 'from-zero' },
+                      { label: 'From Zero (X)', value: 'from-zero-x' },
+                      { label: 'From Zero (Y)', value: 'from-zero-y' },
+                    ]"
+                    size="sm"
+                    @update:model-value="history.save(state)"
+                  />
+                </u-tooltip>
+              </u-form-field>
+              <u-tooltip text="Reset Zoom">
+                <u-button
+                  class="mt-1"
+                  color="primary"
+                  :disabled="!isZoomedIn"
+                  icon="i-lucide-zoom-out"
+                  label="Reset"
+                  size="xs"
+                  variant="subtle"
+                  @click="resetZoom"
+                />
+              </u-tooltip>
+              <u-tooltip text="Swap X and Y Axes">
+                <u-button
+                  class="mt-1"
+                  color="primary"
+                  :disabled="state.series.length === 0"
+                  size="xs"
+                  variant="subtle"
+                  @click="
+                    () => {
+                      for (const series of state.series) {
+                        const { x, y } = series
+                        series.x = y
+                        series.y = x
+                      }
+
+                      history.save(state)
+                    }
+                  "
+                >
+                  X <u-icon name="i-lucide-arrow-left-right" /> Y
+                </u-button>
+              </u-tooltip>
+              <u-tooltip text="Share Plot Link">
+                <u-button
+                  class="cursor-pointer mt-1 px-2"
+                  :disabled="!canShare"
+                  icon="i-lucide-share"
+                  size="xs"
+                  variant="subtle"
+                  @click="share()"
+                />
+              </u-tooltip>
+              <u-tooltip text="Copy Plot Link to Clipboard">
+                <u-button
+                  class="cursor-pointer mt-1 px-2"
+                  icon="i-lucide-link"
+                  size="xs"
+                  variant="subtle"
+                  @click="copyToClipboard()"
+                />
+              </u-tooltip>
+            </div>
+            <u-tooltip text="The R-squared value for all currently selected data.">
+              <div>
+                <div v-if="rSquared != null" class="mt-3 text-[14px] text-center">
+                  <span class="mr-1 relative">
+                    R
+                    <span class="-right-0.5 -top-0.5 absolute text-[10px]">2</span>
+                  </span>
+                  = {{ formatValue(rSquared, 6) }}
+                </div>
+              </div>
+            </u-tooltip>
+          </div>
+        </div>
+        <p v-else class="opacity-80 text-center text-sm">
+          <template v-if="state.series.length > 0">
+            Enter the asset, X/Y axis and year of data to plot.
+          </template>
+          <template v-else>Add a data series to get started.</template>
+        </p>
         <div class="flex items-center mb-2 space-x-2">
           <u-tooltip text="Show/Hide Data Series">
             <u-button
@@ -1111,25 +1208,6 @@ async function copyToClipboard() {
             </template>
           </u-popover>
           <div class="grow" />
-          <u-tooltip text="Share Link">
-            <u-button
-              class="cursor-pointer p-1"
-              :disabled="!canShare"
-              icon="i-lucide-share"
-              size="xs"
-              variant="subtle"
-              @click="share()"
-            />
-          </u-tooltip>
-          <u-tooltip text="Copy Link to Clipboard">
-            <u-button
-              class="cursor-pointer p-1"
-              icon="i-lucide-copy"
-              size="xs"
-              variant="subtle"
-              @click="copyToClipboard()"
-            />
-          </u-tooltip>
           <u-tooltip text="Undo">
             <u-button
               :disabled="!history.canUndo"
@@ -1486,75 +1564,6 @@ async function copyToClipboard() {
               />
             </u-tooltip>
           </div>
-        </div>
-        <div class="pt-4">
-          <template v-if="option != null">
-            <div class="relative">
-              <chart ref="chartInstance" class="h-150" :option="option" />
-              <div class="-bottom-12 absolute flex justify-center left-0 right-0 space-x-2">
-                <u-form-field class="flex items-center" size="sm">
-                  <template #label><div class="pt-1 text-xs">Bounds =</div></template>
-                  <u-select
-                    v-model="state.bounds"
-                    class="min-w-50 ml-1"
-                    :items="[
-                      { label: 'Selected Data Min/Max', value: 'selected-data' },
-                      { label: 'Data Min/Max', value: 'all-data' },
-                      { label: 'From Zero', value: 'from-zero' },
-                      { label: 'From Zero (X)', value: 'from-zero-x' },
-                      { label: 'From Zero (Y)', value: 'from-zero-y' },
-                    ]"
-                    size="sm"
-                    @update:model-value="history.save(state)"
-                  />
-                </u-form-field>
-                <u-button
-                  class="h-7 mt-1"
-                  color="primary"
-                  :disabled="!isZoomedIn"
-                  icon="i-lucide-zoom-out"
-                  label="Reset"
-                  size="xs"
-                  variant="subtle"
-                  @click="resetZoom"
-                />
-                <u-tooltip text="Swap X and Y Axes">
-                  <u-button
-                    class="h-7 mt-1"
-                    color="primary"
-                    :disabled="state.series.length === 0"
-                    size="xs"
-                    variant="subtle"
-                    @click="
-                      () => {
-                        for (const series of state.series) {
-                          const { x, y } = series
-                          series.x = y
-                          series.y = x
-                        }
-
-                        history.save(state)
-                      }
-                    "
-                  >
-                    X <u-icon name="i-lucide-arrow-left-right" /> Y
-                  </u-button>
-                </u-tooltip>
-              </div>
-              <u-tooltip text="The R-squared value for all currently selected data.">
-                <div v-if="rSquared != null" class="mt-3 text-[14px] text-center">
-                  <span class="mr-1 relative">
-                    R
-                    <span class="-right-0.5 -top-0.5 absolute text-[10px]">2</span>
-                  </span>
-                  = {{ formatValue(rSquared, 6) }}
-                </div>
-              </u-tooltip>
-            </div>
-          </template>
-          <p v-else-if="state.series.length > 0" class="opacity-80 text-center text-sm">
-            Enter the asset, X/Y axis and year of data to plot.
-          </p>
         </div>
       </div>
     </u-page-body>
