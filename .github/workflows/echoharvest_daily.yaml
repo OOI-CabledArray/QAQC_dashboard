@@ -12,8 +12,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - refdes: 'CE04OSPS-PC01B-05-ZPLSCB102'
-            name: 'CE04OSPS-PC01B-05-ZPLSCB102'
+        #   - refdes: 'CE04OSPS-PC01B-05-ZPLSCB102'
+        #     name: 'CE04OSPS-PC01B-05-ZPLSCB102'
           - refdes: 'CE02SHBP-MJ01C-07-ZPLSCB101'
             name: 'CE02SHBP-MJ01C-07-ZPLSCB101'
     defaults:
