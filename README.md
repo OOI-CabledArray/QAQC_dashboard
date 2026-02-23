@@ -16,6 +16,11 @@
 
 [![Refresh S3 Image Index](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/create_index.yaml/badge.svg)](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/create_index.yaml)
 
+[![Echograms Daily](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/echogram_daily.yaml/badge.svg)](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/echogram_daily.yaml)
+
+[![Echosounder Harves Daily](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/echoharvest_daily.yaml/badge.svg)](https://github.com/OOI-CabledArray/QAQC_dashboard/actions/workflows/echoharvest_daily.yaml)
+
+
 Wendi's awesome QAQC Dashboard that will display all the information you need for RCA QAQC Data!
 
 **The Vue based frontend code can be found in `dashboard` directory.**
