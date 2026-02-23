@@ -1,0 +1,42 @@
+name: Raw Echosounder Data Harvest
+on:
+  schedule:
+  - cron: "0 10 * * *" #every day at 10:00 UTC (3:00 AM PST)
+  workflow_dispatch:
+
+jobs:
+  run-raw-echo_harvest:
+    name: ${{matrix.name}} raw data harvest
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - refdes: 'CE04OSPS-PC01B-05-ZPLSCB102'
+            name: 'CE04OSPS-PC01B-05-ZPLSCB102'
+          - refdes: 'CE02SHBP-MJ01C-07-ZPLSCB101'
+            name: 'CE02SHBP-MJ01C-07-ZPLSCB101'
+    defaults:
+      run:
+        shell: bash -l {0}
+    container:
+      image: jdduprey/rca-echo-tools:latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GH_PAT }}
+      - name: Run raw echo data harvest
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          TASK_ROLE_ARN: ${{ secrets.TASK_ROLE_ARN }}
+          EXECUTION_ROLE_ARN: ${{ secrets.EXECUTION_ROLE_ARN }}
+          PREFECT_WORKSPACE: jdupreyuwedu/ooi-rca-prefect2
+          PREFECT_KEY: ${{ secrets.PREFECT_KEY }}
+          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          cd /tmp/ooi-echo-tools
+          # Authenticate with prefect2 cloud 
+          prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
+          # Run echosounder raw data harvest
+          rca-echo-harvest --refdes ${{matrix.refdes}} --waveform-mode CW --encode-mode power --sonar-model EK80 --run-type append --cloud True
