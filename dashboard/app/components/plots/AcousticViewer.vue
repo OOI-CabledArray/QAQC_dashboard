@@ -1,8 +1,6 @@
 <script lang="ts" setup>
 import { onMounted, watch } from 'vue'
 
-import { useStore } from '@/store'
-
 const { instruments, basePath } = defineProps<{
   instruments: string[]
   basePath: string
@@ -10,7 +8,6 @@ const { instruments, basePath } = defineProps<{
 
 const currentDate = new Date()
 const currentYear = currentDate.getFullYear()
-const store = useStore()
 
 const currentDays = $ref<Record<string, number>>({})
 const imageExists = $ref<Record<string, boolean>>({})

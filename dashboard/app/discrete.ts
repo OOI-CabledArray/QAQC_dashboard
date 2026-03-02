@@ -12,12 +12,12 @@ export const enum KnownSampleFields {
   Depth = 'CTD Depth [m]',
 }
 
-export type Sample = {
+export type Sample = Readonly<{
   station: string
   asset: string
   timestamp: ZonedDateTime
   data: SampleData
-}
+}>
 
 export type SampleData = Record<string, SampleValue>
 export type SampleValue = string | number | null
@@ -178,6 +178,8 @@ function extractSamples(raw: RawSample[]): [Sample[], SampleSchema] {
   })
 
   samples = orderBy(samples, [(sample) => sample.asset, (sample) => sample.timestamp.toDate()])
+  // Freeze samples to prevent accidental mutations and improve performance in some cases.
+  samples = samples.map((sample) => Object.freeze(sample))
   return [samples, schema]
 }
 

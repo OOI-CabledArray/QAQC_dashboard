@@ -1,5 +1,8 @@
 export default defineAppConfig({
   ui: {
+    toaster: {
+      position: 'top-right',
+    } as any,
     colors: {
       primary: 'primary',
       neutral: 'slate',
@@ -20,6 +23,6 @@ export default defineAppConfig({
       default: {
         class: 'cursor-pointer',
       },
-    },
+    } as any,
   },
 })

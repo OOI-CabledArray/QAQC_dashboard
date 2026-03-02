@@ -1,5 +1,11 @@
+<script setup lang="ts">
+useHead({
+  title: 'Data QA/QC',
+})
+</script>
+
 <template>
-  <u-app>
+  <u-app :toaster="{ position: 'bottom-center' }">
     <u-main>
       <div class="app flex flex-row">
         <!-- Fixed Position Sidebar -->
