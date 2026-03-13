@@ -20,7 +20,7 @@ jobs:
       run:
         shell: bash -l {0}
     container:
-      image: 688122822031.dkr.ecr.us-west-2.amazonaws.com/rca-echo-tools:latest
+      image: public.ecr.aws/p0l4c7i2/rca-echo-tools:latest
     steps:
       - uses: actions/checkout@v2
         with:
