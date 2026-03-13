@@ -38,5 +38,7 @@ jobs:
           cd /tmp/ooi-echo-tools
           # Authenticate with prefect2 cloud 
           prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
+          # Authenticate docker with ECR 
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 688122822031.dkr.ecr.us-west-2.amazonaws.com
           # Run echogram plotting
           rca-daily-echograms --refdes ${{matrix.refdes}} --ping-time-bin 4s --range-bin 1m --parallel-in-cloud True --s3-sync True
