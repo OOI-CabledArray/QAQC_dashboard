@@ -184,6 +184,8 @@ export const useStore = defineStore('store', () => {
               { key: 'temp', value: 'Temperature' },
               { key: 'dark', value: 'Dark Counts' },
               { key: 'ratio', value: 'Ratios' },
+              { key: 'chloro', value: 'Chlorophyll' },
+              { key: 'poc', value: 'POC' },
             ],
           },
 
