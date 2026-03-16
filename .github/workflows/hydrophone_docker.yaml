@@ -28,7 +28,7 @@ jobs:
       run:
         shell: bash -l {0}
     container:
-      image: jdduprey/ooi-hyd-tools:latest
+      image: public.ecr.aws/p0l4c7i2/ooi-hyd-tools:latest
     steps:
       - uses: actions/checkout@v2
         with:
