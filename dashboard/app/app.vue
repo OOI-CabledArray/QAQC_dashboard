@@ -42,6 +42,13 @@ body {
   width: 100%;
   font-family: Avenir, Helvetica, Arial, sans-serif;
 }
+
+@media print {
+  .-side-bar-container,
+  .-side-bar-container + div {
+    display: none !important;
+  }
+}
 </style>
 
 <style scoped>
