@@ -27,12 +27,20 @@ function parseCSVRow(row: string): string[] {
   while (i < row.length) {
     const ch = row[i]
     if (ch === '"') {
-      if (inQuotes && row[i + 1] === '"') { current += '"'; i += 2 }
-      else { inQuotes = !inQuotes; i++ }
+      if (inQuotes && row[i + 1] === '"') {
+        current += '"'
+        i += 2
+      } else {
+        inQuotes = !inQuotes
+        i++
+      }
     } else if (ch === ',' && !inQuotes) {
-      result.push(current.trim()); current = ''; i++
+      result.push(current.trim())
+      current = ''
+      i++
     } else {
-      current += ch; i++
+      current += ch
+      i++
     }
   }
   result.push(current.trim())
@@ -61,10 +69,7 @@ const PRESET_TSUNAMI = [
   'CE04OSPS-PC01B-4A-CTDPFA109',
 ]
 
-const PRESET_EARTHQUAKE = [
-  'RS03CCAL-MJ03F-05-BOTPTA301',
-  'RS03ASHS-MJ03B-09-BOTPTA304',
-]
+const PRESET_EARTHQUAKE = ['RS03CCAL-MJ03F-05-BOTPTA301', 'RS03ASHS-MJ03B-09-BOTPTA304']
 
 const PRESET_VOLCANO = [
   'RS03ASHS-MJ03B-10-CTDPFB304',
@@ -97,7 +102,16 @@ type Panel = {
   descriptionOpen: boolean
 }
 
-const panels = $ref<Panel[]>([{ instrument: '', timespan: 'week', overlay: '', parameter: '', description: '', descriptionOpen: false }])
+const panels = $ref<Panel[]>([
+  {
+    instrument: '',
+    timespan: 'week',
+    overlay: '',
+    parameter: '',
+    description: '',
+    descriptionOpen: false,
+  },
+])
 let isLoading = $ref(false)
 
 onMounted(async () => {
@@ -147,7 +161,14 @@ onMounted(async () => {
 })
 
 function addPanel() {
-  panels.push({ instrument: '', timespan: 'week', overlay: '', parameter: '', description: '', descriptionOpen: false })
+  panels.push({
+    instrument: '',
+    timespan: 'week',
+    overlay: '',
+    parameter: '',
+    description: '',
+    descriptionOpen: false,
+  })
 }
 
 function removePanel(i: number) {
@@ -158,7 +179,13 @@ function getMatchingPlots(panel: Panel): string[] {
   if (!panel.instrument || !panel.timespan) return []
   return store.plotList
     .filter((plot) => {
-      if (!plot.includes(panel.instrument) || !plot.includes(panel.timespan) || !plot.includes('full') || !plot.endsWith('.png')) return false
+      if (
+        !plot.includes(panel.instrument) ||
+        !plot.includes(panel.timespan) ||
+        !plot.includes('full') ||
+        !plot.endsWith('.png')
+      )
+        return false
       if (panel.parameter && !plot.includes(panel.parameter)) return false
       if (panel.overlay && !plot.includes(panel.overlay)) return false
       return true
@@ -181,7 +208,7 @@ function loadPreset(refDesList: string[]) {
     ...refDesList.map((r) => ({
       instrument: r,
       timespan: 'week',
-      overlay: '', 
+      overlay: '',
       parameter: '',
       description: '',
       descriptionOpen: false,
@@ -201,34 +228,34 @@ function downloadPDF() {
       <div class="flex items-center gap-2">
         <h1 class="font-bold text-2xl mr-3">Event Report</h1>
         <u-tooltip text="Tsunami preset">
-          <u-button variant="ghost" size="lg" class="text-4xl" @click="loadPreset(PRESET_TSUNAMI)">🌊</u-button>
+          <u-button variant="ghost" size="lg" class="text-4xl" @click="loadPreset(PRESET_TSUNAMI)"
+            >🌊</u-button
+          >
         </u-tooltip>
         <u-tooltip text="Earthquake preset">
-          <u-button variant="ghost" size="lg" class="text-4xl" @click="loadPreset(PRESET_EARTHQUAKE)">🌍</u-button>
+          <u-button
+            variant="ghost"
+            size="lg"
+            class="text-4xl"
+            @click="loadPreset(PRESET_EARTHQUAKE)"
+            >🌍</u-button
+          >
         </u-tooltip>
         <u-tooltip text="Volcano preset">
-          <u-button variant="ghost" size="lg" class="text-4xl" @click="loadPreset(PRESET_VOLCANO)">🌋</u-button>
+          <u-button variant="ghost" size="lg" class="text-4xl" @click="loadPreset(PRESET_VOLCANO)"
+            >🌋</u-button
+          >
         </u-tooltip>
       </div>
-      <u-button
-        icon="i-lucide-file-down"
-        size="lg"
-        @click="downloadPDF"
-      >
+      <u-button icon="i-lucide-file-down" size="lg" @click="downloadPDF">
         Download as PDF
       </u-button>
     </div>
 
-    <div v-if="isLoading" class="no-print text-gray-500 py-8 text-center">
-      Loading plot list…
-    </div>
+    <div v-if="isLoading" class="no-print text-gray-500 py-8 text-center">Loading plot list…</div>
 
     <!-- Panels -->
-    <div
-      v-for="(panel, i) in panels"
-      :key="i"
-      class="panel mb-10"
-    >
+    <div v-for="(panel, i) in panels" :key="i" class="panel mb-10">
       <!-- Controls row (hidden when printing) -->
       <div class="no-print flex flex-wrap items-center gap-3 mb-4">
         <u-select-menu
@@ -248,7 +275,12 @@ function downloadPDF() {
         />
         <u-select-menu
           v-model="panel.parameter"
-          :items="getParametersForInstrument(panel.instrument).map((p) => ({ label: p.label, value: p.key }))"
+          :items="
+            getParametersForInstrument(panel.instrument).map((p) => ({
+              label: p.label,
+              value: p.key,
+            }))
+          "
           value-key="value"
           class="min-w-48"
           placeholder="Parameter…"
@@ -293,7 +325,10 @@ function downloadPDF() {
           No images found for this selection.
         </div>
       </template>
-      <div v-else class="no-print bg-gray-50 border border-dashed border-gray-300 p-6 rounded text-center text-gray-400">
+      <div
+        v-else
+        class="no-print bg-gray-50 border border-dashed border-gray-300 p-6 rounded text-center text-gray-400"
+      >
         Select instrument and parameters to load images.
       </div>
 
@@ -303,7 +338,9 @@ function downloadPDF() {
           class="no-print flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
           @click="panel.descriptionOpen = !panel.descriptionOpen"
         >
-          <u-icon :name="panel.descriptionOpen ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" />
+          <u-icon
+            :name="panel.descriptionOpen ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+          />
           Notes
         </button>
         <textarea
@@ -313,7 +350,9 @@ function downloadPDF() {
           rows="3"
           placeholder="Add notes or description for this panel…"
         />
-        <p v-if="panel.description" class="print-only text-sm text-gray-700 mt-1">{{ panel.description }}</p>
+        <p v-if="panel.description" class="print-only text-sm text-gray-700 mt-1">
+          {{ panel.description }}
+        </p>
       </div>
     </div>
 
