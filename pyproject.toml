@@ -6,4 +6,6 @@ dependencies = [
     "pip",
     "tqdm",
     "rca-data-tools @ git+https://github.com/OOI-CabledArray/rca-data-tools.git",
+    "requests>=2.32.5",
+    "beautifulsoup4>=4.14.2",
 ]

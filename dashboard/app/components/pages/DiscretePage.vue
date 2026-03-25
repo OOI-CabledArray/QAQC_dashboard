@@ -75,6 +75,7 @@ const SeriesSchema = Zod.object({
   // `undefined` as being "no input" instead of an actual value, despite accepting them
   // type-checking wise. This ends up causing weird behavior where the value in the state goes out
   // of sync with the value stored/displayed by the component in some cases.
+  station: Zod.string().optional(),
   asset: Zod.string().optional(),
   x: Zod.string().optional(),
   y: Zod.string().optional(),
@@ -143,10 +144,28 @@ type PartialSeries = (typeof state)['series'][number]
 // Fully defined series with included index.
 type Series = Required<PartialSeries>
 // Fields in series objects used for filtering samples.
-type SampleFilter = Pick<PartialSeries, 'asset' | 'x' | 'y' | 'year'>
+type SampleFilter = Pick<PartialSeries, 'station' | 'asset' | 'x' | 'y' | 'year'>
 
-// Assets that can be selected for plotting.
-const selectableAssets = $computed(() => discrete.assets.filter((asset) => asset !== 'PI_REQUEST'))
+// Assets that can be selected for plotting, with CTD Cast assets sorted last.
+const selectableAssets = $computed(() => {
+  const assets = compact(discrete.assets.filter((asset) => asset !== 'PI_REQUEST'))
+  return orderBy(assets, [(asset) => (getAssetGroup(asset) === 'ctd-cast' ? 1 : 0)])
+})
+
+function getAssetGroup(asset: string): 'normal' | 'ctd-cast' {
+  if (asset.startsWith('CTD Cast (')) {
+    return 'ctd-cast'
+  }
+  return 'normal'
+}
+
+// Return the subset of selectable assets that belong to the same group (CTD Cast or non-CTD Cast)
+// as the given asset. Used when duplicating a series for all assets of the same kind. If the asset
+// is `null` or `undefined`, return all "normal" assets.
+function peerAssetsFor(asset: string | null | undefined): string[] {
+  const group = asset != null ? getAssetGroup(asset) : 'normal'
+  return selectableAssets.filter((asset) => getAssetGroup(asset) === group)
+}
 
 // All series with filter fields completely filled out.
 const series = $computed(
@@ -175,7 +194,14 @@ const getSamplesForCache: Record<string, Sample[]> = {}
 
 // Return all samples matching the provided filter.
 function getSamplesFor(filter: SampleFilter): Sample[] {
-  const key = [filter.asset ?? '-', filter.x ?? '-', filter.y ?? '-', filter.year ?? '-'].join('&&')
+  const key = [
+    filter.station ?? '-',
+    filter.asset ?? '-',
+    filter.x ?? '-',
+    filter.y ?? '-',
+    filter.year ?? '-',
+  ].join('&&')
+
   const cached = getSamplesForCache[key]
   if (cached != null) {
     return cached
@@ -183,6 +209,7 @@ function getSamplesFor(filter: SampleFilter): Sample[] {
 
   const samples = discrete.samples.filter(
     (sample) =>
+      (filter.station == null || sample.station === filter.station) &&
       (filter.asset == null || sample.asset === filter.asset) &&
       (filter.x == null || sample.data[filter.x!] != null) &&
       (filter.y == null || sample.data[filter.y!] != null) &&
@@ -452,7 +479,7 @@ const option = $computed(() => {
       top: '24px',
       left: '0',
       right: '32px',
-      bottom: '140px',
+      bottom: '100px',
     },
     tooltip: {
       confine: true,
@@ -535,7 +562,7 @@ const option = $computed(() => {
       {
         id: 'x-slider',
         type: 'slider',
-        bottom: 80,
+        bottom: 48,
         height: 22,
         showDetail: false,
         showDataShadow: false,
@@ -556,6 +583,7 @@ const option = $computed(() => {
         chartedSeries.map((current) => [current.name, current.original.enabled]),
       ),
       show: chartedSeries.length <= 20,
+      type: 'scroll',
       bottom: 0,
     },
     series: chartedSeries as any,
@@ -622,6 +650,16 @@ function removeSeries(index?: number) {
   history.save(state)
 
   return removed
+}
+
+function removeOtherSeries(index: number) {
+  const series = state.series[index]
+  if (series == null) {
+    return
+  }
+
+  state.series = [series]
+  history.save(state)
 }
 
 // Move the series at the given index up one position, if possible.
@@ -829,10 +867,11 @@ function duplicateSeriesForAllAssets(
     return
   }
 
+  const peers = peerAssetsFor(series.asset)
   let assetsToGenerate = withMatchingData
     ? // All assets for which we have data matching the series' `x`, `y`, and `year`.
-      selectableAssets.filter((current) => hasDataFor({ ...series, asset: current }))
-    : selectableAssets
+      peers.filter((current) => hasDataFor({ ...series, asset: current }))
+    : peers
 
   if (series.asset != null) {
     // If the original series has an `asset` set and it's in the list, we don't need to generate it.
@@ -1053,98 +1092,101 @@ async function copyToClipboard() {
     <u-page-body class="mb-24 px-8 space-y-4">
       <u-page-header title="Discrete Data" />
       <div>
-        <div v-if="option != null" class="pb-10">
-          <div class="relative">
-            <chart ref="chartInstance" class="h-150" :option="option" />
-            <div class="-bottom-12 absolute flex justify-center left-0 right-0 space-x-2">
-              <u-form-field class="flex items-center" size="sm">
-                <template #label><div class="pt-1 text-xs">Bounds =</div></template>
-                <u-tooltip
-                  text="Choose how the min and max values on the X and Y axes are calculated."
-                >
-                  <u-select
-                    v-model="state.bounds"
-                    class="min-w-50 ml-1"
-                    :items="[
-                      { label: 'Selected Data Min/Max', value: 'selected-data' },
-                      { label: 'Data Min/Max', value: 'all-data' },
-                      { label: 'From Zero', value: 'from-zero' },
-                      { label: 'From Zero (X)', value: 'from-zero-x' },
-                      { label: 'From Zero (Y)', value: 'from-zero-y' },
-                    ]"
-                    size="sm"
-                    @update:model-value="history.save(state)"
-                  />
-                </u-tooltip>
-              </u-form-field>
-              <u-tooltip text="Reset Zoom">
-                <u-button
-                  class="mt-1"
-                  color="primary"
-                  :disabled="!isZoomedIn"
-                  icon="i-lucide-zoom-out"
-                  label="Reset"
-                  size="xs"
-                  variant="subtle"
-                  @click="resetZoom"
-                />
-              </u-tooltip>
-              <u-tooltip text="Swap X and Y Axes">
-                <u-button
-                  class="mt-1"
-                  color="primary"
-                  :disabled="state.series.length === 0"
-                  size="xs"
-                  variant="subtle"
-                  @click="
-                    () => {
-                      for (const series of state.series) {
-                        const { x, y } = series
-                        series.x = y
-                        series.y = x
-                      }
-
-                      history.save(state)
-                    }
-                  "
-                >
-                  X <u-icon name="i-lucide-arrow-left-right" /> Y
-                </u-button>
-              </u-tooltip>
-              <u-tooltip text="Share Plot Link">
-                <u-button
-                  class="cursor-pointer mt-1 px-2"
-                  :disabled="!canShare"
-                  icon="i-lucide-share"
-                  size="xs"
-                  variant="subtle"
-                  @click="share()"
-                />
-              </u-tooltip>
-              <u-tooltip text="Copy Plot Link to Clipboard">
-                <u-button
-                  class="cursor-pointer mt-1 px-2"
-                  icon="i-lucide-link"
-                  size="xs"
-                  variant="subtle"
-                  @click="copyToClipboard()"
-                />
-              </u-tooltip>
+        <div v-if="option != null" class="relative">
+          <chart ref="chartInstance" class="min-h-150" :option="option" />
+          <u-tooltip
+            v-if="rSquared != null"
+            class="absolute cursor-default right-8 top-0.75"
+            text="The R-squared value for all currently selected data."
+          >
+            <div
+              class="text-[12.5px] text-center text-gray-600"
+              style="font-family: 'Helvetica Neue', 'Helvetica'"
+            >
+              <span class="mr-1.5 relative">
+                R
+                <span class="-right-0.5 -top-0.5 absolute text-[10px]">2</span>
+              </span>
+              = {{ formatValue(rSquared, 6) }}
             </div>
-            <u-tooltip text="The R-squared value for all currently selected data.">
-              <div>
-                <div v-if="rSquared != null" class="mt-3 text-[14px] text-center">
-                  <span class="mr-1 relative">
-                    R
-                    <span class="-right-0.5 -top-0.5 absolute text-[10px]">2</span>
-                  </span>
-                  = {{ formatValue(rSquared, 6) }}
-                </div>
-              </div>
+          </u-tooltip>
+          <div class="flex justify-center mb-4 mt-4 space-x-2">
+            <u-form-field class="flex items-center" size="sm">
+              <template #label><div class="text-nowrap text-xs">Bounds =</div></template>
+              <u-tooltip
+                text="Choose how the min and max values on the X and Y axes are calculated."
+              >
+                <u-select
+                  v-model="state.bounds"
+                  class="min-w-50 ml-1"
+                  :items="[
+                    { label: 'Selected Data Min/Max', value: 'selected-data' },
+                    { label: 'Data Min/Max', value: 'all-data' },
+                    { label: 'From Zero', value: 'from-zero' },
+                    { label: 'From Zero (X)', value: 'from-zero-x' },
+                    { label: 'From Zero (Y)', value: 'from-zero-y' },
+                  ]"
+                  size="sm"
+                  @update:model-value="history.save(state)"
+                />
+              </u-tooltip>
+            </u-form-field>
+            <u-tooltip text="Reset Zoom">
+              <u-button
+                class="mt-1"
+                color="primary"
+                :disabled="!isZoomedIn"
+                icon="i-lucide-zoom-out"
+                label="Reset"
+                size="xs"
+                variant="subtle"
+                @click="resetZoom"
+              />
+            </u-tooltip>
+            <u-tooltip text="Swap X and Y Axes">
+              <u-button
+                class="mt-1"
+                color="primary"
+                :disabled="state.series.length === 0"
+                size="xs"
+                variant="subtle"
+                @click="
+                  () => {
+                    for (const series of state.series) {
+                      const { x, y } = series
+                      series.x = y
+                      series.y = x
+                    }
+
+                    history.save(state)
+                  }
+                "
+              >
+                X <u-icon name="i-lucide-arrow-left-right" /> Y
+              </u-button>
+            </u-tooltip>
+            <u-tooltip text="Share Plot Link">
+              <u-button
+                class="cursor-pointer mt-1 px-2"
+                :disabled="!canShare"
+                icon="i-lucide-share"
+                size="xs"
+                variant="subtle"
+                @click="share()"
+              />
+            </u-tooltip>
+            <u-tooltip text="Copy Plot Link to Clipboard">
+              <u-button
+                class="cursor-pointer mt-1 px-2"
+                icon="i-lucide-link"
+                size="xs"
+                variant="subtle"
+                @click="copyToClipboard()"
+              />
             </u-tooltip>
           </div>
         </div>
-        <p v-else class="opacity-80 text-center text-sm">
+        <p v-else class="mb-2 opacity-80 text-center text-sm">
           <template v-if="state.series.length > 0">
             Enter the asset, X/Y axis and year of data to plot.
           </template>
@@ -1323,6 +1365,18 @@ async function copyToClipboard() {
                           },
                           { type: 'separator' },
                           {
+                            icon: 'i-lucide-trash-2',
+                            label: 'Remove',
+                            onSelect: () => removeSeries(i),
+                          },
+                          {
+                            icon: 'i-lucide-brush-cleaning',
+                            label: 'Remove Other Series',
+                            disabled: state.series.length < 2,
+                            onSelect: () => removeOtherSeries(i),
+                          },
+                          { type: 'separator' },
+                          {
                             icon: 'i-lucide-square-stack',
                             label: `Duplicate For All Years (${possibleYears.length})`,
                             onSelect: () =>
@@ -1344,7 +1398,9 @@ async function copyToClipboard() {
                           { type: 'separator' },
                           {
                             icon: 'i-lucide-square-stack',
-                            label: `Duplicate For All Assets (${discrete.assets.length})`,
+                            label:
+                              'Duplicate For All Assets ' +
+                              `(${peerAssetsFor(series.asset).length})`,
                             onSelect: () =>
                               duplicateSeriesForAllAssets(i, { withMatchingData: false }),
                           },
@@ -1353,9 +1409,11 @@ async function copyToClipboard() {
                             label:
                               'Duplicate For All Assets With Matching Data (' +
                               uniq(
-                                getSamplesFor(omit(series, ['asset'])).map(
-                                  (current) => current.asset,
-                                ),
+                                getSamplesFor(omit(series, ['asset']))
+                                  .map((current) => current.asset)
+                                  .filter((asset) =>
+                                    peerAssetsFor(series.asset).includes(asset ?? ''),
+                                  ),
                               ).length +
                               ')',
                             onSelect: () =>
@@ -1379,7 +1437,9 @@ async function copyToClipboard() {
                     :items="[
                       ...selectableAssets.map((asset) => ({
                         label:
-                          `${asset} (${discrete.assetToStation[asset]})` +
+                          (asset.includes('(')
+                            ? asset
+                            : `${asset} (${discrete.assetToStation[asset]})`) +
                           `${getNoDataIndicator({ asset })}`,
                         value: asset as string | null,
                       })),

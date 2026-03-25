@@ -13,11 +13,26 @@ export const enum KnownSampleFields {
 }
 
 export type Sample = Readonly<{
+  type: SampleType
   station: string
-  asset: string
+  asset?: string
   timestamp: ZonedDateTime
   data: SampleData
 }>
+
+const index = [
+  {
+    type: 'summary',
+    file: 'summary-samples.csv',
+  },
+  {
+    type: 'ctd-cast',
+    file: 'ctd-cast-samples.csv',
+  },
+] as const
+
+export const sampleTypes = index.map((entry) => entry.type)
+export type SampleType = (typeof sampleTypes)[number]
 
 export type SampleData = Record<string, SampleValue>
 export type SampleValue = string | number | null
@@ -28,9 +43,9 @@ export type SampleSchemaFieldDefinition = {
   type: SampleValueType
 }
 
-type CsvFile = {
-  name: string
-  content: string
+type RawSampleGroup = {
+  type: SampleType
+  samples: RawSample[]
 }
 
 const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/
@@ -39,8 +54,6 @@ const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/
 const fill = -9999999
 
 export const useDiscrete = defineStore('discrete', () => {
-  // List of CSV file names.
-  let index = $shallowRef<string[]>([])
   // Parsed discrete samples.
   let samples = $shallowRef<Sample[]>([])
   // Inferred schema for discrete samples.
@@ -50,22 +63,19 @@ export const useDiscrete = defineStore('discrete', () => {
     console.log('Loading discrete data.')
     const start = performance.now()
 
-    const loadedIndex = await getIndex()
-    const loadedRawSamples = await getRawSamples(loadedIndex)
-    const [loadedSamples, loadedSchema] = extractSamples(loadedRawSamples)
+    const groups = await Promise.all(index.map(({ type, file }) => getRawSamples(type, file)))
+
+    const [extractedSamples, extractedSchema] = extractSamples(groups)
 
     const end = performance.now()
     const duration = ((end - start) / 1000).toFixed(2)
 
-    index = loadedIndex
-    samples = loadedSamples
-    schema = loadedSchema
+    samples = extractedSamples
+    schema = extractedSchema
 
     console.log(
       `Loaded ${samples.length} discrete samples from ${index.length} files in ${duration}s.`,
     )
-
-    return [...index]
   }
 
   const assetsToStation = $computed<Record<string, string>>(() =>
@@ -77,6 +87,10 @@ export const useDiscrete = defineStore('discrete', () => {
     for (const sample of samples) {
       const station = sample.station
       const asset = sample.asset
+      if (asset == null) {
+        continue
+      }
+
       const assets = (mapping[station] ??= [])
       if (!assets.includes(asset)) {
         assets.push(asset)
@@ -88,7 +102,6 @@ export const useDiscrete = defineStore('discrete', () => {
 
   return {
     load,
-    index: computed(() => index),
     samples: computed(() => samples),
     schema: computed(() => schema),
     fields: computed(() => Object.keys(schema)),
@@ -104,78 +117,68 @@ export const useDiscrete = defineStore('discrete', () => {
   }
 })
 
-async function getIndex(): Promise<string[]> {
-  const response = await fetch('/discrete/index.json')
-  const data: string[] = await response.json()
-  return data
-}
-
-async function getCsvs(index: string[]): Promise<CsvFile[]> {
-  return await Promise.all(
-    index.map(async (name) => {
-      const url = `/discrete/${name}`
-      const response = await fetch(url)
-      const content = await response.text()
-      return { name, content }
-    }),
-  )
-}
-
-async function getRawSamples(index: string[]): Promise<RawSample[]> {
-  const csvs = await getCsvs(index)
-  return csvs.flatMap((csv) => parseRawSamples(csv))
-}
-
-function parseRawSamples(csv: CsvFile): RawSample[] {
-  const parsed = parse(csv.content, {
+async function getRawSamples(type: SampleType, file: string): Promise<RawSampleGroup> {
+  const url = `/discrete/${file}`
+  const response = await fetch(url)
+  const content = await response.text()
+  const parsed = parse(content, {
     header: true,
     skipEmptyLines: true,
   })
 
-  return [...parsed.data] as RawSample[]
+  const samples = [...parsed.data] as RawSample[]
+  return { type, samples }
 }
 
-function extractSamples(raw: RawSample[]): [Sample[], SampleSchema] {
-  const schema = inferSchema(raw)
-  let samples = raw.flatMap((raw) => {
-    // If there are multiple values in a raw sample's station or asset field, split them into
-    // multiple parsed samples for each defined station/asset.
-    const stations =
-      raw[KnownSampleFields.Station]?.split(',')?.map((current) => current.trim()) ?? []
+function extractSamples(groups: RawSampleGroup[]): [Sample[], SampleSchema] {
+  // Infer schema from all raw samples across all groups.
+  const schema = inferSchema(groups.flatMap((file) => file.samples))
 
-    return stations.flatMap((station) => {
-      const assets =
-        raw[KnownSampleFields.Asset]?.split(',')?.map((current) => current.trim()) ?? []
-      return assets.flatMap((asset) => {
-        let timestamp: ZonedDateTime
-        try {
-          timestamp = parseAbsolute(raw[KnownSampleFields.Timestamp] ?? 'unknown', 'UTC')
-        } catch {
-          return []
-        }
+  let samples = groups.flatMap((group) =>
+    group.samples.flatMap((raw) => {
+      // If there are multiple values in a raw sample's station or asset field, split them into
+      // multiple parsed samples for each defined station/asset.
+      const stations =
+        raw[KnownSampleFields.Station]?.split(',')?.map((current) => current.trim()) ?? []
 
-        station = station.split('-').map((current) => current.trim())[0] ?? ''
-        if (station === '') {
-          return []
-        }
-
-        const data: SampleData = {
-          [KnownSampleFields.Station]: station,
-          [KnownSampleFields.Asset]: asset,
-        }
-        for (const [name, value] of Object.entries(raw)) {
-          const field = schema[name]
-          if (field == null || name in data) {
-            continue
+      return stations.flatMap((station) => {
+        const assets =
+          raw[KnownSampleFields.Asset]?.split(',')?.map((current) => current.trim()) ?? []
+        return assets.flatMap((asset) => {
+          if (asset === '') {
+            return []
           }
 
-          data[name] = convertValue(value as string, field)
-        }
+          let timestamp: ZonedDateTime
+          try {
+            timestamp = parseAbsolute(raw[KnownSampleFields.Timestamp] ?? 'unknown', 'UTC')
+          } catch {
+            return []
+          }
 
-        return { station, asset, timestamp, data }
+          station = station.split('-').map((current) => current.trim())[0] ?? ''
+          if (station === '') {
+            return []
+          }
+
+          const data: SampleData = {
+            [KnownSampleFields.Station]: station,
+            [KnownSampleFields.Asset]: asset,
+          }
+          for (const [name, value] of Object.entries(raw)) {
+            const field = schema[name]
+            if (field == null || name in data) {
+              continue
+            }
+
+            data[name] = parseValue(value as string, field)
+          }
+
+          return { type: group.type, station, asset, timestamp, data }
+        })
       })
-    })
-  })
+    }),
+  )
 
   samples = orderBy(samples, [(sample) => sample.asset, (sample) => sample.timestamp.toDate()])
   // Freeze samples to prevent accidental mutations and improve performance in some cases.
@@ -248,7 +251,7 @@ function inferValueType(name: string, raw: string): SampleValueType | null {
   return 'text'
 }
 
-function convertValue(raw: string, field: SampleSchemaFieldDefinition): SampleValue {
+function parseValue(raw: string, field: SampleSchemaFieldDefinition): SampleValue {
   raw = raw.trim()
   if (raw === '') {
     return null
