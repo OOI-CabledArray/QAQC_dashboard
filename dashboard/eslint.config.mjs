@@ -15,7 +15,7 @@ export default withNuxt([
     },
     rules: {
       'no-undef': 'off', // Handled by TypeScript.
-      'max-len': ['warn', 100, 2],
+      'max-len': ['warn', 100, 2, { ignoreStrings: true }],
       '@typescript-eslint/ban-ts-comment': 'off',
       '@typescript-eslint/no-dynamic-delete': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
