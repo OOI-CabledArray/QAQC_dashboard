@@ -5,7 +5,5 @@ definePageMeta({
 </script>
 
 <template>
-  <client-only>
-    <discrete-page />
-  </client-only>
+  <discrete-page />
 </template>

@@ -75,7 +75,6 @@ const SeriesSchema = Zod.object({
   // `undefined` as being "no input" instead of an actual value, despite accepting them
   // type-checking wise. This ends up causing weird behavior where the value in the state goes out
   // of sync with the value stored/displayed by the component in some cases.
-  station: Zod.string().optional(),
   asset: Zod.string().optional(),
   x: Zod.string().optional(),
   y: Zod.string().optional(),
@@ -144,7 +143,7 @@ type PartialSeries = (typeof state)['series'][number]
 // Fully defined series with included index.
 type Series = Required<PartialSeries>
 // Fields in series objects used for filtering samples.
-type SampleFilter = Pick<PartialSeries, 'station' | 'asset' | 'x' | 'y' | 'year'>
+type SampleFilter = Pick<PartialSeries, 'asset' | 'x' | 'y' | 'year'>
 
 // Assets that can be selected for plotting, with CTD Cast assets sorted last.
 const selectableAssets = $computed(() => {
@@ -194,13 +193,7 @@ const getSamplesForCache: Record<string, Sample[]> = {}
 
 // Return all samples matching the provided filter.
 function getSamplesFor(filter: SampleFilter): Sample[] {
-  const key = [
-    filter.station ?? '-',
-    filter.asset ?? '-',
-    filter.x ?? '-',
-    filter.y ?? '-',
-    filter.year ?? '-',
-  ].join('&&')
+  const key = [filter.asset ?? '-', filter.x ?? '-', filter.y ?? '-', filter.year ?? '-'].join('&&')
 
   const cached = getSamplesForCache[key]
   if (cached != null) {
@@ -209,7 +202,6 @@ function getSamplesFor(filter: SampleFilter): Sample[] {
 
   const samples = discrete.samples.filter(
     (sample) =>
-      (filter.station == null || sample.station === filter.station) &&
       (filter.asset == null || sample.asset === filter.asset) &&
       (filter.x == null || sample.data[filter.x!] != null) &&
       (filter.y == null || sample.data[filter.y!] != null) &&
