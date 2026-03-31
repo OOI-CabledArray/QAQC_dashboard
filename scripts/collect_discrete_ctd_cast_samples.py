@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """
-Parse all Sea-Bird *.btl bottle files under a given root directory and emit a single CSV/JSON file
-where every line/array element represents one bottle-closure sample.
+Parse all Sea-Bird *.cnv profile files under a given root directory and emit a single CSV/JSON file
+where every line/array element represents one CTD scan.
+
+The Station for each sample is resolved by matching the CTD file key embedded in each .cnv
+filename (e.g. "TN326_CTD-001") against the "CTD File" column of the summary samples CSV
+supplied via `--summary-samples`.
 
 Usage:
-    ./collect_discrete_ctd_cast_samples.py ROOT [--out FILE] [--format {csv,json}] [--indent N] [--verbose]
+    ./collect_discrete_ctd_cast_samples.py ROOT --summary-samples SUMMARY_CSV [--out FILE] [--format {csv,json}] [--indent N] [--verbose]
 
 The output format is inferred from the extension of `--out` when it is ".csv" or ".json".
 
@@ -14,12 +18,13 @@ If the extension is unrecognised, `--format` is used instead (default: csv).
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import logging
 import re
 import sys
+from collections.abc import Iterator
 from csv import DictWriter
-from datetime import datetime, timezone
 from pathlib import Path
 from textwrap import dedent
 from typing import Any
@@ -30,168 +35,43 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# Sea-Bird BTL column names mapping matching the discrete sample column names as closely as
-# possible.
+# Sea-Bird CNV short column names → output column names.
+# Keys are compared case-insensitively.
 COLUMN_MAP: dict[str, str] = {
-    "Bottle": "_btl_bottle_number",  # Internal, written as "Bottle Position".
-    "Date": "_btl_date",  # Internal, combined with time to create "Bottle Closure Time [UTC]".
-    "PrDM": "CTD Pressure [db]",
-    "DepSM": "CTD Depth [m]",
-    "Latitude": "CTD Latitude [deg]",
-    "Longitude": "CTD Longitude [deg]",
-    "T090C": "CTD Temperature 1 [deg C]",
-    "T190C": "CTD Temperature 2 [deg C]",
-    "C0S/m": "CTD Conductivity 1 [S/m]",
-    "C1S/m": "CTD Conductivity 2 [S/m]",
-    "Sal00": "CTD Salinity 1 [psu]",
-    "Sal11": "CTD Salinity 2 [psu]",
-    "Sbeox0V": "CTD Oxygen Voltage [V]",
-    "Sbeox0ML/L": "CTD Oxygen [mL/L]",
-    "OxsolML/L": "CTD Oxygen Saturation [mL/L]",
-    "FlECO-AFL": "CTD Fluorescence [mg/m^3]",
-    "FlSP": "CTD Fluorescence [mg/m^3]",
-    "CStarAt0": "CTD Beam Attenuation [1/m]",
-    "CStarTr0": "CTD Beam Transmission [%]",
-    "Ph": "CTD pH",
+    "prdm": "CTD Cast Pressure [db]",
+    "depsm": "CTD Cast Depth [m]",
+    "latitude": "CTD Cast Latitude [deg]",
+    "longitude": "CTD Cast Longitude [deg]",
+    "t090c": "CTD Cast Temperature 1 [deg C]",
+    "t190c": "CTD Cast Temperature 2 [deg C]",
+    "c0s/m": "CTD Cast Conductivity 1 [S/m]",
+    "c1s/m": "CTD Cast Conductivity 2 [S/m]",
+    "sal00": "CTD Cast Salinity 1 [psu]",
+    "sal11": "CTD Cast Salinity 2 [psu]",
+    "sbeox0v": "CTD Cast Oxygen Voltage [V]",
+    "sbeox0ml/l": "CTD Cast Oxygen [mL/L]",
+    "oxsolml/l": "CTD Cast Oxygen Saturation [mL/L]",
+    "fleco-afl": "CTD Cast Fluorescence [mg/m^3]",
+    "flsp": "CTD Cast Fluorescence [mg/m^3]",
+    "cstarat0": "CTD Cast Beam Attenuation [1/m]",
+    "cstartr0": "CTD Cast Beam Transmission [%]",
+    "ph": "CTD Cast pH",
+    "times": "CTD Cast Time [seconds]",
 }
 
-# Rules for mapping a raw `.btl` Location/Station/Station Name/Station Number string to the
-# canonical station name used in summary-samples.csv.
-#
-# Each entry is a (keywords, station_name) pair.  All keywords in the tuple must appear
-# (case-insensitively) somewhere in the location string for the rule to match.  The first
-# matching rule wins.  More-specific rules (more keywords, or narrower terms) must therefore
-# appear before less-specific ones.
-#
-# Station names deliberately omit the "- <N> m <direction>" offset suffix so that multiple nearby
-# cast positions all resolve to the same base name.  If the matched station name has no recognised
-# platform-type suffix (" Shallow Profiler", " Deep Profiler", " BEP", " Junction Box") one is
-# appended automatically by `_ensure_station_suffix`.
-LOCATION_STATION_RULES: list[tuple[list[str], str]] = [
-    #
-    # Exact CTD-number codes. These must precede generic keyword rules.
-    #
-    # TN326 2015: slope base junction box
-    (["ctd12"], "Slope Base Junction Box LJ01A"),
-    (["ctd13"], "Slope Base Junction Box LJ01A"),
-    (["ctd17"], "Slope Base Junction Box LJ01A"),
-    (["ctd19"], "Slope Base Junction Box LJ01A"),
-    # TN326 2015: slope base shallow profiler
-    (["ctd02"], "Slope Base Shallow Profiler"),
-    (["ctd14"], "Slope Base Shallow Profiler"),
-    # TN326 2015: axial base shallow profiler
-    (["ctd03"], "Axial Base Shallow Profiler"),
-    (["ctd04"], "Axial Base Shallow Profiler"),
-    (["ctd05"], "Axial Base Shallow Profiler"),
-    # SKQ201610S 2016: slope base junction box
-    (["ca_ctd_2016-02"], "Slope Base Junction Box LJ01A"),
-    # SKQ201610S 2016: slope base shallow profiler
-    (["ca_ctd_2016-03"], "Slope Base Shallow Profiler"),
-    (["ca_ctd_2016-06"], "Slope Base Shallow Profiler"),
-    # AT50-29 2024: axial base shallow profiler
-    (["ctd 12"], "Axial Base Shallow Profiler"),
-    (["ctd 13"], "Axial Base Shallow Profiler"),
-    # AT50-29 2024: oregon offshore shallow profiler
-    (["ctd 009"], "Oregon Offshore Shallow Profiler"),
-    (["ctd 14"], "Oregon Offshore Shallow Profiler"),
-    #
-    # Generic keyword rules.
-    #
-    # Slope Base Junction Box
-    (["lv01a"], "Slope Base Junction Box LV01A"),
-    (["lj01a"], "Slope Base Junction Box LJ01A"),
-    (["bubble", "plume"], "Slope Base Junction Box LJ01A"),
-    # Slope Base Deep Profiler
-    (["slope", "base", "dp"], "Slope Base Deep Profiler"),
-    (["slope", "base", "deep"], "Slope Base Deep Profiler"),
-    # Slope Base Shallow Profiler
-    (["slope", "base"], "Slope Base Shallow Profiler"),
-    # Axial Base Deep Profiler
-    (["axial", "dp"], "Axial Base Deep Profiler"),
-    (["axial", "deep"], "Axial Base Deep Profiler"),
-    # Axial Base Shallow Profiler
-    (["axial"], "Axial Base Shallow Profiler"),
-    # Oregon Offshore Deep Profiler
-    (["offshore", "dp"], "Oregon Offshore Deep Profiler"),
-    (["offshore", "deep"], "Oregon Offshore Deep Profiler"),
-    (["offshore", "600"], "Oregon Offshore Deep Profiler"),
-    (["endurance", "dp"], "Oregon Offshore Deep Profiler"),
-    # Oregon Shelf BEP
-    (["shelf"], "Oregon Shelf BEP"),
-    # Oregon Offshore Shallow Profiler
-    (["offshore"], "Oregon Offshore Shallow Profiler"),
-    (["endurance"], "Oregon Offshore Shallow Profiler"),
+# Substrings (case-insensitive) that cause a CNV column to be omitted from output.
+COLUMN_IGNORE: list[str] = [
+    "error",
 ]
 
+# Matches a distance-offset suffix like " - 500 m SW" or " - 100 m N of Einstein's Grotto".
+_STATION_OFFSET_RE = re.compile(r"\s+-\s+\d+\s+m\b.*$")
 
-def lookup_station(location: str) -> str | None:
-    """
-    Return the canonical summary-samples.csv station name for a raw btl Location/Station value,
-    or None if no rule matches.
+# Matches the cruise portion and CTD portion of a CTD file key, separated by "_" or "-".
+_CTD_FILE_KEY_RE = re.compile(r"^(.+?)[-_](CTD-.+)$", re.IGNORECASE)
 
-    Each rule in LOCATION_STATION_RULES is checked in order; the first whose keywords are all
-    present (case-insensitively) in `location` wins.
-    """
-    lower = location.lower()
-    for keywords, station_name in LOCATION_STATION_RULES:
-        if all(kw in lower for kw in keywords):
-            return station_name
-    return None
-
-
-# Mapping from raw header keys to CSV column names.
-META_KEY_TO_COLUMN_MAP: dict[str, str] = {
-    "cruise": "Cruise",
-    "cast": "Cast",
-    "station": "Station",
-    "station_name": "Station",
-    "station_number": "Station",
-    "location": "Station",
-    "water_depth": "CTD Cast Water Depth [m]",
-    "depth": "CTD Depth [m]",
-    "date": "Start Time [UTC]",
-}
-
-
-def sanitise_key(column_name: str) -> str:
-    """
-    Convert an unmapped Sea-Bird column name to a safe JSON key by replacing every run of
-    non-alphanumeric characters with a single underscore.
-    """
-    return re.sub(r"[^A-Za-z0-9]+", "_", column_name).strip("_")
-
-
-def column_to_key(column_name: str) -> str:
-    """Return the JSON key for a Sea-Bird column name."""
-    if column_name in COLUMN_MAP:
-        return COLUMN_MAP[column_name]
-
-    return sanitise_key(column_name)
-
-
-def is_stdev_key(key: str) -> bool:
-    """Return `True` if `key` is a standard-deviation companion column."""
-    return key.endswith(" stdev") or key.endswith("_sdev")
-
-
-def stdev_key(measurement_key: str) -> str:
-    """
-    Return the standard-deviation companion key for a measurement key.
-
-    For keys that match CSV column names (contain spaces / brackets) the stdev is appended as a
-    suffix in a consistent way so downstream code can find it. For plain snake_case keys the _sdev
-    suffix is used.
-    """
-    if " " in measurement_key or "[" in measurement_key:
-        return measurement_key + " stdev"
-    return measurement_key + "_sdev"
-
-
-# Regex for a Sea-Bird user-comment metadata line.
-META_REGEX = re.compile(r"^\*\*\s+([A-Za-z ]+?):\s*(.*?)\s*$")
-
-# Regex for a system header line.
-SYS_REGEX = re.compile(r"^\*\s+([A-Za-z /()]+?)\s*=\s*(.*?)\s*$")
+# Regex for parsing "# name N = shortName: Description [units]" lines.
+_CNV_NAME_RE = re.compile(r"^#\s*name\s+(\d+)\s*=\s*(\S+)\s*:")
 
 # Month abbreviations used when parsing date strings.
 MONTHS = {
@@ -216,34 +96,68 @@ MONTHS = {
 }
 
 
-def parse_datetime(text: str, time_text: str) -> str | None:
+def normalize_ctd_file_key(key: str) -> str:
     """
-    Combine a date token like "Aug 06 2021" and a time token like "00:08:19" into an ISO-8601 UTC
-    string. Returns `None` on failure.
+    Strip hyphens from the cruise portion of a CTD file key and normalize the separator to "_".
+
+    Examples:
+        "TN-393_CTD-001" -> "TN393_CTD-001"
+        "AT42-12_CTD-003" -> "AT4212_CTD-003"
+        "TN422-CTD-009" -> "TN422_CTD-009"
+    """
+    match = _CTD_FILE_KEY_RE.match(key)
+    if match:
+        return match.group(1).replace("-", "") + "_" + match.group(2)
+    return key
+
+
+# Mapping from raw header keys to CSV column names.
+META_KEY_TO_COLUMN_MAP: dict[str, str] = {
+    "cruise": "Cruise",
+    "cast": "Cast",
+    "water_depth": "CTD Cast Water Depth [m]",
+    "depth": "CTD Cast Depth [m]",
+    "date": "Start Time [UTC]",
+}
+
+# Regex for a Sea-Bird user-comment metadata line.
+META_REGEX = re.compile(r"^\*\*\s+([A-Za-z ]+?):\s*(.*?)\s*$")
+
+# Regex for a system header line.
+SYS_REGEX = re.compile(r"^\*\s+([A-Za-z /()]+?)\s*=\s*(.*?)\s*$")
+
+
+def load_ctd_file_lookup(summary_path: Path) -> dict[str, tuple[str, list[str]]]:
+    """
+    Read the summary samples CSV and return a mapping from "CTD File" value (e.g. "TN326_CTD-001")
+    to a (station, assets) tuple, where assets is the ordered list of unique "Target Asset" values
+    associated with that CTD file.
     """
     try:
-        parts = text.split()
-        if len(parts) == 3:
-            month = MONTHS.get(parts[0].lower())
-            if month is None:
-                return None
-            day = int(parts[1])
-            year = int(parts[2])
-        else:
-            return None
+        text = summary_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        log.error("Cannot read summary file %s: %s", summary_path, exc)
+        return {}
 
-        hour, minute, second = (int(part) for part in time_text.split(":"))
-        return datetime(
-            year,
-            month,
-            day,
-            hour,
-            minute,
-            second,
-            tzinfo=timezone.utc,
-        ).isoformat()
-    except Exception:
-        return None
+    mapping: dict[str, tuple[str, list[str]]] = {}
+    reader = csv.DictReader(text.splitlines())
+    for row in reader:
+        ctd_file = normalize_ctd_file_key((row.get("CTD File") or "").strip())
+        station = (row.get("Station") or "").strip()
+        asset = (row.get("Target Asset") or "").strip()
+        if not ctd_file or not station:
+            continue
+        if ctd_file not in mapping:
+            mapping[ctd_file] = (station, [])
+        if asset and asset not in mapping[ctd_file][1]:
+            mapping[ctd_file][1].append(asset)
+
+    log.info(
+        "Loaded %d CTD file → station/asset mappings from '%s'.",
+        len(mapping),
+        summary_path,
+    )
+    return mapping
 
 
 def parse_nmea_utc(value: str) -> str | None:
@@ -251,14 +165,21 @@ def parse_nmea_utc(value: str) -> str | None:
     Convert an NMEA UTC header string like "Jul 06 2015 15:59:45" to an ISO-8601 UTC string. Returns
     `None` on failure.
     """
+    from datetime import datetime, timezone
+
     try:
-        # Format: "Mon DD YYYY HH:MM:SS"
-        nmea_parts = value.split()
-        if len(nmea_parts) != 4:
+        parts = value.split()
+        if len(parts) != 4:
             return None
-        date_str = " ".join(nmea_parts[:3])  # "Jul 06 2015"
-        time_str = nmea_parts[3]  # "15:59:45"
-        return parse_datetime(date_str, time_str)
+        month = MONTHS.get(parts[0].lower())
+        if month is None:
+            return None
+        day = int(parts[1])
+        year = int(parts[2])
+        hour, minute, second = (int(part) for part in parts[3].split(":"))
+        return datetime(
+            year, month, day, hour, minute, second, tzinfo=timezone.utc
+        ).isoformat()
     except Exception:
         return None
 
@@ -283,6 +204,11 @@ def parse_nmea_coordinates(value: str) -> float | None:
         return None
 
 
+def column_name_for(short_name: str) -> str:
+    """Return the output column name for a CNV short column name, using case-insensitive lookup."""
+    return COLUMN_MAP.get(short_name.lower(), short_name)
+
+
 def coerce_number(value: str) -> float | str:
     """Try to parse `value` as float; return the original string on failure."""
     try:
@@ -291,285 +217,322 @@ def coerce_number(value: str) -> float | str:
         return value
 
 
-def parse(path: Path) -> list[dict[str, Any]]:
+def parse(
+    path: Path,
+    ctd_file_lookup: dict[str, tuple[str, list[str]]],
+    downsample: int | None = None,
+    downsample_by: str = "depth",
+    downsample_select: str = "average",
+) -> Iterator[dict[str, Any]]:
+    """Parse a single .cnv file and yield sample dicts."""
+    ctd_file_key = normalize_ctd_file_key(path.stem.split("__")[-1])
+    lookup = ctd_file_lookup.get(ctd_file_key)
+    if lookup is not None:
+        station = _STATION_OFFSET_RE.sub("", lookup[0]).strip()
+        assets = lookup[1]
+    else:
+        station = None
+        assets = []
+    if station is None:
+        log.warning(
+            "No station found in summary for CTD file %r (%s), skipping.",
+            ctd_file_key,
+            path,
+        )
+        return
+
     try:
-        text = path.read_text(encoding="latin-1")
+        file = path.open(encoding="latin-1")
     except OSError as exc:
         log.error("Cannot read %s: %s", path, exc)
-        return []
+        return
 
-    lines = text.splitlines()
+    with file:
+        # Parse header: metadata and column definitions (line by line).
+        # Use readline() instead of iteration so that tell()/seek() work later.
+        meta: dict[str, Any] = {}
+        columns: dict[int, str] = {}
+        found_end = False
 
-    #
-    # Extract header metadata values, which are values included in all samples.
-    #
-    meta: dict[str, Any] = {}
-
-    for line in path.open(encoding="latin-1"):
-        # User-defined comment fields:  ** Cruise: TN393
-        user_comment_match = META_REGEX.match(line)
-        if user_comment_match:
-            raw_key = re.sub(r"\s+", "_", user_comment_match.group(1).strip().lower())
-            value = user_comment_match.group(2).strip()
-            if value:
-                csv_key = META_KEY_TO_COLUMN_MAP.get(raw_key)
-                if csv_key:
-                    # "Station" can be supplied by multiple source keys, first wins.
-                    if csv_key not in meta:
-                        if csv_key == "Station":
-                            canonical = lookup_station(value)
-                            if canonical is not None:
-                                meta["Station"] = canonical
-                            else:
-                                log.warning(
-                                    "No station mapping found for location %r in %s, skipping.",
-                                    value,
-                                    path,
-                                )
-                        else:
-                            meta[csv_key] = value
-
-            continue
-
-        # System header fields.
-        sys_header_match = SYS_REGEX.match(line)
-        if sys_header_match:
-            raw_key = sys_header_match.group(1).strip().lower()
-            value = sys_header_match.group(2).strip()
-            if "nmea latitude" in raw_key:
-                coord = parse_nmea_coordinates(value)
-                if coord is not None:
-                    meta["Start Latitude [degrees]"] = coord
-            elif "nmea longitude" in raw_key:
-                coord = parse_nmea_coordinates(value)
-                if coord is not None:
-                    meta["Start Longitude [degrees]"] = coord
-            elif "nmea utc" in raw_key:
-                # Only use as Start Time fallback if not already set by ** Date
-                if "Start Time [UTC]" not in meta:
-                    iso_time = parse_nmea_utc(value)
-                    meta["Start Time [UTC]"] = (
-                        iso_time if iso_time is not None else value
-                    )
-            elif "software version" in raw_key:
-                meta["software_version"] = value
-            continue
-
-        # Stop scanning metadata once we hit the data section
-        if line.strip().startswith("Bottle") and "Date" in line:
-            break
-
-    # Find column header line and parse column names.
-    header_line_index: int | None = None
-    raw_columns: list[str] = []
-
-    for line_index, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped.startswith("Bottle") and "Date" in stripped:
-            # Split on whitespace. The header uses fixed-width layout but whitespace splitting is
-            # reliable for the column names themselves.
-            raw_columns = stripped.split()
-            header_line_index = line_index
-            break
-
-    if "Station" not in meta:
-        return []
-
-    if header_line_index is None:
-        log.warning("No data header found in %s, skipping.", path)
-        return []
-
-    # Map Sea-Bird column names → clean JSON keys
-    json_keys = [column_to_key(column_name) for column_name in raw_columns]
-
-    #
-    # Parse data rows.
-    #
-    # The BTL format interleaves "avg" and "sdev" rows, but we really only care about the averages.
-    #
-    # The bottle number and date appear on the avg row; the time of day
-    # appears in the same column position as "Date" on the sdev row.
-    # We combine them into a single ISO timestamp.
-    #
-    # Skip the "Position  Time  ..." unit row immediately after the header.
-    data_start_index = header_line_index + 2
-    if data_start_index < len(lines) and "Position" in lines[data_start_index - 1]:
-        pass  # already correct — unit row was at header_line_index + 1
-
-    samples: list[dict[str, Any]] = []
-    row_index = data_start_index
-
-    while row_index < len(lines):
-        avg_line = lines[row_index]
-
-        # Skip blank lines
-        if not avg_line.strip():
-            row_index += 1
-            continue
-
-        if not avg_line.strip().endswith("(avg)"):
-            row_index += 1
-            continue
-
-        # Peek at the next non-empty line to get the sdev row.
-        sdev_line = ""
-        sdev_search_index = row_index + 1
-        while sdev_search_index < len(lines):
-            if lines[sdev_search_index].strip():
-                if lines[sdev_search_index].strip().endswith("(sdev)"):
-                    sdev_line = lines[sdev_search_index]
+        while True:
+            line = file.readline()
+            if not line:
                 break
-            sdev_search_index += 1
+            if line.strip() == "*END*":
+                found_end = True
+                break
 
-        # Parse the "avg" row, stripping the trailing "(avg)" marker before splitting.
-        avg_values_raw = avg_line.strip().rstrip("(avg)").strip()
-        # The first token is the bottle number, the next three tokens form the date ("Aug 06 2021"),
-        # then the remaining tokens are numeric values.
-        avg_tokens = avg_values_raw.split()
+            name_match = _CNV_NAME_RE.match(line)
+            if name_match:
+                column_index = int(name_match.group(1))
+                short_name = name_match.group(2)
+                if not any(short in short_name.lower() for short in COLUMN_IGNORE):
+                    columns[column_index] = column_name_for(short_name)
+                continue
 
-        # ---- Parse the sdev row ----------------------------------------
-        sdev_tokens: list[str] = []
-        if sdev_line:
-            sdev_values_raw = sdev_line.strip().rstrip("(sdev)").strip()
-            sdev_tokens = sdev_values_raw.split()
+            user_comment_match = META_REGEX.match(line)
+            if user_comment_match:
+                raw_key = re.sub(
+                    r"\s+", "_", user_comment_match.group(1).strip().lower()
+                )
+                value = user_comment_match.group(2).strip()
+                if value:
+                    csv_key = META_KEY_TO_COLUMN_MAP.get(raw_key)
+                    if csv_key and csv_key not in meta:
+                        meta[csv_key] = value
+                continue
 
-        # Reconstruct per-column token lists.
-        avg_column_tokens: list[str | None] = []
-        sdev_column_tokens: list[str | None] = []
+            sys_header_match = SYS_REGEX.match(line)
+            if sys_header_match:
+                raw_key = sys_header_match.group(1).strip().lower()
+                value = sys_header_match.group(2).strip()
+                if "nmea latitude" in raw_key:
+                    coord = parse_nmea_coordinates(value)
+                    if coord is not None:
+                        meta["CTD Cast Start Latitude [degrees]"] = coord
+                elif "nmea longitude" in raw_key:
+                    coord = parse_nmea_coordinates(value)
+                    if coord is not None:
+                        meta["CTD Cast Start Longitude [degrees]"] = coord
+                elif "nmea utc" in raw_key:
+                    if "Start Time [UTC]" not in meta:
+                        iso_time = parse_nmea_utc(value)
+                        meta["Start Time [UTC]"] = (
+                            iso_time if iso_time is not None else value
+                        )
+                continue
 
-        try:
-            # Append bottle number.
-            avg_column_tokens.append(avg_tokens[0])
-            # No bottle number on sdev row.
-            sdev_column_tokens.append(None)
+        if not found_end or not columns:
+            log.warning("No data header or columns found in %s, skipping.", path)
+            return
 
-            # Date is 3 tokens, time is 1.
-            date_text = " ".join(avg_tokens[1:4])
-            avg_column_tokens.append(date_text)
+        max_column = max(columns.keys())
 
-            time_text = sdev_tokens[0] if sdev_tokens else None
-            sdev_column_tokens.append(time_text)
-
-            # Remaining numeric columns, one token each.
-            for avg_token_index in range(4, len(avg_tokens)):
-                avg_column_tokens.append(avg_tokens[avg_token_index])
-            for sdev_token_index in range(1, len(sdev_tokens)):
-                sdev_column_tokens.append(sdev_tokens[sdev_token_index])
-
-        except IndexError:
-            log.warning(
-                "Malformed row in %s at line %d, skipping bottle.", path, row_index + 1
-            )
-            row_index = sdev_search_index + 1
-            continue
-
-        # Build the sample with "Station" and "Target Asset" at the front.
-        station = meta["Station"]
-        sample: dict[str, Any] = {
-            "Station": station,
-            "Target Asset": f"CTD Cast ({station})",
-            **{key: value for key, value in meta.items() if key != "Station"},
-        }
-
-        # Populate measured columns.
-        date_part: str = ""
-        time_part: str = ""
-
-        for column_index, json_key in enumerate(json_keys):
-            avg_text = (
-                avg_column_tokens[column_index]
-                if column_index < len(avg_column_tokens)
-                else None
-            )
-            sdev_text = (
-                sdev_column_tokens[column_index]
-                if column_index < len(sdev_column_tokens)
-                else None
-            )
-
-            if json_key == "_btl_bottle_number":
-                sample["CTD Cast Bottle Position"] = (
-                    int(avg_text) if avg_text is not None else None
+        # Find the depth column index for depth-based downsampling.
+        depth_column: int | None = None
+        if downsample is not None and downsample_by == "depth":
+            for column_index, column_name in columns.items():
+                if column_name == COLUMN_MAP.get("depsm"):
+                    depth_column = column_index
+                    break
+            if depth_column is None:
+                log.warning(
+                    "No depth column found in %s, falling back to time-based downsampling.",
+                    path,
                 )
 
-            elif json_key == "_btl_date":
-                # Defer writing the datetime until we also have the time.
-                date_part = avg_text or ""
-                time_part = sdev_text or ""
-
-            else:
-                # Numeric measurement, skip internal sentinel keys.
-                if json_key.startswith("_btl_"):
+        # Helper: read all data rows as parsed token lists.
+        def read_all_rows() -> list[list[str]]:
+            rows: list[list[str]] = []
+            while True:
+                line = file.readline()
+                if not line:
+                    break
+                line = line.strip()
+                if not line:
                     continue
-                if avg_text is not None:
-                    sample[json_key] = coerce_number(avg_text)
-                if sdev_text is not None:
-                    sample[stdev_key(json_key)] = coerce_number(sdev_text)
+                tokens = line.split()
+                if len(tokens) > max_column:
+                    rows.append(tokens)
+            return rows
 
-        # Combine date and time into ISO-8601 UTC → "CTD Bottle Closure Time [UTC]".
-        if date_part and time_part:
-            iso = parse_datetime(date_part, time_part)
-            if iso:
-                sample["CTD Cast Bottle Closure Time [UTC]"] = iso
+        # Helper: build a sample dict from a token list.
+        def make_sample(tokens: list[str]) -> dict[str, Any]:
+            sample: dict[str, Any] = {
+                "Station": station,
+                "Target Asset": None,
+                **meta,
+            }
+            for column_index, column_name in columns.items():
+                sample[column_name] = coerce_number(tokens[column_index])
+            return sample
+
+        # Helper: average numeric columns across multiple token lists.
+        def average_tokens(group: list[list[str]]) -> list[str]:
+            result: list[str] = list(group[0])
+            for column_index in columns:
+                values: list[float] = []
+                for tokens in group:
+                    try:
+                        values.append(float(tokens[column_index]))
+                    except ValueError:
+                        pass
+                if values:
+                    result[column_index] = str(sum(values) / len(values))
+            return result
+
+        # Helper: yield sample dicts for each asset.
+        def emit(tokens: list[str]) -> Iterator[dict[str, Any]]:
+            sample = make_sample(tokens)
+            for asset in assets:
+                copy = dict(sample)
+                copy["Target Asset"] = asset
+                yield copy
+
+        # No downsampling: stream rows directly.
+        if downsample is None:
+            while True:
+                line = file.readline()
+                if not line:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                tokens = line.split()
+                if len(tokens) > max_column:
+                    yield from emit(tokens)
+            return
+
+        # --- Downsampling path: read all rows into memory for this file. ---
+        all_rows = read_all_rows()
+        if not all_rows:
+            return
+
+        if len(all_rows) <= downsample:
+            # Fewer rows than target: emit everything.
+            for tokens in all_rows:
+                yield from emit(tokens)
+            return
+
+        if downsample_by == "depth" and depth_column is not None:
+            # Compute evenly-spaced target depths.
+            depths = []
+            for i, tokens in enumerate(all_rows):
+                try:
+                    depths.append((i, float(tokens[depth_column])))
+                except ValueError:
+                    pass
+
+            if not depths:
+                return
+
+            min_depth = min(d for _, d in depths)
+            max_depth = max(d for _, d in depths)
+
+            if max_depth <= min_depth:
+                # All depths identical: just take evenly-spaced indices.
+                step = len(all_rows) / downsample
+                for i in range(downsample):
+                    yield from emit(all_rows[int(i * step)])
+                return
+
+            bin_size = (max_depth - min_depth) / downsample
+
+            if downsample_select == "average":
+                # Assign each row to a depth bin, then average each bin.
+                bins: dict[int, list[list[str]]] = {}
+                for row_index, depth in depths:
+                    bin_index = min(int((depth - min_depth) / bin_size), downsample - 1)
+                    bins.setdefault(bin_index, []).append(all_rows[row_index])
+
+                for bin_index in sorted(bins):
+                    yield from emit(average_tokens(bins[bin_index]))
             else:
-                sample["CTD Cast Bottle Closure Time [UTC]"] = (
-                    f"{date_part} {time_part}"
-                )
-        elif date_part:
-            sample["CTD Cast Bottle Closure Time [UTC]"] = date_part
+                # If "first", pick the nearest row to each target depth.
+                sorted_depths = sorted(depths, key=lambda entry: entry[1])
+                targets = [min_depth + i * bin_size for i in range(downsample)]
+                seen: set[int] = set()
+                cursor = 0
+                for target in targets:
+                    while (
+                        cursor < len(sorted_depths) - 1
+                        and sorted_depths[cursor][1] < target
+                    ):
+                        cursor += 1
+                    row_index = sorted_depths[cursor][0]
+                    if row_index not in seen:
+                        seen.add(row_index)
+                        yield from emit(all_rows[row_index])
+        else:
+            # Time-based, evenly-spaced row indices.
+            step = len(all_rows) / downsample
 
-        # Drop stdev keys before storing.
-        sample = {key: value for key, value in sample.items() if not is_stdev_key(key)}
-        samples.append(sample)
-        row_index = sdev_search_index + 1
-
-    return samples
+            if downsample_select == "average":
+                for i in range(downsample):
+                    start = int(i * step)
+                    end = int((i + 1) * step)
+                    group = all_rows[start:end] or [all_rows[start]]
+                    yield from emit(average_tokens(group))
+            else:
+                for i in range(downsample):
+                    yield from emit(all_rows[int(i * step)])
 
 
 def write_samples_as_json(
-    samples: list[dict[str, Any]],
+    samples: Iterator[dict[str, Any]],
     output: Path,
     indent: int,
-) -> None:
+) -> int:
+    """Stream samples to a JSON array file. Returns the number of samples written."""
+    count = 0
+    separator = ""
+    applied_indent = indent or None
+
     with output.open("w", encoding="utf-8") as stream:
-        json.dump(
-            samples,
-            stream,
-            indent=indent or None,
-            ensure_ascii=False,
-        )
-        stream.write("\n")
+        stream.write("[\n" if applied_indent else "[")
+
+        for sample in samples:
+            stream.write(separator)
+            json.dump(sample, stream, indent=applied_indent, ensure_ascii=False)
+            separator = ",\n" if applied_indent else ","
+            count += 1
+
+        stream.write("\n]\n" if applied_indent else "]")
+
+    return count
 
 
-def write_samples_as_csv(samples: list[dict[str, Any]], output: Path) -> None:
-
+def discover_columns(
+    files: list[Path],
+    ctd_file_lookup: dict[str, tuple[str, list[str]]],
+    downsample: int | None = None,
+    downsample_by: str = "depth",
+    downsample_select: str = "average",
+) -> list[str]:
+    """Do a quick pass over all files to collect the union of all column names in order."""
     columns: dict[str, None] = {}
-    for sample in samples:
-        # Add keys from all fields, values are updated here, but ignored. Preserve insertion order
-        # by using dictionary keys as an ordered set.
-        columns.update(sample)
+    for path in files:
+        for sample in parse(
+            path,
+            ctd_file_lookup,
+            downsample=downsample,
+            downsample_by=downsample_by,
+            downsample_select=downsample_select,
+        ):
+            columns.update(sample)
+            break  # Only need the first sample per file to get its columns.
+    return list(columns)
 
+
+def write_samples_as_csv(
+    samples: Iterator[dict[str, Any]],
+    output: Path,
+    columns: list[str],
+) -> int:
+    """Stream samples to a CSV file. Returns the number of samples written."""
+    count = 0
     with output.open("w", encoding="utf-8", newline="") as stream:
         writer = DictWriter(
             stream,
-            fieldnames=list(columns),
+            fieldnames=columns,
             extrasaction="ignore",
         )
         writer.writeheader()
-        writer.writerows(samples)
+        for sample in samples:
+            writer.writerow(sample)
+            count += 1
+    return count
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Convert all *.btl files under ROOT to a single JSON or CSV file.",
+        description="Convert all *.cnv files under ROOT to a single JSON or CSV file.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=dedent("""
           examples:
             # Write to the default output path (<root_name>.csv).
             ./collect_discrete_ctd_cast_samples.py ./ctd-cast-sample-source-files/
             # Write to a JSON file (format inferred from extension).
-            ./collect_discrete_ctd_cast_samples.py ./ctd-cast-sample-source-files/ --out ctd-cast-source-files.json
-            # Override format explicitly.
             ./collect_discrete_ctd_cast_samples.py ./ctd-cast-sample-source-files/ --out ctd-cast-source-files.json
             # Use compact JSON output with no indentation.
             ./collect_discrete_ctd_cast_samples.py ./ctd-cast-sample-source-files/ --out ctd-cast-source-files.json --indent 0
@@ -579,7 +542,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "root",
         type=Path,
         metavar="ROOT",
-        help="Root directory to search recursively for *.btl files.",
+        help="Root directory to search recursively for *.cnv files.",
+    )
+    parser.add_argument(
+        "--summary-samples",
+        type=Path,
+        required=True,
+        metavar="SUMMARY_CSV",
+        help=(
+            "Path to the collected discrete summary samples CSV. Used to resolve the Station for "
+            "each CTD cast by matching the CTD file key in the .cnv filename against the "
+            "'CTD File' column."
+        ),
     )
     parser.add_argument(
         "--format",
@@ -607,6 +581,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="JSON indentation level, use 0 for compact output. (default: 2)",
     )
     parser.add_argument(
+        "--downsample-casts",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Maximum number of evenly-spaced samples to keep per cast. By default all samples are kept.",
+    )
+    parser.add_argument(
+        "--downsample-by",
+        choices=["depth", "time"],
+        default="depth",
+        help="Dimension along which to evenly space downsampled points: 'depth' for even depth "
+        "spacing, 'time' for even row-index spacing. (default: depth)",
+    )
+    parser.add_argument(
+        "--downsample-select",
+        choices=["average", "first"],
+        default="average",
+        help="How to select a value within each downsampling bin: 'average' averages all scans "
+        "in the bin, 'first' picks a single representative scan. (default: average)",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Enable DEBUG-level logging.",
@@ -627,11 +622,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.format is not None:
-        # The `--format` was explicitly provided, and takes priority.
         format = args.format
         out = args.out if args.out is not None else Path(f"{root.name}.{format}")
     elif args.out is not None:
-        # No explicit `--format`, infer from the file extension.
         extension = args.out.suffix.lower()[1:]
         if extension in {"csv", "json"}:
             format = extension
@@ -643,35 +636,65 @@ def main(argv: list[str] | None = None) -> int:
             format = "csv"
         out = args.out
     else:
-        # Neither `--format` or `--out` provided, use defaults.
         format = "csv"
         out = Path(f"{root.name}.csv")
 
-    files = sorted(root.rglob("*.btl"))
-    if not files:
-        log.error("No *.btl files found under '%s', exiting.", root)
+    if not args.summary_samples.exists():
+        log.error("Summary file '%s' does not exist.", args.summary_samples)
         return 1
 
-    log.info("Found %s *.btl file(s) under '%s'.", len(files), root)
+    ctd_file_lookup = load_ctd_file_lookup(args.summary_samples)
+    if not ctd_file_lookup:
+        log.error(
+            "No CTD file → station/asset mappings loaded from '%s', exiting.",
+            args.summary_samples,
+        )
+        return 1
 
-    samples: list[dict[str, Any]] = []
+    files = sorted(root.rglob("*.cnv"))
+    if not files:
+        log.error("No *.cnv files found under '%s', exiting.", root)
+        return 1
 
-    for file in files:
-        log.debug("Parsing '%s'.", file)
-        file_samples = parse(file)
-        log.info("  '%s' (%s sample(s))", file, len(file_samples))
-        samples.extend(file_samples)
+    log.info("Found %s *.cnv file(s) under '%s'.", len(files), root)
 
-    log.info("Parsed %s sample(s) from %s file(s).", len(samples), len(files))
+    downsample: int | None = args.downsample_casts
+    downsample_by: str = args.downsample_by
+    downsample_select: str = args.downsample_select
+
+    def stream() -> Iterator[dict[str, Any]]:
+        for file in files:
+            log.debug("Parsing '%s'.", file)
+            count = 0
+            for sample in parse(
+                file,
+                ctd_file_lookup,
+                downsample=downsample,
+                downsample_by=downsample_by,
+                downsample_select=downsample_select,
+            ):
+                count += 1
+                yield sample
+            log.info("  '%s' (%s sample(s))", file, count)
 
     out.parent.mkdir(parents=True, exist_ok=True)
 
     match format:
         case "csv":
-            write_samples_as_csv(samples, out)
+            columns = discover_columns(
+                files,
+                ctd_file_lookup,
+                downsample=downsample,
+                downsample_by=downsample_by,
+                downsample_select=downsample_select,
+            )
+            total = write_samples_as_csv(stream(), out, columns)
         case "json":
-            write_samples_as_json(samples, out, args.indent)
+            total = write_samples_as_json(stream(), out, args.indent)
+        case _:
+            total = 0
 
+    log.info("Wrote %s sample(s) from %s file(s).", total, len(files))
     log.info(f"'{out}': ({out.stat().st_size / 1024:.1f} KB)")
     return 0
 

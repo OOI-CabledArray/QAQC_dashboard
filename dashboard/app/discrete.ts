@@ -9,7 +9,7 @@ export const enum KnownSampleFields {
   Station = 'Station',
   Asset = 'Target Asset',
   Timestamp = 'Start Time [UTC]',
-  Depth = 'CTD Depth [m]',
+  Depth = 'CTD Bottle Depth [m]',
 }
 
 export type Sample = Readonly<{
@@ -108,7 +108,21 @@ export const useDiscrete = defineStore('discrete', () => {
     plottableFields: computed(() =>
       Object.entries(schema)
         .filter(([, definition]) => definition.type !== 'text')
-        .map(([name]) => name),
+        .map(([name]) => name)
+        .sort((left, right) => {
+          // Normalize "CTD Cast X" → "CTD X" so CTD and CTD Cast fields sort together,
+          // then use isCTDCast as a tiebreaker so "CTD X" always precedes "CTD Cast X".
+          const normalize = (field: string) =>
+            field.replace(/^CTD Bottle /, 'CTD ').replace(/^CTD Cast /, 'CTD ')
+          const isCTDCast = (field: string) => (field.startsWith('CTD Cast ') ? 1 : 0)
+          const leftNormalized = normalize(left)
+          const rightNormalized = normalize(right)
+          return leftNormalized < rightNormalized
+            ? -1
+            : leftNormalized > rightNormalized
+              ? 1
+              : isCTDCast(left) - isCTDCast(right)
+        }),
     ),
     stations: computed(() => uniq(samples.map((sample) => sample.station)).sort()),
     assets: computed(() => uniq(samples.map((sample) => sample.asset)).sort()),
@@ -156,7 +170,7 @@ function extractSamples(groups: RawSampleGroup[]): [Sample[], SampleSchema] {
             return []
           }
 
-          station = station.split('-').map((current) => current.trim())[0] ?? ''
+          station = station.trim()
           if (station === '') {
             return []
           }

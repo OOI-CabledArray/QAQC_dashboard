@@ -145,26 +145,9 @@ type Series = Required<PartialSeries>
 // Fields in series objects used for filtering samples.
 type SampleFilter = Pick<PartialSeries, 'asset' | 'x' | 'y' | 'year'>
 
-// Assets that can be selected for plotting, with CTD Cast assets sorted last.
-const selectableAssets = $computed(() => {
-  const assets = compact(discrete.assets.filter((asset) => asset !== 'PI_REQUEST'))
-  return orderBy(assets, [(asset) => (getAssetGroup(asset) === 'ctd-cast' ? 1 : 0)])
-})
-
-function getAssetGroup(asset: string): 'normal' | 'ctd-cast' {
-  if (asset.startsWith('CTD Cast (')) {
-    return 'ctd-cast'
-  }
-  return 'normal'
-}
-
-// Return the subset of selectable assets that belong to the same group (CTD Cast or non-CTD Cast)
-// as the given asset. Used when duplicating a series for all assets of the same kind. If the asset
-// is `null` or `undefined`, return all "normal" assets.
-function peerAssetsFor(asset: string | null | undefined): string[] {
-  const group = asset != null ? getAssetGroup(asset) : 'normal'
-  return selectableAssets.filter((asset) => getAssetGroup(asset) === group)
-}
+const selectableAssets = $computed(() =>
+  compact(discrete.assets.filter((asset) => asset !== 'PI_REQUEST')),
+)
 
 // All series with filter fields completely filled out.
 const series = $computed(
@@ -217,8 +200,21 @@ function hasDataFor(filter: SampleFilter) {
   return getSamplesFor(filter).length > 0
 }
 
-function getNoDataIndicator(filter: SampleFilter) {
-  return !hasDataFor(filter) ? ' (No Data)' : ''
+function getNoDataIndicator(
+  filter: SampleFilter,
+  forOppositeAxis?: { opposite: 'x' | 'y'; value: string | undefined },
+) {
+  if (!hasDataFor(filter)) {
+    return ' (No Data)'
+  }
+
+  if (forOppositeAxis != null) {
+    if (!hasDataFor({ ...filter, [forOppositeAxis.opposite]: forOppositeAxis.value })) {
+      return ` (No Data for ${forOppositeAxis.opposite.toUpperCase()})`
+    }
+  }
+
+  return ''
 }
 
 const currentYear = new Date().getFullYear()
@@ -287,7 +283,9 @@ const chartedSeries = $computed(() => {
       id: i,
       name,
       type: series.display,
+      z: i + 2,
       emphasis: { focus: 'series' },
+      ...({ showSymbol: series.display !== 'line' } as any),
       data,
       itemStyle: { color: series.color },
       lineStyle: series.display === 'line' ? { color: series.color } : undefined,
@@ -384,12 +382,12 @@ function computeDataExtents(selectedOnly: boolean) {
 
   return {
     x: {
-      min: minOf(series.flatMap((series) => series.data.map(([x]) => x))) ?? 0,
-      max: maxOf(series.flatMap((series) => series.data.map(([x]) => x))) ?? 1,
+      min: minOf(series.flatMap((series) => series.data.map(([x]: any) => x))) ?? 0,
+      max: maxOf(series.flatMap((series) => series.data.map(([x]: any) => x))) ?? 1,
     },
     y: {
-      min: minOf(series.flatMap((series) => series.data.map(([_, y]) => y))) ?? 0,
-      max: maxOf(series.flatMap((series) => series.data.map(([_, y]) => y))) ?? 1,
+      min: minOf(series.flatMap((series) => series.data.map(([_, y]: any) => y))) ?? 0,
+      max: maxOf(series.flatMap((series) => series.data.map(([_, y]: any) => y))) ?? 1,
     },
   }
 }
@@ -544,12 +542,14 @@ const option = $computed(() => {
         xAxisIndex: 0,
         moveOnMouseWheel: 'alt',
         disabled: isShiftPressed,
+        filterMode: 'none',
       },
       {
         id: 'y-inside',
         type: 'inside',
         yAxisIndex: 0,
         disabled: isCtrlPressed,
+        filterMode: 'none',
       },
       {
         id: 'x-slider',
@@ -558,6 +558,7 @@ const option = $computed(() => {
         height: 22,
         showDetail: false,
         showDataShadow: false,
+        filterMode: 'none',
       },
       {
         id: 'y-slider',
@@ -568,6 +569,7 @@ const option = $computed(() => {
         right: 4,
         showDetail: false,
         showDataShadow: false,
+        filterMode: 'none',
       },
     ],
     legend: {
@@ -859,11 +861,10 @@ function duplicateSeriesForAllAssets(
     return
   }
 
-  const peers = peerAssetsFor(series.asset)
   let assetsToGenerate = withMatchingData
     ? // All assets for which we have data matching the series' `x`, `y`, and `year`.
-      peers.filter((current) => hasDataFor({ ...series, asset: current }))
-    : peers
+      selectableAssets.filter((current) => hasDataFor({ ...series, asset: current }))
+    : selectableAssets
 
   if (series.asset != null) {
     // If the original series has an `asset` set and it's in the list, we don't need to generate it.
@@ -1390,9 +1391,7 @@ async function copyToClipboard() {
                           { type: 'separator' },
                           {
                             icon: 'i-lucide-square-stack',
-                            label:
-                              'Duplicate For All Assets ' +
-                              `(${peerAssetsFor(series.asset).length})`,
+                            label: 'Duplicate For All Assets ' + `(${selectableAssets.length})`,
                             onSelect: () =>
                               duplicateSeriesForAllAssets(i, { withMatchingData: false }),
                           },
@@ -1403,9 +1402,7 @@ async function copyToClipboard() {
                               uniq(
                                 getSamplesFor(omit(series, ['asset']))
                                   .map((current) => current.asset)
-                                  .filter((asset) =>
-                                    peerAssetsFor(series.asset).includes(asset ?? ''),
-                                  ),
+                                  .filter((asset) => selectableAssets.includes(asset ?? '')),
                               ).length +
                               ')',
                             onSelect: () =>
@@ -1452,7 +1449,12 @@ async function copyToClipboard() {
                     class="w-full"
                     :items="
                       discrete.plottableFields.map((field) => ({
-                        label: `${field} ${getNoDataIndicator({ asset: series.asset, x: field })}`,
+                        label:
+                          `${field} ` +
+                          getNoDataIndicator(
+                            { asset: series.asset, x: field },
+                            { opposite: 'y', value: series.y },
+                          ),
                         value: field as string | null,
                       }))
                     "
@@ -1465,12 +1467,23 @@ async function copyToClipboard() {
                     <template #item-label="{ item }">
                       <span
                         :class="
-                          !hasDataFor({ asset: series.asset, x: (item as any).value }) &&
-                          'opacity-75'
+                          !hasDataFor({
+                            asset: series.asset,
+                            x: (item as any).value,
+                            y: series.y,
+                          }) && 'opacity-75'
                         "
                       >
                         {{ (item as any).value }}
-                        {{ getNoDataIndicator({ asset: series.asset, x: (item as any).value }) }}
+                        {{
+                          getNoDataIndicator(
+                            {
+                              asset: series.asset,
+                              x: (item as any).value,
+                            },
+                            { opposite: 'y', value: series.y },
+                          )
+                        }}
                         {{ itemLabelModifier }}
                       </span>
                     </template>
@@ -1497,7 +1510,12 @@ async function copyToClipboard() {
                     class="w-full"
                     :items="
                       discrete.plottableFields.map((field) => ({
-                        label: `${field} ${getNoDataIndicator({ asset: series.asset, y: field })}`,
+                        label:
+                          `${field} ` +
+                          getNoDataIndicator(
+                            { asset: series.asset, y: field },
+                            { opposite: 'x', value: series.x },
+                          ),
                         value: field ?? null,
                       }))
                     "
@@ -1510,12 +1528,23 @@ async function copyToClipboard() {
                     <template #item-label="{ item }">
                       <span
                         :class="
-                          !hasDataFor({ asset: series.asset, y: (item as any).value }) &&
-                          'opacity-75'
+                          !hasDataFor({
+                            asset: series.asset,
+                            x: series.x,
+                            y: (item as any).value,
+                          }) && 'opacity-75'
                         "
                       >
                         {{ (item as any).value }}
-                        {{ getNoDataIndicator({ asset: series.asset, x: (item as any).value }) }}
+                        {{
+                          getNoDataIndicator(
+                            {
+                              asset: series.asset,
+                              y: (item as any).value,
+                            },
+                            { opposite: 'x', value: series.x },
+                          )
+                        }}
                         {{ itemLabelModifier }}
                       </span>
                     </template>

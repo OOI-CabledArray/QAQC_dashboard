@@ -3,7 +3,7 @@
 # CSVs used by the dashboard. Writes to the following locations under `dashboard/public/`:
 #   - ctd-cast-samples.csv
 #   - summary-samples.csv
-#   - source-data/ctd-casts/ (for .btl files)
+#   - source-data/ctd-casts/ (for .cnv files)
 #   - source-data/summaries/ (for *Discrete_Summary.csv files)
 #
 # Usage:
@@ -56,18 +56,28 @@ fi
 refresh_ctd_cast() {
     local source="$DISCRETE_DIRECTORY/source-data/ctd-casts"
     local output="$DISCRETE_DIRECTORY/ctd-cast-samples.csv"
-    local glob="cruise_data/Cabled/*/Water_Sampling/CTD Data/*.btl"
+    local glob="cruise_data/Cabled/*/Water_Sampling/CTD Data/*.cnv"
 
-    echo "==> [ctd-cast] Downloading .btl files into '$source' ..."
+    echo "==> [ctd-cast] Downloading .cnv files into '$source' ..."
     python "$DOWNLOAD_SCRIPT" \
         "$glob" \
         --destination "$source" \
         --flatten \
         "${DOWNLOAD_ARGS[@]+"${DOWNLOAD_ARGS[@]}"}"
 
-    echo "==> [ctd-cast] Parsing .btl files into '$output' ..."
+    local summary="$DISCRETE_DIRECTORY/summary-samples.csv"
+    if [ ! -f "$summary" ]; then
+        echo "==> [ctd-cast] summary-samples.csv not found at '$summary', refreshing it first ..."
+        refresh_summary
+    fi
+
+    echo "==> [ctd-cast] Parsing .cnv files into '$output' ..."
     python "$SCRIPT_DIRECTORY/collect_discrete_ctd_cast_samples.py" \
         "$source" \
+        --summary-samples "$summary" \
+        --downsample-casts 200 \
+        --downsample-by depth \
+        --downsample-select average \
         --out "$output"
     echo "==> [ctd-cast] Done. Output written to '$output'."
 }

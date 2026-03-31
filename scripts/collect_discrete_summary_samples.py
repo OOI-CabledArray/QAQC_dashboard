@@ -21,6 +21,7 @@ import argparse
 import csv
 import json
 import logging
+import re
 import sys
 from pathlib import Path
 from textwrap import dedent
@@ -31,6 +32,20 @@ logging.basicConfig(
     format="%(levelname)-8s %(message)s",
 )
 log = logging.getLogger(__name__)
+
+# Matches a distance-offset suffix like " - 500 m SW".
+_STATION_OFFSET_RE = re.compile(r"\s+-\s+\d+\s+m\b.*$")
+
+# Matches "CTD " at the start of a column name, but not "CTD File" or "CTD Bottle".
+_CTD_COLUMN_RE = re.compile(r"^CTD (?!File\b|Bottle\b)")
+
+
+def strip_station_offset(station: str) -> str:
+    return _STATION_OFFSET_RE.sub("", station).strip()
+
+
+def rename_ctd_column(name: str) -> str:
+    return _CTD_COLUMN_RE.sub("CTD Bottle ", name)
 
 
 def parse(
@@ -57,10 +72,31 @@ def parse(
     reader = csv.DictReader(lines)
 
     if columns is None:
-        columns = list(reader.fieldnames or [])
+        columns = [rename_ctd_column(c) for c in (reader.fieldnames or [])]
 
-    rows: list[dict[str, Any]] = list(reader)
-    return columns, rows
+    expanded: list[dict[str, Any]] = []
+    for row in reader:
+        row = {rename_ctd_column(k): v for k, v in row.items()}
+        if "Station" in row and row["Station"]:
+            row["Station"] = strip_station_offset(row["Station"])
+
+        # Split the "Target Asset" column into individual assets, if present.
+        raw_asset = row.get("Target Asset") or ""
+        assets = [
+            designator.strip()
+            for designator in raw_asset.split(",")
+            if designator.strip()
+        ]
+
+        if len(assets) <= 1:
+            expanded.append(row)
+        else:
+            for asset in assets:
+                copy = dict(row)
+                copy["Target Asset"] = asset
+                expanded.append(copy)
+
+    return columns, expanded
 
 
 def write_as_csv(
