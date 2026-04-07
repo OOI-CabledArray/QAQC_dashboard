@@ -96,6 +96,12 @@ MONTHS = {
 }
 
 
+def normalize_cast(value: str) -> str:
+    """Strip 'CTD-' prefix and leading zeros, returning the integer string or empty."""
+    value = re.sub(r"^CTD-", "", value.strip(), flags=re.IGNORECASE).lstrip("0") or "0"
+    return value if value.isdigit() else ""
+
+
 def normalize_ctd_file_key(key: str) -> str:
     """
     Strip hyphens from the cruise portion of a CTD file key and normalize the separator to "_".
@@ -247,10 +253,18 @@ def parse(
         log.error("Cannot read %s: %s", path, exc)
         return
 
+    # Extract the cast number from the filename (e.g. "TN326_CTD-018" -> "18").
+    filename_cast = ""
+    file_key_match = _CTD_FILE_KEY_RE.match(path.stem.split("__")[-1])
+    if file_key_match:
+        filename_cast = normalize_cast(file_key_match.group(2))
+
     with file:
         # Parse header: metadata and column definitions (line by line).
         # Use readline() instead of iteration so that tell()/seek() work later.
         meta: dict[str, Any] = {}
+        if filename_cast:
+            meta["Cast"] = filename_cast
         columns: dict[int, str] = {}
         found_end = False
 
@@ -279,7 +293,9 @@ def parse(
                 if value:
                     csv_key = META_KEY_TO_COLUMN_MAP.get(raw_key)
                     if csv_key and csv_key not in meta:
-                        meta[csv_key] = value
+                        meta[csv_key] = (
+                            normalize_cast(value) if csv_key == "Cast" else value
+                        )
                 continue
 
             sys_header_match = SYS_REGEX.match(line)
@@ -287,13 +303,17 @@ def parse(
                 raw_key = sys_header_match.group(1).strip().lower()
                 value = sys_header_match.group(2).strip()
                 if "nmea latitude" in raw_key:
-                    coord = parse_nmea_coordinates(value)
-                    if coord is not None:
-                        meta["CTD Cast Start Latitude [degrees]"] = coord
+                    lat_column = COLUMN_MAP.get("latitude")
+                    if lat_column and lat_column not in meta:
+                        parsed = parse_nmea_coordinates(value)
+                        if parsed is not None:
+                            meta[lat_column] = str(parsed)
                 elif "nmea longitude" in raw_key:
-                    coord = parse_nmea_coordinates(value)
-                    if coord is not None:
-                        meta["CTD Cast Start Longitude [degrees]"] = coord
+                    lon_column = COLUMN_MAP.get("longitude")
+                    if lon_column and lon_column not in meta:
+                        parsed = parse_nmea_coordinates(value)
+                        if parsed is not None:
+                            meta[lon_column] = str(parsed)
                 elif "nmea utc" in raw_key:
                     if "Start Time [UTC]" not in meta:
                         iso_time = parse_nmea_utc(value)

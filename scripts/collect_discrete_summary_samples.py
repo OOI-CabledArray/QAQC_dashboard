@@ -36,16 +36,34 @@ log = logging.getLogger(__name__)
 # Matches a distance-offset suffix like " - 500 m SW".
 _STATION_OFFSET_RE = re.compile(r"\s+-\s+\d+\s+m\b.*$")
 
-# Matches "CTD " at the start of a column name, but not "CTD File" or "CTD Bottle".
-_CTD_COLUMN_RE = re.compile(r"^CTD (?!File\b|Bottle\b)")
+# Substrings (case-insensitive) that cause a column to be omitted from output.
+COLUMN_IGNORE: list[str] = [
+    "bottle",
+]
+
+# Column renames applied to the output.
+COLUMN_RENAME: dict[str, str] = {
+    "Bottom Depth at Start Position [m]": "Water Depth [m]",
+}
+
+
+def _is_ignored_column(name: str) -> bool:
+    lower = name.lower()
+    return any(substring in lower for substring in COLUMN_IGNORE)
+
+
+def _rename_column(name: str) -> str:
+    return COLUMN_RENAME.get(name, name)
+
+
+def normalize_cast(value: str) -> str:
+    """Strip 'CTD-' prefix and leading zeros, returning the integer string or empty."""
+    value = re.sub(r"^CTD-", "", value.strip(), flags=re.IGNORECASE).lstrip("0") or "0"
+    return value if value.isdigit() else ""
 
 
 def strip_station_offset(station: str) -> str:
     return _STATION_OFFSET_RE.sub("", station).strip()
-
-
-def rename_ctd_column(name: str) -> str:
-    return _CTD_COLUMN_RE.sub("CTD Bottle ", name)
 
 
 def parse(
@@ -72,13 +90,24 @@ def parse(
     reader = csv.DictReader(lines)
 
     if columns is None:
-        columns = [rename_ctd_column(c) for c in (reader.fieldnames or [])]
+        columns = [
+            _rename_column(name) for name in (reader.fieldnames or [])
+            if not _is_ignored_column(name)
+        ]
 
     expanded: list[dict[str, Any]] = []
     for row in reader:
-        row = {rename_ctd_column(k): v for k, v in row.items()}
+        # Remove ignored columns and apply renames.
+        row = {
+            _rename_column(key): value
+            for key, value in row.items()
+            if not _is_ignored_column(key)
+        }
+
         if "Station" in row and row["Station"]:
             row["Station"] = strip_station_offset(row["Station"])
+        if "Cast" in row:
+            row["Cast"] = normalize_cast(row.get("Cast") or "")
 
         # Split the "Target Asset" column into individual assets, if present.
         raw_asset = row.get("Target Asset") or ""

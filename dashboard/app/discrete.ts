@@ -9,7 +9,7 @@ export const enum KnownSampleFields {
   Station = 'Station',
   Asset = 'Target Asset',
   Timestamp = 'Start Time [UTC]',
-  Depth = 'CTD Bottle Depth [m]',
+  Depth = 'CTD Depth [m]',
 }
 
 export type Sample = Readonly<{
@@ -105,25 +105,31 @@ export const useDiscrete = defineStore('discrete', () => {
     samples: computed(() => samples),
     schema: computed(() => schema),
     fields: computed(() => Object.keys(schema)),
-    plottableFields: computed(() =>
-      Object.entries(schema)
-        .filter(([, definition]) => definition.type !== 'text')
+    plottableFields: computed(() => {
+      const fields = Object.entries(schema)
+        .filter(([name, definition]) => {
+          if (definition.type === 'text') return false
+          const lower = name.toLowerCase()
+          if (lower.includes('latitude') || lower.includes('longitude')) return false
+          return true
+        })
         .map(([name]) => name)
-        .sort((left, right) => {
-          // Normalize "CTD Cast X" → "CTD X" so CTD and CTD Cast fields sort together,
-          // then use isCTDCast as a tiebreaker so "CTD X" always precedes "CTD Cast X".
-          const normalize = (field: string) =>
-            field.replace(/^CTD Bottle /, 'CTD ').replace(/^CTD Cast /, 'CTD ')
-          const isCTDCast = (field: string) => (field.startsWith('CTD Cast ') ? 1 : 0)
-          const leftNormalized = normalize(left)
-          const rightNormalized = normalize(right)
-          return leftNormalized < rightNormalized
-            ? -1
-            : leftNormalized > rightNormalized
-              ? 1
-              : isCTDCast(left) - isCTDCast(right)
-        }),
-    ),
+
+      // Preserve original column order, but move "CTD Cast" fields to the end, and
+      // "Water Depth [m]" just before them.
+      const rank = (field: string) => {
+        if (field.startsWith('CTD Cast ')) {
+          return 2
+        }
+        if (field === 'Water Depth [m]') {
+          return 1
+        }
+
+        return 0
+      }
+      return fields.sort((left, right) => rank(left) - rank(right))
+    }),
+
     stations: computed(() => uniq(samples.map((sample) => sample.station)).sort()),
     assets: computed(() => uniq(samples.map((sample) => sample.asset)).sort()),
     assetToStation: computed(() => assetsToStation),

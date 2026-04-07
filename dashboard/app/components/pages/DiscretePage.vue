@@ -1,9 +1,11 @@
 <script lang="ts" setup>
 import { useEventListener } from '@vueuse/core'
+import Color from 'color'
 import type { SeriesOption } from 'echarts'
 import {
   cloneDeep,
   compact,
+  groupBy,
   orderBy,
   truncate,
   uniq,
@@ -18,7 +20,7 @@ import Zod from 'zod'
 
 import type { Option } from '~/chart'
 import type Chart from '~/components/Chart.vue'
-import type { Sample, SampleSchemaFieldDefinition, SampleValue } from '~/discrete'
+import type { Sample, SampleData, SampleSchemaFieldDefinition, SampleValue } from '~/discrete'
 import { useDiscrete } from '~/discrete'
 import { usePersisted } from '~/persisted'
 import { isMac } from '~/platform'
@@ -81,6 +83,7 @@ const SeriesSchema = Zod.object({
   year: Zod.number().optional(),
   display: Zod.enum(['scatter', 'line']).default('scatter'),
   enabled: Zod.boolean().default(true),
+  showCasts: Zod.boolean().default(false).catch(false),
   color: Zod.string().default(chartColors[0]),
 })
 
@@ -236,6 +239,8 @@ type ChartedSeries = Omit<SeriesOption, 'data'> & {
 
   name: string
   data: [SampleValue, SampleValue][]
+  // Source samples aligned with `data` for tooltip access.
+  sources: Sample[]
   itemStyle?: any
   lineStyle?: any
 
@@ -244,38 +249,105 @@ type ChartedSeries = Omit<SeriesOption, 'data'> & {
   yAxisLabel: string
 }
 
+// Generate a color shifted from a base color, enough to distinguish but close enough to recognize.
+function varyColor(baseColor: string, index: number, length: number): string {
+  if (index === 0) {
+    return baseColor
+  }
+
+  const base = Color(baseColor).hsl()
+  const maxSpread = Math.min(60, length * 20)
+  const hueStep = maxSpread / length
+  const lightnessStep = 14 / length
+  return base
+    .hue((base.hue() + hueStep * index) % 360)
+    .lightness(Math.max(30, Math.min(70, base.lightness() + lightnessStep * index - 7)))
+    .hex()
+}
+
 // Computed ECharts series options with data points.
 const chartedSeries = $computed(() => {
-  return series.map((series, i) => {
-    let data = getSamplesFor(series)
-      // Convert samples to [X value, Y value] data points for ECharts.
-      .map((sample) => [sample.data[series.x], sample.data[series.y]] as [SampleValue, SampleValue])
-      // Shouldn't be necessary because the samples match, but just in case.
-      .filter(([x, y]) => x != null && y != null)
+  return series.flatMap((series, i) => {
+    const samples = getSamplesFor(series)
 
     // We need to create unique series names depending on which axes are the same/different.
-    let name: string
+    let baseName: string
     if (allAxesAreSame) {
-      // All axes are the same, so just specify asset and year.
-      name = `${series.asset} (${series.year})`
+      baseName = `${series.asset} (${series.year})`
     } else if (xAxesAreSame) {
-      // Only X axes are the same, so specify asset, year and the distinct Y axis.
-      name = `${series.asset} (${series.year}) — ${series.y}`
+      baseName = `${series.asset} (${series.year}) — ${series.y}`
     } else if (yAxesAreSame) {
-      // Only Y axes are the same, so specify asset, year and the distinct X axis.
-      name = `${series.asset} (${series.year}) — ${series.x}`
+      baseName = `${series.asset} (${series.year}) — ${series.x}`
     } else {
-      // Both axes are the different, so specify asset, year, and both the Y and X axis.
-      name = `${series.asset} (${series.year}) — ${series.y} / ${series.x}`
+      baseName = `${series.asset} (${series.year}) — ${series.y} / ${series.x}`
     }
 
-    if (data.length === 0) {
+    const castSamples = series.showCasts
+      ? samples.filter((sample) => sample.data['Cast'] != null)
+      : []
+    if (castSamples.length > 0) {
+      const casts = groupBy(
+        castSamples,
+        (sample) => `${sample.data['Cast']}__${sample.timestamp.toString()}`,
+      )
+      const castKeys = Object.keys(casts).sort()
+
+      // Check if any casts share the same date (need cast number to disambiguate).
+      const castDates = castKeys.map((key) => {
+        const sample = casts[key]![0]!
+        return sample.timestamp.toString().split('T')[0] ?? ''
+      })
+      const hasDuplicateDates = new Set(castDates).size < castDates.length
+
+      return castKeys.map((castKey, castIndex) => {
+        let paired = casts[castKey]!.map((sample) => ({
+          point: [sample.data[series.x], sample.data[series.y]] as [SampleValue, SampleValue],
+          source: sample,
+        })).filter(({ point: [x, y] }) => x != null && y != null)
+
+        paired = orderBy(paired, ({ point: [x] }) => x)
+        paired = uniqBy(paired, ({ point: [x, y] }) => x + '|' + y)
+
+        const firstSample = casts[castKey]![0]!
+        const rawCast = firstSample.data['Cast']
+        const castNumber = rawCast != null ? Number(rawCast) || rawCast : castIndex + 1
+        const castDate = castDates[castIndex]
+        const dateLabel = hasDuplicateDates ? `${castDate}, Cast ${castNumber}` : castDate
+        const name = baseName.replace(`(${series.year})`, `(${dateLabel})`)
+        const color = varyColor(series.color, castIndex, castKeys.length)
+
+        return {
+          original: series,
+          id: `${i}-${castIndex}`,
+          name,
+          type: series.display,
+          z: i + 2,
+          emphasis: { focus: 'series' },
+          ...({ showSymbol: series.display !== 'line' } as any),
+          data: paired.map(({ point }) => point),
+          sources: paired.map(({ source }) => source),
+          itemStyle: { color },
+          lineStyle: series.display === 'line' ? { color } : undefined,
+          xAxisLabel: series.x,
+          yAxisLabel: series.y,
+        } satisfies ChartedSeries
+      })
+    }
+
+    // Non-cast series, use single series.
+    let paired = samples
+      .map((sample) => ({
+        point: [sample.data[series.x], sample.data[series.y]] as [SampleValue, SampleValue],
+        source: sample,
+      }))
+      .filter(({ point: [x, y] }) => x != null && y != null)
+
+    let name = baseName
+    if (paired.length === 0) {
       name += ' (No Data)'
     } else {
-      // Order by the X-axis.
-      data = orderBy(data, ([x]) => x)
-      // Ensure all data points are unique.
-      data = uniqBy(data, ([x, y]) => x + '|' + y)
+      paired = orderBy(paired, ({ point: [x] }) => x)
+      paired = uniqBy(paired, ({ point: [x, y] }) => x + '|' + y)
     }
 
     return {
@@ -286,10 +358,10 @@ const chartedSeries = $computed(() => {
       z: i + 2,
       emphasis: { focus: 'series' },
       ...({ showSymbol: series.display !== 'line' } as any),
-      data,
+      data: paired.map(({ point }) => point),
+      sources: paired.map(({ source }) => source),
       itemStyle: { color: series.color },
       lineStyle: series.display === 'line' ? { color: series.color } : undefined,
-      // Not used by ECharts, stored here for tooltip rendering.
       xAxisLabel: series.x,
       yAxisLabel: series.y,
     } satisfies ChartedSeries
@@ -438,6 +510,48 @@ function isInvertedAxis(axis: string) {
   return lower.includes('depth') || lower.includes('pressure')
 }
 
+// Build axis select items from plottable fields, inserting a separator between
+// CTD Cast and non-CTD Cast fields. If the opposite axis has a CTD Cast value
+// selected, CTD Cast fields come first; otherwise non-CTD Cast fields come first.
+function axisSelectItems(series: PartialSeries, axis: 'x' | 'y') {
+  const opposite = axis === 'x' ? 'y' : 'x'
+  const oppositeValue = axis === 'x' ? series.y : series.x
+  const castFirst = typeof oppositeValue === 'string' && oppositeValue.startsWith('CTD Cast ')
+
+  const castFields: string[] = []
+  const otherFields: string[] = []
+  for (const field of discrete.plottableFields) {
+    if (field.startsWith('CTD Cast ')) {
+      castFields.push(field)
+    } else {
+      otherFields.push(field)
+    }
+  }
+
+  const ordered = castFirst ? [...castFields, ...otherFields] : [...otherFields, ...castFields]
+
+  const items: any[] = []
+  let prevWasCast: boolean | null = null
+  for (const field of ordered) {
+    const isCast = field.startsWith('CTD Cast ')
+    if (prevWasCast !== null && isCast !== prevWasCast) {
+      items.push({ type: 'separator' })
+    }
+    prevWasCast = isCast
+    items.push({
+      label:
+        `${field} ` +
+        getNoDataIndicator(
+          { asset: series.asset, [axis]: field },
+          { opposite, value: oppositeValue },
+        ),
+      value: field as string | null,
+    })
+  }
+
+  return items
+}
+
 // Invert the Y axis if depth is selected.
 const invertYAxis = $computed(() => series.every((series) => isInvertedAxis(series.y ?? '')))
 
@@ -481,25 +595,36 @@ const option = $computed(() => {
         for (const point of points) {
           const {
             seriesName,
-            seriesIndex,
+            dataIndex,
             data: [x, y],
             color,
           } = point
 
-          const series = chartedSeries[seriesIndex]
+          const series = chartedSeries.find((s) => s.name === seriesName)
           if (series == null) {
             continue
           }
+
+          const source = series.sources[dataIndex]
+          const latitude = source != null ? findFieldValue(source.data, 'latitude') : null
+          const longitude = source != null ? findFieldValue(source.data, 'longitude') : null
+          const coordinateLine =
+            latitude != null && longitude != null
+              ? '<span class="text-gray-300">' +
+                `(${formatValue(latitude, 6)}°, ${formatValue(longitude, 6)}°)` +
+                '</span><br/>'
+              : ''
 
           content.push(`
             <div>
               <div class="flex items-center mb-1">
                 <div class="w-3 h-3 rounded-full mr-1.5" style="background-color: ${color}">
               </div>
-              <b>${seriesName}</b>
+              <b>${seriesName.replace(/ — .*$/, '')}</b>
               </div>
               ${series.yAxisLabel}: <b>${formatValue(y, decimalPlacesInTooltip)}</b><br/>
               ${series.xAxisLabel}: <b>${formatValue(x, decimalPlacesInTooltip)}</b><br/>
+              ${coordinateLine}
             </div>
           `)
         }
@@ -573,6 +698,7 @@ const option = $computed(() => {
       },
     ],
     legend: {
+      data: chartedSeries.map((current) => current.name),
       selected: Object.fromEntries(
         chartedSeries.map((current) => [current.name, current.original.enabled]),
       ),
@@ -938,6 +1064,33 @@ watchEffect((onInvalidate) => {
     }
   })
 
+  // Click a data point to isolate its series, click again to restore all.
+  let isolatedSeriesName: string | null = null
+  chartInstance?.on('click', (event: any) => {
+    if (event.seriesName == null) {
+      return
+    }
+
+    if (isolatedSeriesName === event.seriesName) {
+      // Restore all series.
+      for (const series of chartedSeries) {
+        chartInstance?.dispatchAction({
+          type: 'legendSelect',
+          name: series.name,
+        })
+      }
+      isolatedSeriesName = null
+    } else {
+      // Isolate the clicked series.
+      for (const series of chartedSeries) {
+        chartInstance?.dispatchAction({
+          type: series.name === event.seriesName ? 'legendSelect' : 'legendUnSelect',
+          name: series.name,
+        })
+      }
+      isolatedSeriesName = event.seriesName
+    }
+  })
   // Keep the the series `enabled` states synced with the selected legend items of the chart.
   const legendSelectChangedEventName = 'legendselectchanged'
   chartInstance?.on(legendSelectChangedEventName, (event: any) => {
@@ -970,8 +1123,9 @@ watchEffect((onInvalidate) => {
 
   // Unregister event handlers when invalidated.
   onInvalidate(() => {
+    chartInstance?.off('click')
     chartInstance?.off(dataZoomEventName)
-    chartInstance?.off(dataZoomEventName)
+    chartInstance?.off(legendSelectChangedEventName)
   })
 })
 
@@ -1001,6 +1155,18 @@ function resetZoom() {
 }
 
 // Format a value for display in an axis label or tooltip.
+function findFieldValue(data: SampleData, substring: string): SampleValue | null {
+  // Find the first field value in sample data where the field name contains the given substring
+  // (case-insensitive).
+  const lower = substring.toLowerCase()
+  for (const [name, value] of Object.entries(data)) {
+    if (name.toLowerCase().includes(lower) && value != null) {
+      return value
+    }
+  }
+  return null
+}
+
 function formatValue(value: unknown, maxDecimalPlaces: number) {
   // The value should almost always be a number, but just in case, only try to format decimal
   // places if it is.
@@ -1447,17 +1613,7 @@ async function copyToClipboard() {
                 <u-form-field class="flex-1 min-w-80" label="X-Axis" size="sm">
                   <u-select-menu
                     class="w-full"
-                    :items="
-                      discrete.plottableFields.map((field) => ({
-                        label:
-                          `${field} ` +
-                          getNoDataIndicator(
-                            { asset: series.asset, x: field },
-                            { opposite: 'y', value: series.y },
-                          ),
-                        value: field as string | null,
-                      }))
-                    "
+                    :items="axisSelectItems(series, 'x')"
                     label-key="label"
                     :model-value="series.x ?? null"
                     size="sm"
@@ -1508,17 +1664,7 @@ async function copyToClipboard() {
                 <u-form-field class="flex-1 min-w-80" label="Y-Axis" size="sm">
                   <u-select-menu
                     class="w-full"
-                    :items="
-                      discrete.plottableFields.map((field) => ({
-                        label:
-                          `${field} ` +
-                          getNoDataIndicator(
-                            { asset: series.asset, y: field },
-                            { opposite: 'x', value: series.x },
-                          ),
-                        value: field ?? null,
-                      }))
-                    "
+                    :items="axisSelectItems(series, 'y')"
                     label-key="label"
                     :model-value="series.y"
                     size="sm"
@@ -1551,7 +1697,21 @@ async function copyToClipboard() {
                   </u-select-menu>
                 </u-form-field>
                 <div class="flex flex-1 flex-row shrink space-x-2">
-                  <u-form-field class="basis-0 grow min-w-34" label="Year" size="sm">
+                  <u-form-field class="basis-0 grow min-w-24" label="Year" size="sm">
+                    <template #hint>
+                      <u-tooltip text="Show separate chart-series for each CTD cast collected.">
+                        <u-checkbox
+                          class="flex-row-reverse gap-1 items-center"
+                          label="Show Casts"
+                          :model-value="series.showCasts ?? false"
+                          size="xs"
+                          :ui="{ label: 'text-[11px]' }"
+                          @update:model-value="
+                            (value) => setSeriesField(i, 'showCasts', value && true)
+                          "
+                        />
+                      </u-tooltip>
+                    </template>
                     <u-select-menu
                       :key="series.year"
                       class="w-full"
