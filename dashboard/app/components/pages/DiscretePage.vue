@@ -11,8 +11,8 @@ import {
   uniq,
   uniqBy,
   upperFirst,
-  min,
-  max,
+  min as minOf,
+  max as maxOf,
   range,
   omit,
 } from 'lodash-es'
@@ -29,9 +29,6 @@ import { useUndo } from '~/undo'
 useHead({
   titleTemplate: 'Discrete Data | %s',
 })
-
-const minOf = min
-const maxOf = max
 
 // Reference to the `Chart` component instance, used to dispatch actions and listen for events.
 const chartInstance = $ref<InstanceType<typeof Chart> | null>(null)
