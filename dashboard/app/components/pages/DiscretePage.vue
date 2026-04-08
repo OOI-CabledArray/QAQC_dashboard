@@ -526,6 +526,19 @@ function isInvertedAxis(axis: string) {
   return lower.includes('depth') || lower.includes('pressure')
 }
 
+// Compare two series-like objects by their identifying fields rather than reference.
+function sameOriginal(
+  left: { asset?: string; x?: string; y?: string; year?: number },
+  right: { asset?: string; x?: string; y?: string; year?: number },
+): boolean {
+  return (
+    left.asset === right.asset &&
+    left.x === right.x &&
+    left.y === right.y &&
+    left.year === right.year
+  )
+}
+
 function isCTDCastField(field: string | undefined): boolean {
   return typeof field === 'string' && field.startsWith('CTD Cast ')
 }
@@ -624,7 +637,7 @@ const option = $computed(() => {
             color,
           } = point
 
-          const series = chartedSeries.find((s) => s.name === seriesName)
+          const series = chartedSeries.find((charted) => charted.name === seriesName)
           if (series == null) {
             continue
           }
@@ -924,15 +937,11 @@ function setSeriesField<K extends keyof PartialSeries>(
   // reset to match the parent state.
   if (field === 'enabled') {
     const target = state.series[index]
-    for (const charted of chartedSeries) {
-      const original = charted.original
-      if (
-        original.asset === target?.asset &&
-        original.x === target?.x &&
-        original.y === target?.y &&
-        original.year === target?.year
-      ) {
-        legendSelectionOverrides.delete(charted.name)
+    if (target != null) {
+      for (const charted of chartedSeries) {
+        if (sameOriginal(charted.original, target)) {
+          legendSelectionOverrides.delete(charted.name)
+        }
       }
     }
   }
@@ -1165,8 +1174,10 @@ watchEffect((onInvalidate) => {
     }
 
     const isSelected = selected[clickedName] ?? true
-    const group = chartedSeries.filter((charted) => charted.original === clicked.original)
-    const seriesIndex = series.indexOf(clicked.original)
+    const group = chartedSeries.filter((charted) =>
+      sameOriginal(charted.original, clicked.original),
+    )
+    const seriesIndex = state.series.findIndex((current) => sameOriginal(clicked.original, current))
 
     // When shift is held, toggle all series in the same original group together.
     if (isShiftPressed) {
