@@ -1767,13 +1767,14 @@ async function copyToClipboard() {
                       <u-tooltip text="Show separate chart series for each CTD cast collected.">
                         <u-checkbox
                           :class="[
-                            'flex-row-reverse gap-1 items-center hover:opacity-100',
-                            series.showCasts ? 'opacity-100' : 'opacity-80',
+                            'flex-row-reverse gap-1 items-center hover:opacity-100 ',
+                            'whitespace-nowrap mr-3',
+                            series.showCasts ? 'opacity-100' : 'opacity-70',
                           ]"
                           label="Show Casts"
                           :model-value="series.showCasts ?? false"
                           size="xs"
-                          :ui="{ label: 'text-[11px]' }"
+                          :ui="{ label: 'text-[9px]' }"
                           @update:model-value="
                             (value) => setSeriesField(i, 'showCasts', value && true)
                           "
