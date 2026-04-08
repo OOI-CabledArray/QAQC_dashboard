@@ -132,7 +132,7 @@ const ctrlKey = isMac ? 'Command' : 'Ctrl'
 const historyOmit: ReadonlyArray<keyof typeof state> = ['zoom', 'seriesCollapsed']
 // Implement undo/redo for modifying the page's state.
 const history = useUndo({
-  initial: state,
+  current: () => state,
   onUndo(values) {
     Object.assign(state, omit(values, historyOmit))
   },
@@ -323,7 +323,9 @@ const chartedSeries = $computed(() => {
           type: series.display,
           z: i + 2,
           emphasis: { focus: 'series' },
-          ...({ showSymbol: series.display !== 'line' } as any),
+          ...({
+            showSymbol: series.display !== 'line' || !isCTDCastSeries(series),
+          } as any),
           data: paired.map(({ point }) => point),
           sources: paired.map(({ source }) => source),
           itemStyle: { color },
@@ -510,18 +512,26 @@ function isInvertedAxis(axis: string) {
   return lower.includes('depth') || lower.includes('pressure')
 }
 
-// Build axis select items from plottable fields, inserting a separator between
-// CTD Cast and non-CTD Cast fields. If the opposite axis has a CTD Cast value
-// selected, CTD Cast fields come first; otherwise non-CTD Cast fields come first.
+function isCTDCastField(field: string | undefined): boolean {
+  return typeof field === 'string' && field.startsWith('CTD Cast ')
+}
+
+function isCTDCastSeries(series: { x?: string; y?: string }): boolean {
+  return isCTDCastField(series.x) || isCTDCastField(series.y)
+}
+
+// Build axis select items from plottable fields, inserting a separator between CTD Cast and non-CTD
+// Cast fields. If the opposite axis has a CTD Cast value selected, CTD Cast fields come first,
+// otherwise non-CTD Cast fields come first.
 function axisSelectItems(series: PartialSeries, axis: 'x' | 'y') {
   const opposite = axis === 'x' ? 'y' : 'x'
   const oppositeValue = axis === 'x' ? series.y : series.x
-  const castFirst = typeof oppositeValue === 'string' && oppositeValue.startsWith('CTD Cast ')
+  const castFirst = isCTDCastField(oppositeValue)
 
   const castFields: string[] = []
   const otherFields: string[] = []
   for (const field of discrete.plottableFields) {
-    if (field.startsWith('CTD Cast ')) {
+    if (isCTDCastField(field)) {
       castFields.push(field)
     } else {
       otherFields.push(field)
@@ -533,7 +543,7 @@ function axisSelectItems(series: PartialSeries, axis: 'x' | 'y') {
   const items: any[] = []
   let prevWasCast: boolean | null = null
   for (const field of ordered) {
-    const isCast = field.startsWith('CTD Cast ')
+    const isCast = isCTDCastField(field)
     if (prevWasCast !== null && isCast !== prevWasCast) {
       items.push({ type: 'separator' })
     }
@@ -610,7 +620,8 @@ const option = $computed(() => {
           const longitude = source != null ? findFieldValue(source.data, 'longitude') : null
           const coordinateLine =
             latitude != null && longitude != null
-              ? '<span class="text-gray-300">' +
+              ? '<span class="text-gray-500">Cast Location</span> ' +
+                '<span class="text-gray-400">' +
                 `(${formatValue(latitude, 6)}°, ${formatValue(longitude, 6)}°)` +
                 '</span><br/>'
               : ''
@@ -749,7 +760,7 @@ function addSeries({
 
   state.series.splice(index, 0, created)
   if (saveUndo) {
-    history.save(state)
+    history.save()
   }
 
   return created
@@ -767,7 +778,7 @@ function removeSeries(index?: number) {
   }
 
   const removed = state.series.splice(index, 1)[0]
-  history.save(state)
+  history.save()
 
   return removed
 }
@@ -779,7 +790,7 @@ function removeOtherSeries(index: number) {
   }
 
   state.series = [series]
-  history.save(state)
+  history.save()
 }
 
 // Move the series at the given index up one position, if possible.
@@ -793,7 +804,7 @@ function moveSeriesUp(index: number) {
   state.series[index - 1] = series
   state.series[index] = previous
 
-  history.save(state)
+  history.save()
 }
 
 // Move the series at the given index down one position, if possible.
@@ -807,7 +818,7 @@ function moveSeriesDown(index: number) {
   state.series[index + 1] = series
   state.series[index] = next
 
-  history.save(state)
+  history.save()
 }
 
 // Indicates the "Shift" key is currently held.
@@ -843,19 +854,18 @@ useEventListener('keyup', (event: KeyboardEvent) => {
 })
 
 // Reset modifier keys when the browser tab loses focus. Otherwise, they can get stuck in the
-// pressed state if the user switches away from the page while holding them, due to the key up event
-// never being received.
+// pressed state if the user switches away from the page while holding them, due to the key up
+// event never being received.
 useEventListener('blur', () => {
   isShiftPressed = false
   isCtrlPressed = false
 })
 
-// Return a new series object with the provided `field` set to `value` while keeping the order
-// of fields consistent with the `SeriesSchema` definition. The reason being: the JSON of each
-// series object is displayed in the browser's URL, and having a consistent order with `asset`
-// displayed first makes the URL more readable. In addition, when opening a shared link to this
-// page, the URL won't appear to suddenly change when the data is re-parsed from the URL on load
-// anyway.
+// Return a new series object with the provided `field` set to `value` while keeping the order of
+// fields consistent with the `SeriesSchema` definition. The reason being: the JSON of each series
+// object is displayed in the browser's URL, and having a consistent order with `asset` displayed
+// first makes the URL more readable. In addition, when opening a shared link to this page, the URL
+// won't appear to suddenly change when the data is re-parsed from the URL on load anyway.
 function withSeriesFieldSet(series: PartialSeries, field: keyof PartialSeries, value: any) {
   const data = { ...series, [field]: value }
   try {
@@ -893,13 +903,13 @@ function setSeriesField<K extends keyof PartialSeries>(
     // Apply the change to all series.
     state.series = state.series.map((current) => withSeriesFieldSet(current, field, value))
     if (saveUndo) {
-      history.save(state)
+      history.save()
     }
   } else {
     // Apply the change to just the current series.
     state.series[index] = withSeriesFieldSet(series, field, value)
     if (saveUndo) {
-      history.save(state)
+      history.save()
     }
   }
 }
@@ -970,13 +980,13 @@ function duplicateSeriesForAllYears(
   clonedOriginal.color = series.color
 
   // Save undo history.
-  history.save(state)
+  history.save()
   return clones
 }
 
 // Create series with the same (`x`, `y`, `year`) of the given series at `index` for all assets. If
-// `withMatchingData` is `true`, do this only for assets for which we have data for matching
-// the original series' filter fields. All generated series objects will be inserted after `index`.
+// `withMatchingData` is `true`, do this only for assets for which we have data matching the
+// original series' filter fields. All generated series objects will be inserted after `index`.
 function duplicateSeriesForAllAssets(
   index: number,
   { withMatchingData = true }: { withMatchingData?: boolean } = {},
@@ -1020,7 +1030,7 @@ function duplicateSeriesForAllAssets(
   }
 
   // Save undo history.
-  history.save(state)
+  history.save()
   return clones
 }
 
@@ -1118,7 +1128,7 @@ watchEffect((onInvalidate) => {
       }
     }
 
-    history.save(state)
+    history.save()
   })
 
   // Unregister event handlers when invalidated.
@@ -1286,7 +1296,7 @@ async function copyToClipboard() {
                     { label: 'From Zero (Y)', value: 'from-zero-y' },
                   ]"
                   size="sm"
-                  @update:model-value="history.save(state)"
+                  @update:model-value="history.save()"
                 />
               </u-tooltip>
             </u-form-field>
@@ -1317,7 +1327,7 @@ async function copyToClipboard() {
                       series.y = x
                     }
 
-                    history.save(state)
+                    history.save()
                   }
                 "
               >
@@ -1440,7 +1450,7 @@ async function copyToClipboard() {
                 () => {
                   state.series = []
                   state.seriesCollapsed = false
-                  history.save(state)
+                  history.save()
                 }
               "
             />
