@@ -170,14 +170,19 @@ const series = $computed(
 const xAxesAreSame = $computed(() => uniq(compact(series.map((series) => series.x))).length <= 1)
 // True if all series share the same Y axis value.
 const yAxesAreSame = $computed(() => uniq(compact(series.map((series) => series.y))).length <= 1)
-// True if all series share the same X and Y axis values.
-const allAxesAreSame = $computed(() => xAxesAreSame && yAxesAreSame)
 
-// Cache for `getSamplesFor` below.
-const getSamplesForCache: Record<string, Sample[]> = {}
+// Cache for `getSamplesFor` below, invalidated when discrete samples change.
+let getSamplesForCache: Record<string, Sample[]> = {}
+let getSamplesForCacheSource: readonly Sample[] = []
 
 // Return all samples matching the provided filter.
 function getSamplesFor(filter: SampleFilter): Sample[] {
+  // Invalidate cache when the underlying samples change.
+  if (discrete.samples !== getSamplesForCacheSource) {
+    getSamplesForCache = {}
+    getSamplesForCacheSource = discrete.samples
+  }
+
   const key = [filter.asset ?? '-', filter.x ?? '-', filter.y ?? '-', filter.year ?? '-'].join('&&')
 
   const cached = getSamplesForCache[key]
@@ -264,23 +269,80 @@ function varyColor(baseColor: string, index: number, length: number): string {
     .hex()
 }
 
+// Per-entry legend selection overrides for cast sub-series that have been individually toggled.
+const legendSelectionOverrides = reactive(new Map<string, boolean>())
+
+// A plottable data point with its source sample.
+type DataPoint = {
+  x: SampleValue
+  y: SampleValue
+  source: Sample
+}
+
+// Extract x/y values from samples into data points, filter out nulls, sort by x, and dedupe.
+function extractDataPoints(
+  samples: Sample[],
+  x: string | undefined,
+  y: string | undefined,
+): DataPoint[] {
+  let points = samples
+    .map((sample) => ({
+      x: sample.data[x!] ?? null,
+      y: sample.data[y!] ?? null,
+      source: sample,
+    }))
+    .filter((point) => point.x != null && point.y != null)
+
+  points = orderBy(points, (point) => point.x)
+  points = uniqBy(points, (point) => point.x + '|' + point.y)
+  return points
+}
+
+function createChartedSeries(
+  series: Series,
+  id: string | number,
+  index: number,
+  name: string,
+  color: string,
+  points: DataPoint[],
+): ChartedSeries {
+  const castSeries = isCTDCastSeries(series)
+  return {
+    original: series,
+    id,
+    name,
+    type: series.display,
+    z: index + 2,
+    emphasis: { focus: 'series' },
+    ...({
+      showSymbol: series.display !== 'line' || !castSeries,
+      ...(castSeries ? { symbolSize: 8 } : {}),
+    } as any),
+    data: points.map((point) => [point.x, point.y]),
+    sources: points.map((point) => point.source),
+    itemStyle: { color },
+    lineStyle: series.display === 'line' ? { color } : undefined,
+    xAxisLabel: series.x,
+    yAxisLabel: series.y,
+  }
+}
+
 // Computed ECharts series options with data points.
 const chartedSeries = $computed(() => {
   return series.flatMap((series, i) => {
     const samples = getSamplesFor(series)
 
-    // We need to create unique series names depending on which axes are the same/different.
-    let baseName: string
-    if (allAxesAreSame) {
-      baseName = `${series.asset} (${series.year})`
-    } else if (xAxesAreSame) {
-      baseName = `${series.asset} (${series.year}) — ${series.y}`
-    } else if (yAxesAreSame) {
-      baseName = `${series.asset} (${series.year}) — ${series.x}`
-    } else {
-      baseName = `${series.asset} (${series.year}) — ${series.y} / ${series.x}`
+    // Build unique series names depending on which axes are the same/different.
+    let baseName = `${series.asset} (${series.year})`
+    if (!xAxesAreSame && !yAxesAreSame) {
+      baseName += ` — ${series.y} / ${series.x}`
+    } else if (!xAxesAreSame) {
+      baseName += ` — ${series.x}`
+    } else if (!yAxesAreSame) {
+      baseName += ` — ${series.y}`
     }
 
+    // Split into per-cast series when enabled and cast data is available.
     const castSamples = series.showCasts
       ? samples.filter((sample) => sample.data['Cast'] != null)
       : []
@@ -299,14 +361,7 @@ const chartedSeries = $computed(() => {
       const hasDuplicateDates = new Set(castDates).size < castDates.length
 
       return castKeys.map((castKey, castIndex) => {
-        let paired = casts[castKey]!.map((sample) => ({
-          point: [sample.data[series.x], sample.data[series.y]] as [SampleValue, SampleValue],
-          source: sample,
-        })).filter(({ point: [x, y] }) => x != null && y != null)
-
-        paired = orderBy(paired, ({ point: [x] }) => x)
-        paired = uniqBy(paired, ({ point: [x, y] }) => x + '|' + y)
-
+        const points = extractDataPoints(casts[castKey]!, series.x, series.y)
         const firstSample = casts[castKey]![0]!
         const rawCast = firstSample.data['Cast']
         const castNumber = rawCast != null ? Number(rawCast) || rawCast : castIndex + 1
@@ -315,59 +370,22 @@ const chartedSeries = $computed(() => {
         const name = baseName.replace(`(${series.year})`, `(${dateLabel})`)
         const color = varyColor(series.color, castIndex, castKeys.length)
 
-        return {
-          original: series,
-          id: `${i}-${castIndex}`,
-          name,
-          type: series.display,
-          z: i + 2,
-          emphasis: { focus: 'series' },
-          ...({
-            showSymbol: series.display !== 'line' || !isCTDCastSeries(series),
-          } as any),
-          data: paired.map(({ point }) => point),
-          sources: paired.map(({ source }) => source),
-          itemStyle: { color },
-          lineStyle: series.display === 'line' ? { color } : undefined,
-          xAxisLabel: series.x,
-          yAxisLabel: series.y,
-        } satisfies ChartedSeries
+        return createChartedSeries(series, `${i}-${castIndex}`, i, name, color, points)
       })
     }
 
-    // Non-cast series, use single series.
-    let paired = samples
-      .map((sample) => ({
-        point: [sample.data[series.x], sample.data[series.y]] as [SampleValue, SampleValue],
-        source: sample,
-      }))
-      .filter(({ point: [x, y] }) => x != null && y != null)
+    const points = extractDataPoints(samples, series.x, series.y)
+    const name = points.length === 0 ? baseName + ' (No Data)' : baseName
 
-    let name = baseName
-    if (paired.length === 0) {
-      name += ' (No Data)'
-    } else {
-      paired = orderBy(paired, ({ point: [x] }) => x)
-      paired = uniqBy(paired, ({ point: [x, y] }) => x + '|' + y)
-    }
-
-    return {
-      original: series,
-      id: i,
-      name,
-      type: series.display,
-      z: i + 2,
-      emphasis: { focus: 'series' },
-      ...({ showSymbol: series.display !== 'line' } as any),
-      data: paired.map(({ point }) => point),
-      sources: paired.map(({ source }) => source),
-      itemStyle: { color: series.color },
-      lineStyle: series.display === 'line' ? { color: series.color } : undefined,
-      xAxisLabel: series.x,
-      yAxisLabel: series.y,
-    } satisfies ChartedSeries
+    return createChartedSeries(series, i, i, name, series.color, points)
   })
 })
+
+// Clear stale legend overrides when the set of charted series names changes.
+watch(
+  () => chartedSeries.map((charted) => charted.name).join('\0'),
+  () => legendSelectionOverrides.clear(),
+)
 
 // Calculate R-squared value for correlation analysis.
 function calculateRSquared(datasets: [SampleValue, SampleValue][][]) {
@@ -600,7 +618,7 @@ const option = $computed(() => {
       trigger: 'axis',
       // Show both axis values for all hovered points.
       formatter: (points: any) => {
-        const content = ['<div class="space-y-2">']
+        const sections: string[] = []
         for (const point of points) {
           const {
             seriesName,
@@ -617,30 +635,43 @@ const option = $computed(() => {
           const source = series.sources[dataIndex]
           const latitude = source != null ? findFieldValue(source.data, 'latitude') : null
           const longitude = source != null ? findFieldValue(source.data, 'longitude') : null
-          const coordinateLine =
-            latitude != null && longitude != null
-              ? '<span class="text-gray-500">Cast Location</span> ' +
-                '<span class="text-gray-400">' +
-                `(${formatValue(latitude, 6)}°, ${formatValue(longitude, 6)}°)` +
-                '</span><br/>'
-              : ''
 
-          content.push(`
-            <div>
-              <div class="flex items-center mb-1">
-                <div class="w-3 h-3 rounded-full mr-1.5" style="background-color: ${color}">
-              </div>
-              <b>${seriesName.replace(/ — .*$/, '')}</b>
-              </div>
-              ${series.yAxisLabel}: <b>${formatValue(y, decimalPlacesInTooltip)}</b><br/>
-              ${series.xAxisLabel}: <b>${formatValue(x, decimalPlacesInTooltip)}</b><br/>
-              ${coordinateLine}
-            </div>
-          `)
+          const rows: string[] = []
+          rows.push(
+            `<tr>` +
+              `<td class="text-right text-gray-500 pr-2">${series.yAxisLabel}</td>` +
+              `<td class="font-bold">${formatValue(y, decimalPlacesInTooltip)}</td>` +
+              `</tr>`,
+          )
+          rows.push(
+            `<tr>` +
+              `<td class="text-right text-gray-500 pr-2">${series.xAxisLabel}</td>` +
+              `<td class="font-bold">${formatValue(x, decimalPlacesInTooltip)}</td>` +
+              `</tr>`,
+          )
+          if (latitude != null && longitude != null) {
+            rows.push(
+              `<tr>` +
+                `<td class="text-right text-gray-500 pr-2">Location</td>` +
+                `<td class="text-gray-500">` +
+                `(${formatValue(latitude, 6)}°, ${formatValue(longitude, 6)}°)` +
+                `</td>` +
+                `</tr>`,
+            )
+          }
+
+          sections.push(
+            `<div>` +
+              `<div class="flex items-center mb-1">` +
+              `<div class="w-3 h-3 rounded-full mr-1.5" style="background-color: ${color}"></div>` +
+              `<b>${seriesName.replace(/ — .*$/, '')}</b>` +
+              `</div>` +
+              `<table class="[&_td+td]:border-l [&_td+td]:border-gray-700 [&_td+td]:pl-2">${rows.join('')}</table>` +
+              `</div>`,
+          )
         }
 
-        content.push('</div>')
-        return content.join('')
+        return `<div class="space-y-2">${sections.join('')}</div>`
       },
     },
     xAxis: {
@@ -710,7 +741,10 @@ const option = $computed(() => {
     legend: {
       data: chartedSeries.map((current) => current.name),
       selected: Object.fromEntries(
-        chartedSeries.map((current) => [current.name, current.original.enabled]),
+        chartedSeries.map((current) => [
+          current.name,
+          legendSelectionOverrides.get(current.name) ?? current.original.enabled,
+        ]),
       ),
       show: chartedSeries.length <= 20,
       type: 'scroll',
@@ -1100,34 +1134,55 @@ watchEffect((onInvalidate) => {
       isolatedSeriesName = event.seriesName
     }
   })
-  // Keep the the series `enabled` states synced with the selected legend items of the chart.
+  // Keep the series `enabled` states synced with the selected legend items of the chart.
   const legendSelectChangedEventName = 'legendselectchanged'
   chartInstance?.on(legendSelectChangedEventName, (event: any) => {
     const selected: Record<string, boolean> | undefined = event.selected
-    if (selected == null) {
+    const clickedName: string | undefined = event.name
+    if (selected == null || clickedName == null) {
       return
     }
 
-    const currentSelectedStates = Object.values(selected)
-    const previousSelectedStates = state.series.map((series) => series.enabled)
+    console.debug('Series selection changed from legend.', clickedName, selected)
 
-    console.debug('Series selection changed from legend.', selected)
-    for (const [i, isSelected] of currentSelectedStates.entries()) {
-      const previousIsSelected = previousSelectedStates[i]
-      if (isSelected !== previousIsSelected) {
-        setSeriesField(i, 'enabled', isSelected)
-        return
-      }
+    const clicked = chartedSeries.find((charted) => charted.name === clickedName)
+    if (clicked == null) {
+      return
     }
 
-    for (const [i, isSelected] of Object.values(selected).entries()) {
-      const series = state.series[i]
-      if (series != null) {
-        series.enabled = isSelected
+    const isSelected = selected[clickedName] ?? true
+    const group = chartedSeries.filter((charted) => charted.original === clicked.original)
+    const seriesIndex = series.indexOf(clicked.original)
+
+    // When shift is held, toggle all series in the same original group together.
+    if (isShiftPressed) {
+      for (const charted of group) {
+        legendSelectionOverrides.set(charted.name, isSelected)
       }
+      if (seriesIndex !== -1 && state.series[seriesIndex]!.enabled !== isSelected) {
+        setSeriesField(seriesIndex, 'enabled', isSelected)
+      }
+      return
     }
 
-    history.save()
+    // Store the override for the individual legend entry.
+    legendSelectionOverrides.set(clickedName, isSelected)
+
+    // Sync the parent `enabled` state when all sub-series in the group agree.
+    if (seriesIndex !== -1) {
+      const allSelected = group.every(
+        (charted) => legendSelectionOverrides.get(charted.name) ?? charted.original.enabled,
+      )
+      const noneSelected = group.every(
+        (charted) => !(legendSelectionOverrides.get(charted.name) ?? charted.original.enabled),
+      )
+
+      if (noneSelected && state.series[seriesIndex]!.enabled) {
+        setSeriesField(seriesIndex, 'enabled', false)
+      } else if (allSelected && !state.series[seriesIndex]!.enabled) {
+        setSeriesField(seriesIndex, 'enabled', true)
+      }
+    }
   })
 
   // Unregister event handlers when invalidated.
