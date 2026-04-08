@@ -920,6 +920,23 @@ function setSeriesField<K extends keyof PartialSeries>(
     value = undefined
   }
 
+  // Clear legend selection overrides for this series when toggling enabled, so cast sub-series
+  // reset to match the parent state.
+  if (field === 'enabled') {
+    const target = state.series[index]
+    for (const charted of chartedSeries) {
+      const original = charted.original
+      if (
+        original.asset === target?.asset &&
+        original.x === target?.x &&
+        original.y === target?.y &&
+        original.year === target?.year
+      ) {
+        legendSelectionOverrides.delete(charted.name)
+      }
+    }
+  }
+
   // The series (possibly) being modified.
   const series = state.series[index]
   if (series == null) {
