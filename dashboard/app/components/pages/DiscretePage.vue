@@ -348,7 +348,11 @@ const chartedSeries = $computed(() => {
         castSamples,
         (sample) => `${sample.data['Cast']}__${sample.timestamp.toString()}`,
       )
-      const castKeys = Object.keys(casts).sort()
+      const castKeys = Object.keys(casts).sort((left, right) => {
+        const leftTimestamp = casts[left]![0]!.timestamp
+        const rightTimestamp = casts[right]![0]!.timestamp
+        return leftTimestamp.compare(rightTimestamp)
+      })
 
       // Check if any casts share the same date (need cast number to disambiguate).
       const castDates = castKeys.map((key) => {
