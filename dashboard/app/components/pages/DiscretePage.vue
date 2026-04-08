@@ -1712,9 +1712,12 @@ async function copyToClipboard() {
                 <div class="flex flex-1 flex-row shrink space-x-2">
                   <u-form-field class="basis-0 grow min-w-24" label="Year" size="sm">
                     <template #hint>
-                      <u-tooltip text="Show separate chart-series for each CTD cast collected.">
+                      <u-tooltip text="Show separate chart series for each CTD cast collected.">
                         <u-checkbox
-                          class="flex-row-reverse gap-1 items-center"
+                          :class="[
+                            'flex-row-reverse gap-1 items-center hover:opacity-100',
+                            series.showCasts ? 'opacity-100' : 'opacity-80',
+                          ]"
                           label="Show Casts"
                           :model-value="series.showCasts ?? false"
                           size="xs"
