@@ -3,6 +3,8 @@ import { orderBy, uniq } from 'lodash-es'
 import { parse } from 'papaparse'
 import { defineStore } from 'pinia'
 
+import { sleep } from '~/utilities'
+
 type RawSample = Record<string, string>
 
 export const enum KnownSampleFields {
@@ -58,25 +60,32 @@ export const useDiscrete = defineStore('discrete', () => {
   let samples = $shallowRef<Sample[]>([])
   // Inferred schema for discrete samples.
   let schema = $shallowRef<SampleSchema>({})
+  let loading = $ref(true)
 
   async function load() {
     console.log('Loading discrete data.')
-    const start = performance.now()
+    try {
+      const start = performance.now()
 
-    const groups = await Promise.all(index.map(({ type, file }) => getRawSamples(type, file)))
+      const groups = await Promise.all(index.map(({ type, file }) => getRawSamples(type, file)))
 
-    const [extractedSamples, extractedSchema] = extractSamples(groups)
+      const [extractedSamples, extractedSchema] = await extractSamples(groups)
 
-    const end = performance.now()
-    const duration = ((end - start) / 1000).toFixed(2)
+      const end = performance.now()
+      const duration = ((end - start) / 1000).toFixed(2)
 
-    samples = extractedSamples
-    schema = extractedSchema
+      samples = extractedSamples
+      schema = extractedSchema
 
-    console.log(
-      `Loaded ${samples.length} discrete samples from ${index.length} files in ${duration}s.`,
-    )
+      console.log(
+        `Loaded ${samples.length} discrete samples from ${index.length} files in ${duration}s.`,
+      )
+    } finally {
+      loading = false
+    }
   }
+
+  load()
 
   const assetsToStation = $computed<Record<string, string>>(() =>
     Object.fromEntries(samples.map((sample) => [sample.asset, sample.station])),
@@ -102,6 +111,7 @@ export const useDiscrete = defineStore('discrete', () => {
 
   return {
     load,
+    loading: computed(() => loading),
     samples: computed(() => samples),
     schema: computed(() => schema),
     fields: computed(() => Object.keys(schema)),
@@ -141,44 +151,60 @@ async function getRawSamples(type: SampleType, file: string): Promise<RawSampleG
   const url = `/discrete/${file}`
   const response = await fetch(url)
   const content = await response.text()
-  const parsed = parse(content, {
-    header: true,
-    skipEmptyLines: true,
+
+  const samples = await new Promise<RawSample[]>((resolve) => {
+    parse<RawSample>(content, {
+      header: true,
+      skipEmptyLines: true,
+      worker: true,
+      complete(results) {
+        resolve(results.data)
+      },
+    })
   })
 
-  const samples = [...parsed.data] as RawSample[]
   return { type, samples }
 }
 
-function extractSamples(groups: RawSampleGroup[]): [Sample[], SampleSchema] {
-  // Infer schema from all raw samples across all groups.
-  const schema = inferSchema(groups.flatMap((file) => file.samples))
+/** Number of raw samples to process before yielding to the event loop. */
+const batchSize = 2500
 
-  let samples = groups.flatMap((group) =>
-    group.samples.flatMap((raw) => {
+async function extractSamples(groups: RawSampleGroup[]): Promise<[Sample[], SampleSchema]> {
+  const allRaw = groups.flatMap((file) => file.samples)
+
+  // Infer schema from all raw samples across all groups.
+  const schema = await inferSchema(allRaw)
+
+  await sleep(0)
+
+  const samples: Sample[] = []
+  let processed = 0
+
+  for (const group of groups) {
+    for (const raw of group.samples) {
       // If there are multiple values in a raw sample's station or asset field, split them into
       // multiple parsed samples for each defined station/asset.
       const stations =
         raw[KnownSampleFields.Station]?.split(',')?.map((current) => current.trim()) ?? []
 
-      return stations.flatMap((station) => {
+      for (let station of stations) {
         const assets =
           raw[KnownSampleFields.Asset]?.split(',')?.map((current) => current.trim()) ?? []
-        return assets.flatMap((asset) => {
+        for (const asset of assets) {
           if (asset === '') {
-            return []
+            continue
           }
 
           let timestamp: ZonedDateTime
           try {
             timestamp = parseAbsolute(raw[KnownSampleFields.Timestamp] ?? 'unknown', 'UTC')
           } catch {
-            return []
+            continue
           }
 
           station = station.trim()
           if (station === '') {
-            return []
+            continue
           }
 
           const data: SampleData = {
@@ -194,22 +220,33 @@ function extractSamples(groups: RawSampleGroup[]): [Sample[], SampleSchema] {
             data[name] = parseValue(value as string, field)
           }
 
-          return { type: group.type, station, asset, timestamp, data }
-        })
-      })
-    }),
-  )
+          samples.push({ type: group.type, station, asset, timestamp, data })
+        }
+      }
 
-  samples = orderBy(samples, [(sample) => sample.asset, (sample) => sample.timestamp.toDate()])
+      processed++
+      if (processed % batchSize === 0) {
+        await sleep(0)
+      }
+    }
+  }
+
+  await sleep(0)
+
+  const sorted = orderBy(samples, [(sample) => sample.asset, (sample) => sample.timestamp.toDate()])
+
+  await sleep(0)
+
   // Freeze samples to prevent accidental mutations and improve performance in some cases.
-  samples = samples.map((sample) => Object.freeze(sample))
-  return [samples, schema]
+  const frozen = sorted.map((sample) => Object.freeze(sample))
+  return [frozen, schema]
 }
 
-function inferSchema(raw: RawSample[]): SampleSchema {
+async function inferSchema(raw: RawSample[]): Promise<SampleSchema> {
   let schema: SampleSchema = {}
 
-  for (const sample of raw) {
+  for (let i = 0; i < raw.length; i++) {
+    const sample = raw[i]!
     for (const [name, value] of Object.entries(sample)) {
       const type = inferValueType(name, value)
       if (type == null) {
@@ -233,6 +270,10 @@ function inferSchema(raw: RawSample[]): SampleSchema {
           schema[name] = { type }
         }
       }
+    }
+
+    if (i % batchSize === 0 && i > 0) {
+      await sleep(0)
     }
   }
 

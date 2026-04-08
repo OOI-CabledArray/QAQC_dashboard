@@ -38,7 +38,6 @@ const chartInstance = $ref<InstanceType<typeof Chart> | null>(null)
 
 // Load discrete data.
 const discrete = useDiscrete()
-await discrete.load()
 
 // Pre-defined colors for new series when first inserted.
 const chartColors = [
@@ -1260,7 +1259,11 @@ async function copyToClipboard() {
   <u-page>
     <u-page-body class="mb-24 px-8 space-y-4">
       <u-page-header title="Discrete Data" />
-      <div>
+      <div v-if="discrete.loading" class="flex flex-col items-center justify-center py-32">
+        <u-icon class="animate-spin text-4xl text-primary" name="i-lucide-loader-2" />
+        <p class="mt-4 text-gray-500">Loading discrete samples...</p>
+      </div>
+      <div v-else>
         <div v-if="option != null" class="relative">
           <chart ref="chartInstance" class="min-h-150" :option="option" />
           <u-tooltip
