@@ -1182,13 +1182,14 @@ watchEffect((onInvalidate) => {
       sameOriginal(charted.original, clicked.original),
     )
     const seriesIndex = state.series.findIndex((current) => sameOriginal(clicked.original, current))
+    const series = seriesIndex !== -1 ? state.series[seriesIndex]! : null
 
     // When shift is held, toggle all series in the same original group together.
     if (isShiftPressed) {
       for (const charted of group) {
         legendSelectionOverrides.set(charted.name, isSelected)
       }
-      if (seriesIndex !== -1 && state.series[seriesIndex]!.enabled !== isSelected) {
+      if (series != null && series.enabled !== isSelected) {
         setSeriesField(seriesIndex, 'enabled', isSelected)
       }
       return
@@ -1198,7 +1199,7 @@ watchEffect((onInvalidate) => {
     legendSelectionOverrides.set(clickedName, isSelected)
 
     // Sync the parent `enabled` state when all sub-series in the group agree.
-    if (seriesIndex !== -1) {
+    if (series != null) {
       const allSelected = group.every(
         (charted) => legendSelectionOverrides.get(charted.name) ?? charted.original.enabled,
       )
@@ -1206,9 +1207,9 @@ watchEffect((onInvalidate) => {
         (charted) => !(legendSelectionOverrides.get(charted.name) ?? charted.original.enabled),
       )
 
-      if (noneSelected && state.series[seriesIndex]!.enabled) {
+      if (noneSelected && series.enabled) {
         setSeriesField(seriesIndex, 'enabled', false)
-      } else if (allSelected && !state.series[seriesIndex]!.enabled) {
+      } else if (allSelected && !series.enabled) {
         setSeriesField(seriesIndex, 'enabled', true)
       }
     }
