@@ -81,6 +81,10 @@ const SeriesSchema = Zod.object({
   enabled: Zod.boolean().default(true),
   showCasts: Zod.boolean().default(false).catch(false),
   color: Zod.string().default(chartColors[0]),
+  // Internal ID for tracking series identity. Last so it appears at the end of the URL.
+  id: Zod.string()
+    .default(() => crypto.randomUUID())
+    .catch(() => crypto.randomUUID()),
 })
 
 function createDefaultZoom(): ZoomState {
@@ -127,6 +131,9 @@ const ctrlKey = isMac ? 'Command' : 'Ctrl'
 // Omit `zoom` and any other other unintuitive visual-related changes from undo/redo history.
 const historyOmit: ReadonlyArray<keyof typeof state> = ['zoom', 'seriesCollapsed']
 // Implement undo/redo for modifying the page's state.
+// Internal IDs for tracking series identity. Not persisted to the URL. Stored as a non-enumerable
+// property directly on each series object so it survives reactive proxy wrapping and spread copies
+// won't include it.
 const history = useUndo({
   current: () => state,
   onUndo(values) {
@@ -297,7 +304,7 @@ function extractDataPoints(
 
 function createChartedSeries(
   series: Series,
-  id: string | number,
+  id: string,
   index: number,
   name: string,
   color: string,
@@ -371,14 +378,14 @@ const chartedSeries = $computed(() => {
         const name = baseName.replace(`(${series.year})`, `(${dateLabel})`)
         const color = varyColor(series.color, castIndex, castKeys.length)
 
-        return createChartedSeries(series, `${i}-${castIndex}`, i, name, color, points)
+        return createChartedSeries(series, `${series.id}-${castIndex}`, i, name, color, points)
       })
     }
 
     const points = extractDataPoints(samples, series.x, series.y)
     const name = points.length === 0 ? baseName + ' (No Data)' : baseName
 
-    return createChartedSeries(series, i, i, name, series.color, points)
+    return createChartedSeries(series, series.id, i, name, series.color, points)
   })
 })
 
@@ -528,19 +535,6 @@ const yAxisMinMax = $computed(() => getAxisMinMax('y'))
 function isInvertedAxis(axis: string) {
   const lower = axis.toLowerCase()
   return lower.includes('depth') || lower.includes('pressure')
-}
-
-// Compare two series-like objects by their identifying fields rather than reference.
-function sameOriginal(
-  left: { asset?: string; x?: string; y?: string; year?: number },
-  right: { asset?: string; x?: string; y?: string; year?: number },
-): boolean {
-  return (
-    left.asset === right.asset &&
-    left.x === right.x &&
-    left.y === right.y &&
-    left.year === right.year
-  )
 }
 
 function isCTDCastField(field: string | undefined): boolean {
@@ -943,7 +937,7 @@ function setSeriesField<K extends keyof PartialSeries>(
     const target = state.series[index]
     if (target != null) {
       for (const charted of chartedSeries) {
-        if (sameOriginal(charted.original, target)) {
+        if (charted.original.id === target.id) {
           legendSelectionOverrides.delete(charted.name)
         }
       }
@@ -1178,10 +1172,8 @@ watchEffect((onInvalidate) => {
     }
 
     const isSelected = selected[clickedName] ?? true
-    const group = chartedSeries.filter((charted) =>
-      sameOriginal(charted.original, clicked.original),
-    )
-    const seriesIndex = state.series.findIndex((current) => sameOriginal(clicked.original, current))
+    const group = chartedSeries.filter((charted) => charted.original.id === clicked.original.id)
+    const seriesIndex = state.series.findIndex((current) => current.id === clicked.original.id)
     const series = seriesIndex !== -1 ? state.series[seriesIndex]! : null
 
     // When shift is held, toggle all series in the same original group together.
