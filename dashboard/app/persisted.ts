@@ -21,6 +21,8 @@ export type LocalStoragePersistenceMethod<TData extends Mapping> = {
 
 export type URLPersistenceMethod<TData extends Mapping> = {
   type: 'url'
+  /** Field names to strip from nested objects and arrays before writing to the URL. */
+  omit?: string[]
 } & BasePersistenceMethod<TData>
 
 export type PersistenceMethod<TData extends Mapping> =
@@ -178,7 +180,8 @@ function writeToUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema>
       continue
     }
 
-    search.set(key, JSON.stringify(value))
+    const stripped = method.omit ? stripFields(value, method.omit) : value
+    search.set(key, JSON.stringify(stripped))
   }
 
   const params = url.searchParams.toString()
@@ -263,6 +266,25 @@ function isPrimitiveField(schema: BaseSchema, field: string): boolean {
     isFieldOfType(schema, field, ZodString) ||
     isFieldOfType(schema, field, ZodEnum)
   )
+}
+
+/** Strip the given field names from all objects nested within a value. */
+function stripFields(value: unknown, fields: string[]): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripFields(item, fields))
+  }
+
+  if (value != null && typeof value === 'object') {
+    const result: Record<string, unknown> = {}
+    for (const [key, inner] of Object.entries(value)) {
+      if (!fields.includes(key)) {
+        result[key] = stripFields(inner, fields)
+      }
+    }
+    return result
+  }
+
+  return value
 }
 
 function isPrimitiveArrayField(schema: BaseSchema, field: string): boolean {

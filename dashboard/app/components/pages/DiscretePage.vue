@@ -119,7 +119,7 @@ const state = usePersisted({
       .default(createDefaultZoom)
       .catch(createDefaultZoom),
   }),
-  methods: [{ type: 'url' }],
+  methods: [{ type: 'url', omit: ['id'] }],
 })
 
 onMounted(() => {
