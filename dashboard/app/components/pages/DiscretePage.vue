@@ -66,7 +66,11 @@ function getRandomColor() {
   )
 }
 
-// Schema for data series objects in form.
+// Generate a random UUID for a series.
+function createSeriesId() {
+  return crypto.randomUUID()
+}
+
 const SeriesSchema = Zod.object({
   // Note that we need to convert these possibly `undefined` values to `null` before passing them to
   // the `model-value` of a NuxtUI select or select menu component because they seem to treat
@@ -83,8 +87,8 @@ const SeriesSchema = Zod.object({
   color: Zod.string().default(chartColors[0]),
   // Internal ID for tracking series identity. Last so it appears at the end of the URL.
   id: Zod.string()
-    .default(() => crypto.randomUUID())
-    .catch(() => crypto.randomUUID()),
+    .default(() => createSeriesId())
+    .catch(() => createSeriesId()),
 })
 
 function createDefaultZoom(): ZoomState {
@@ -797,6 +801,7 @@ function addSeries({
     ...cloneDeep(copy ?? {}),
     color,
     ...changes,
+    id: createSeriesId(),
   })
 
   state.series.splice(index, 0, created)
