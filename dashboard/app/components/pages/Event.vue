@@ -5,10 +5,10 @@ import { useStore } from '~/store'
 
 const store = useStore()
 
-const SITES_CSV_URL =
-  'https://raw.githubusercontent.com/OOI-CabledArray/rca-data-tools/main/rca_data_tools/qaqc/params/sitesDictionary.csv'
-const VARIABLE_MAP_URL =
-  'https://raw.githubusercontent.com/OOI-CabledArray/rca-data-tools/main/rca_data_tools/qaqc/params/variableMap.csv'
+// prettier-ignore
+const SITES_CSV_URL = 'https://raw.githubusercontent.com/OOI-CabledArray/rca-data-tools/main/rca_data_tools/qaqc/params/sitesDictionary.csv'
+// prettier-ignore
+const VARIABLE_MAP_URL = 'https://raw.githubusercontent.com/OOI-CabledArray/rca-data-tools/main/rca_data_tools/qaqc/params/variableMap.csv'
 
 let instruments = $ref<{ key: string; label: string }[]>([])
 let parameters = $ref<{ key: string; label: string }[]>([])
