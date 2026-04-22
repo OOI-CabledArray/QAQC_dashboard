@@ -106,7 +106,7 @@ const panels = $ref<Panel[]>([
   {
     instrument: '',
     timespan: 'week',
-    overlay: '',
+    overlay: 'none',
     parameter: '',
     description: '',
     descriptionOpen: false,
@@ -164,7 +164,7 @@ function addPanel() {
   panels.push({
     instrument: '',
     timespan: 'week',
-    overlay: '',
+    overlay: 'none',
     parameter: '',
     description: '',
     descriptionOpen: false,
@@ -208,7 +208,7 @@ function loadPreset(refDesList: string[]) {
     ...refDesList.map((r) => ({
       instrument: r,
       timespan: 'week',
-      overlay: '',
+      overlay: 'none',
       parameter: '',
       description: '',
       descriptionOpen: false,
