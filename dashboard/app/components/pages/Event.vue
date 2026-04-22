@@ -317,6 +317,7 @@ function getMatchingPlots(panel: Panel): string[] {
         !plot.endsWith('.png')
       )
         return false
+      if (plot.includes('meters')) return false
       if (panel.parameter && !plot.includes(panel.parameter)) return false
       if (panel.overlay && !plot.includes(panel.overlay)) return false
       return true
