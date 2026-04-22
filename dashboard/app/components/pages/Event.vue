@@ -130,6 +130,92 @@ const PRESET_VOLCANO: PresetEntry[] = [
     timespan: 'week',
   },
 ]
+const PRESET_MARINE_HEATWAVE: PresetEntry[] = [
+  {
+    instrument: 'CE02SHBP-LJ01D-06-CTDBPN106',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+  {
+    instrument: 'CE04OSBP-LJ01C-06-CTDBPO108',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+  {
+    instrument: 'RS01SLBS-LJ01A-12-CTDPFB101',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+  {
+    instrument: 'RS03AXBS-LJ03A-12-CTDPFB301',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+  {
+    instrument: 'RS03ASHS-MJ03B-10-CTDPFB304',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+  {
+    instrument: 'RS03CCAL-MJ03F-12-CTDPFB305',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+  {
+    instrument: 'RS03ECAL-MJ03E-12-CTDPFB306',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+  {
+    instrument: 'RS03INT2-MJ03D-11-CTDPFB307',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+  {
+    instrument: 'RS01SBPS-PC01A-4A-CTDPFA103',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+  {
+    instrument: 'CE04OSPS-PC01B-4A-CTDPFA109',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+  {
+    instrument: 'RS03AXPS-PC03A-4A-CTDPFA303',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+  {
+    instrument: 'RS01SBPS-SF01A-2A-CTDPFA102',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+  {
+    instrument: 'CE04OSPS-SF01B-2A-CTDPFA107',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+  {
+    instrument: 'RS03AXPS-SF03A-2A-CTDPFA302',
+    parameter: 'temperature',
+    overlay: 'clim',
+    timespan: 'month',
+  },
+]
 // ─────────────────────────────────────────────────────────────────────────────
 
 const timeSpans = [
@@ -289,6 +375,15 @@ function downloadPDF() {
         <u-tooltip text="Volcano preset">
           <u-button variant="ghost" size="lg" class="text-4xl" @click="loadPreset(PRESET_VOLCANO)"
             >🌋</u-button
+          >
+        </u-tooltip>
+        <u-tooltip text="Marine heatwave preset">
+          <u-button
+            variant="ghost"
+            size="lg"
+            class="text-4xl"
+            @click="loadPreset(PRESET_MARINE_HEATWAVE)"
+            >🌡️</u-button
           >
         </u-tooltip>
       </div>
