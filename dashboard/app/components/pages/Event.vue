@@ -62,24 +62,73 @@ function getParametersForInstrument(refDes: string): { key: string; label: strin
   })
 }
 
+type Panel = {
+  instrument: string
+  timespan: string
+  overlay: string
+  parameter: string
+  description: string
+  descriptionOpen: boolean
+}
+
 // ── Presets ───────────────────────────────────────────────────────────────────
 type PresetEntry = Partial<Omit<Panel, 'description' | 'descriptionOpen'>> & { instrument: string }
 
 const PRESET_TSUNAMI: PresetEntry[] = [
-  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'temperature', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS01SBPS-PC01A-4A-CTDPFA103', parameter: 'temperature', overlay: 'none', timespan: 'week' },
-  { instrument: 'CE04OSPS-PC01B-4A-CTDPFA109', parameter: 'temperature', overlay: 'none', timespan: 'week' },
+  {
+    instrument: 'RS03INT2-MJ03D-11-CTDPFB307',
+    parameter: 'temperature',
+    overlay: 'none',
+    timespan: 'week',
+  },
+  {
+    instrument: 'RS01SBPS-PC01A-4A-CTDPFA103',
+    parameter: 'temperature',
+    overlay: 'none',
+    timespan: 'week',
+  },
+  {
+    instrument: 'CE04OSPS-PC01B-4A-CTDPFA109',
+    parameter: 'temperature',
+    overlay: 'none',
+    timespan: 'week',
+  },
 ]
 
 const PRESET_EARTHQUAKE: PresetEntry[] = [
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_10m', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_10m', overlay: 'none', timespan: 'week' },
+  {
+    instrument: 'RS03CCAL-MJ03F-05-BOTPTA301',
+    parameter: 'seafloor_uplift_10m',
+    overlay: 'none',
+    timespan: 'week',
+  },
+  {
+    instrument: 'RS03ASHS-MJ03B-09-BOTPTA304',
+    parameter: 'seafloor_uplift_10m',
+    overlay: 'none',
+    timespan: 'week',
+  },
 ]
 
 const PRESET_VOLCANO: PresetEntry[] = [
-  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'temperature', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'temperature', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'temperature', overlay: 'none', timespan: 'week' },
+  {
+    instrument: 'RS03ASHS-MJ03B-10-CTDPFB304',
+    parameter: 'temperature',
+    overlay: 'none',
+    timespan: 'week',
+  },
+  {
+    instrument: 'RS03CCAL-MJ03F-12-CTDPFB305',
+    parameter: 'temperature',
+    overlay: 'none',
+    timespan: 'week',
+  },
+  {
+    instrument: 'RS03ECAL-MJ03E-12-CTDPFB306',
+    parameter: 'temperature',
+    overlay: 'none',
+    timespan: 'week',
+  },
 ]
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -97,15 +146,6 @@ const overlays = [
   { key: 'time', label: 'Time' },
   { key: 'clim', label: 'Climatology' },
 ]
-
-type Panel = {
-  instrument: string
-  timespan: string
-  overlay: string
-  parameter: string
-  description: string
-  descriptionOpen: boolean
-}
 
 const panels = $ref<Panel[]>([
   {
