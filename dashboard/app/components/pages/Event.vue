@@ -402,88 +402,92 @@ function downloadPDF() {
       </div>
       <div class="flex gap-3 items-end justify-between">
         <div class="flex gap-3 items-end">
-        <div class="flex flex-col gap-1 items-center">
-          <u-tooltip text="Tsunami" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
-            <u-button
-              class="text-4xl"
-              size="lg"
-              variant="ghost"
-              @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami)"
-              >🌊</u-button
+          <div class="flex flex-col gap-1 items-center">
+            <u-tooltip text="Tsunami" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
+              <u-button
+                class="text-4xl"
+                size="lg"
+                variant="ghost"
+                @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami)"
+                >🌊</u-button
+              >
+            </u-tooltip>
+            <u-select-menu
+              v-model="presetTimespans.tsunami"
+              class="text-xs w-24"
+              :items="timeSpans"
+              multiple
+              value-key="key"
+            />
+          </div>
+          <div class="flex flex-col gap-1 items-center">
+            <u-tooltip text="Earthquake" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
+              <u-button
+                class="text-4xl"
+                size="lg"
+                variant="ghost"
+                @click="loadPreset(PRESET_EARTHQUAKE, presetTimespans.earthquake)"
+                >🌍</u-button
+              >
+            </u-tooltip>
+            <u-select-menu
+              v-model="presetTimespans.earthquake"
+              class="text-xs w-24"
+              :items="timeSpans"
+              multiple
+              value-key="key"
+            />
+          </div>
+          <div class="flex flex-col gap-1 items-center">
+            <u-tooltip text="Eruption" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
+              <u-button
+                class="text-4xl"
+                size="lg"
+                variant="ghost"
+                @click="loadPreset(PRESET_VOLCANO, presetTimespans.volcano)"
+                >🌋</u-button
+              >
+            </u-tooltip>
+            <u-select-menu
+              v-model="presetTimespans.volcano"
+              class="text-xs w-24"
+              :items="timeSpans"
+              multiple
+              value-key="key"
+            />
+          </div>
+          <div class="flex flex-col gap-1 items-center">
+            <u-tooltip
+              text="Marine Heatwave"
+              :content="{ side: 'top' }"
+              :ui="{ text: 'font-bold' }"
             >
-          </u-tooltip>
-          <u-select-menu
-            v-model="presetTimespans.tsunami"
-            class="text-xs w-24"
-            :items="timeSpans"
-            multiple
-            value-key="key"
-          />
-        </div>
-        <div class="flex flex-col gap-1 items-center">
-          <u-tooltip text="Earthquake" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
-            <u-button
-              class="text-4xl"
-              size="lg"
-              variant="ghost"
-              @click="loadPreset(PRESET_EARTHQUAKE, presetTimespans.earthquake)"
-              >🌍</u-button
-            >
-          </u-tooltip>
-          <u-select-menu
-            v-model="presetTimespans.earthquake"
-            class="text-xs w-24"
-            :items="timeSpans"
-            multiple
-            value-key="key"
-          />
-        </div>
-        <div class="flex flex-col gap-1 items-center">
-          <u-tooltip text="Eruption" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
-            <u-button
-              class="text-4xl"
-              size="lg"
-              variant="ghost"
-              @click="loadPreset(PRESET_VOLCANO, presetTimespans.volcano)"
-              >🌋</u-button
-            >
-          </u-tooltip>
-          <u-select-menu
-            v-model="presetTimespans.volcano"
-            class="text-xs w-24"
-            :items="timeSpans"
-            multiple
-            value-key="key"
-          />
-        </div>
-        <div class="flex flex-col gap-1 items-center">
-          <u-tooltip text="Marine Heatwave" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
-            <u-button
-              class="text-4xl"
-              size="lg"
-              variant="ghost"
-              @click="loadPreset(PRESET_MARINE_HEATWAVE, presetTimespans.marineHeatwave)"
-              >🌡️</u-button
-            >
-          </u-tooltip>
-          <u-select-menu
-            v-model="presetTimespans.marineHeatwave"
-            class="text-xs w-24"
-            :items="timeSpans"
-            multiple
-            value-key="key"
-          />
-        </div>
-        <div class="flex flex-col gap-1 items-center">
-          <span class="text-gray-400 text-xs">UTC Date</span>
-          <input
-            v-model="eventDate"
-            class="border border-gray-300 px-2 py-1 rounded text-xs w-24"
-            placeholder="YYYY-MM-DD"
-            type="text"
-            maxlength="10"
-          />
-        </div>
+              <u-button
+                class="text-4xl"
+                size="lg"
+                variant="ghost"
+                @click="loadPreset(PRESET_MARINE_HEATWAVE, presetTimespans.marineHeatwave)"
+                >🌡️</u-button
+              >
+            </u-tooltip>
+            <u-select-menu
+              v-model="presetTimespans.marineHeatwave"
+              class="text-xs w-24"
+              :items="timeSpans"
+              multiple
+              value-key="key"
+            />
+          </div>
+          <div class="flex flex-col gap-1 items-center">
+            <span class="text-gray-400 text-xs">UTC Date</span>
+            <input
+              v-model="eventDate"
+              class="border border-gray-300 px-2 py-1 rounded text-xs w-24"
+              placeholder="YYYY-MM-DD"
+              type="text"
+              maxlength="10"
+            />
+          </div>
         </div>
         <p class="max-w-xs pb-1 text-gray-400 text-right text-xs">
           Click an event emoji to load a preset collection of plots. Set a UTC date to populate
