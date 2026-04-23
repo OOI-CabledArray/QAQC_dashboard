@@ -489,7 +489,7 @@ function downloadPDF() {
             />
           </div>
         </div>
-        <p class="max-w-xs pb-1 text-gray-400 text-right text-xs">
+        <p class="max-w-xs pb-1 text-right text-xs text-gray-800">
           Click an event emoji to load a preset collection of plots. Set a UTC date to populate
           acoustic instrument panels.
         </p>
