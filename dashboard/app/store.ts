@@ -39,6 +39,8 @@ export const useStore = defineStore('store', () => {
     TimeSpan: '', // hopefully we can use these to filter
     Overlay: '', // instead of the props in each file
 
+    archiveKey: null as string | null,
+
     mainNav: [
       {
         title: 'Data: by Site',
@@ -400,6 +402,20 @@ export const useStore = defineStore('store', () => {
     }
   }
 
+  const livePlotsURL = state.plotsURL
+
+  async function enterArchiveMode(key: string) {
+    state.archiveKey = key
+    state.plotsURL = `/archives/${key}`
+    await getPlots()
+  }
+
+  async function exitArchiveMode() {
+    state.archiveKey = null
+    state.plotsURL = livePlotsURL
+    await getPlots()
+  }
+
   return {
     ...toRefs(state),
     storePlots,
@@ -411,5 +427,7 @@ export const useStore = defineStore('store', () => {
     getIndexes,
     loadCSVs,
     readCSV,
+    enterArchiveMode,
+    exitArchiveMode,
   }
 })
