@@ -13,7 +13,7 @@ const SESSION_EXPIRY_DAYS = 7
 const SESSION_ID_BYTES = 32
 
 export interface User {
-  id: number
+  id: string
   email: string
   name: string
   role: 'admin' | 'viewer'
@@ -37,7 +37,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return timingSafeEqual(derived, storedBuffer)
 }
 
-export function createSession(userId: number): string {
+export function createSession(userId: string): string {
   const sessionId = randomBytes(SESSION_ID_BYTES).toString('hex')
   const expiresAt = new Date(Date.now() + SESSION_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString()
   const database = getDatabase()

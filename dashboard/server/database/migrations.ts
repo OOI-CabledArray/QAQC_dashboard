@@ -13,7 +13,7 @@ const migrations: Migration[] = [
     up(database) {
       database.exec(`
         CREATE TABLE users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          id TEXT PRIMARY KEY,
           email TEXT NOT NULL UNIQUE,
           name TEXT NOT NULL,
           password TEXT NOT NULL,
@@ -24,7 +24,7 @@ const migrations: Migration[] = [
 
         CREATE TABLE sessions (
           id TEXT PRIMARY KEY,
-          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           expires_at TEXT NOT NULL,
           created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
@@ -40,7 +40,7 @@ const migrations: Migration[] = [
     up(database) {
       database.exec(`
         CREATE TABLE archives (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          id TEXT PRIMARY KEY,
           date TEXT NOT NULL,
           slug TEXT NOT NULL,
           prefix TEXT NOT NULL UNIQUE,

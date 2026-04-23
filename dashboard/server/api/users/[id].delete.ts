@@ -5,7 +5,7 @@ export default defineEventHandler((event) => {
   const user = requireAdmin(event)
 
   const id = getRouterParam(event, 'id')
-  if (Number(id) === user.id) {
+  if (id === user.id) {
     throw createError({ statusCode: 400, statusMessage: 'Cannot delete your own account' })
   }
 

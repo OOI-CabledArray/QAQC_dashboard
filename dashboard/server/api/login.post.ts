@@ -13,16 +13,16 @@ export default defineEventHandler(async (event) => {
 
   const database = getDatabase()
   const row = database
-    .prepare('SELECT id, email, name, role, password_hash FROM users WHERE email = ?')
+    .prepare('SELECT id, email, name, role, password FROM users WHERE email = ?')
     .get(email) as
-    | { id: number; email: string; name: string; role: string; password_hash: string }
+    | { id: string; email: string; name: string; role: string; password: string }
     | undefined
 
   if (!row) {
     throw createError({ statusCode: 401, statusMessage: 'Invalid email or password' })
   }
 
-  const valid = await verifyPassword(password, row.password_hash)
+  const valid = await verifyPassword(password, row.password)
   if (!valid) {
     throw createError({ statusCode: 401, statusMessage: 'Invalid email or password' })
   }
