@@ -312,12 +312,12 @@ function downloadPDF() {
     <div class="no-print flex items-center justify-between mb-6">
       <div class="flex items-center gap-2">
         <h1 class="font-bold text-2xl mr-3">Event Report</h1>
-        <u-tooltip text="Tsunami preset">
+        <u-tooltip text="Tsunami">
           <u-button variant="ghost" size="lg" class="text-4xl" @click="loadPreset(PRESET_TSUNAMI)"
             >🌊</u-button
           >
         </u-tooltip>
-        <u-tooltip text="Earthquake preset">
+        <u-tooltip text="Earthquake">
           <u-button
             variant="ghost"
             size="lg"
@@ -326,12 +326,12 @@ function downloadPDF() {
             >🌍</u-button
           >
         </u-tooltip>
-        <u-tooltip text="Volcano preset">
+        <u-tooltip text="Volcano">
           <u-button variant="ghost" size="lg" class="text-4xl" @click="loadPreset(PRESET_VOLCANO)"
             >🌋</u-button
           >
         </u-tooltip>
-        <u-tooltip text="Marine heatwave preset">
+        <u-tooltip text="Marine Heatwave">
           <u-button
             variant="ghost"
             size="lg"
