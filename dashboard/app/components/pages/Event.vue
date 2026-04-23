@@ -308,69 +308,67 @@ function downloadPDF() {
 <template>
   <div class="image-report-root p-6">
     <!-- Page header (hidden when printing) -->
-    <div class="no-print flex items-center justify-between mb-6">
-      <div class="flex items-center gap-2">
-        <h1 class="font-bold text-2xl mr-3">Event Report</h1>
-        <div class="flex flex-col items-center gap-1">
-          <u-button
-            class="text-4xl"
-            @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami)"
+    <div class="flex items-center justify-between mb-6 no-print">
+      <div class="flex gap-2 items-center">
+        <h1 class="font-bold mr-3 text-2xl">Event Report</h1>
+        <div class="flex flex-col gap-1 items-center">
+          <u-button class="text-4xl" @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami)"
             >🌊</u-button
           >
           <u-select-menu
             v-model="presetTimespans.tsunami"
+            class="text-xs w-24"
             :items="timeSpans"
-            value-key="key"
             multiple
-            class="w-24 text-xs"
+            value-key="key"
           />
         </div>
-        <div class="flex flex-col items-center gap-1">
+        <div class="flex flex-col gap-1 items-center">
           <u-button
-            variant="ghost"
-            size="lg"
             class="text-4xl"
+            size="lg"
+            variant="ghost"
             @click="loadPreset(PRESET_EARTHQUAKE, presetTimespans.earthquake)"
             >🌍</u-button
           >
           <u-select-menu
             v-model="presetTimespans.earthquake"
+            class="text-xs w-24"
             :items="timeSpans"
-            value-key="key"
             multiple
-            class="w-24 text-xs"
+            value-key="key"
           />
         </div>
-        <div class="flex flex-col items-center gap-1">
+        <div class="flex flex-col gap-1 items-center">
           <u-button
-            variant="ghost"
-            size="lg"
             class="text-4xl"
+            size="lg"
+            variant="ghost"
             @click="loadPreset(PRESET_VOLCANO, presetTimespans.volcano)"
             >🌋</u-button
           >
           <u-select-menu
             v-model="presetTimespans.volcano"
+            class="text-xs w-24"
             :items="timeSpans"
-            value-key="key"
             multiple
-            class="w-24 text-xs"
+            value-key="key"
           />
         </div>
-        <div class="flex flex-col items-center gap-1">
+        <div class="flex flex-col gap-1 items-center">
           <u-button
-            variant="ghost"
-            size="lg"
             class="text-4xl"
+            size="lg"
+            variant="ghost"
             @click="loadPreset(PRESET_MARINE_HEATWAVE, presetTimespans.marineHeatwave)"
             >🌡️</u-button
           >
           <u-select-menu
             v-model="presetTimespans.marineHeatwave"
+            class="text-xs w-24"
             :items="timeSpans"
-            value-key="key"
             multiple
-            class="w-24 text-xs"
+            value-key="key"
           />
         </div>
       </div>
@@ -379,9 +377,9 @@ function downloadPDF() {
       </u-button>
     </div>
 
-    <div class="no-print h-px bg-gray-200 mb-6" />
+    <div class="bg-gray-200 h-px mb-6 no-print" />
 
-    <div v-if="isLoading" class="no-print text-gray-500 py-8 text-center">Loading plot list…</div>
+    <div v-if="isLoading" class="no-print py-8 text-center text-gray-500">Loading plot list…</div>
 
     <!-- Panels -->
     <div v-for="(panel, i) in panels" :key="i" class="mb-10 panel">
