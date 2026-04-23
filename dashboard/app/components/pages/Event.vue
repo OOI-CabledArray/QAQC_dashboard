@@ -394,8 +394,8 @@ function downloadPDF() {
   <div class="image-report-root p-6">
     <!-- Page header (hidden when printing) -->
     <div class="flex items-center justify-between mb-6 no-print">
-      <div class="flex gap-2 items-center">
-        <h1 class="font-bold mr-3 text-2xl">Event Report</h1>
+      <div class="flex gap-2 items-end">
+        <h1 class="font-bold mb-2 mr-3 text-2xl">Event Report</h1>
         <div class="flex flex-col gap-1 items-center">
           <u-tooltip text="Tsunami">
             <u-button
