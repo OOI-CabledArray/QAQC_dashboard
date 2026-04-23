@@ -1,4 +1,4 @@
-import { getArchiveIndex } from '../../utils/archive'
+import { getArchiveIndex } from '#server/utils/archive'
 
 export default defineEventHandler(async (event) => {
   const key = getRouterParam(event, 'key')

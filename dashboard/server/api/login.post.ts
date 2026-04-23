@@ -1,5 +1,5 @@
-import { verifyPassword, createSession } from '../utils/auth'
-import { getDatabase } from '../utils/db'
+import { verifyPassword, createSession } from '#server/utils/auth'
+import { getDatabase } from '#server/utils/db'
 
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60
 

@@ -3,7 +3,7 @@ import { promisify } from 'node:util'
 
 import { createError, type H3Event } from 'h3'
 
-import { getDatabase } from './db'
+import { getDatabase } from '#server/utils/db'
 
 const scryptAsync = promisify(scrypt)
 
@@ -28,7 +28,7 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
-  const [salt, hash] = stored.split(':')
+  const [salt, hash] = stored.split(':') as [string, string]
   const derived = (await scryptAsync(password, salt, KEY_LENGTH)) as Buffer
   const storedBuffer = Buffer.from(hash, 'hex')
   if (derived.length !== storedBuffer.length) {

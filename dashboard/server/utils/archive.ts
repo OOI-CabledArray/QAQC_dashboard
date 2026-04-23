@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto'
+
 import {
   S3Client,
   ListObjectsV2Command,
@@ -5,9 +7,9 @@ import {
   DeleteObjectsCommand,
   GetObjectCommand,
 } from '@aws-sdk/client-s3'
-import { randomUUID } from 'node:crypto'
-import { getDatabase } from './db'
-import { slugify } from './slugify'
+
+import { getDatabase } from '#server/utils/db'
+import { slugify } from '#server/utils/slugify'
 
 const BUCKET = process.env.QAQC_S3_BUCKET || 'ooi-rca-qaqc-prod'
 const REGION = process.env.AWS_REGION || 'us-west-2'
@@ -63,7 +65,9 @@ export async function createArchive(options: {
   } else if (existing) {
     let counter = 2
     while (
-      database.prepare('SELECT id FROM archives WHERE date = ? AND slug = ?').get(today, `${slug}-${counter}`)
+      database
+        .prepare('SELECT id FROM archives WHERE date = ? AND slug = ?')
+        .get(today, `${slug}-${counter}`)
     ) {
       counter++
     }
@@ -103,7 +107,16 @@ export async function createArchive(options: {
       `INSERT INTO archives (id, date, slug, prefix, name, trigger_type, triggered_by, image_count)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(id, today, finalSlug, prefix, options.name || null, triggerType, options.triggeredBy || null, plotFiles.length)
+    .run(
+      id,
+      today,
+      finalSlug,
+      prefix,
+      options.name || null,
+      triggerType,
+      options.triggeredBy || null,
+      plotFiles.length,
+    )
 
   return database.prepare('SELECT * FROM archives WHERE id = ?').get(id) as ArchiveRow
 }

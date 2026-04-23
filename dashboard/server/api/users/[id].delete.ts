@@ -1,5 +1,5 @@
-import { requireAdmin } from '../../utils/auth'
-import { getDatabase } from '../../utils/db'
+import { requireAdmin } from '#server/utils/auth'
+import { getDatabase } from '#server/utils/db'
 
 export default defineEventHandler((event) => {
   const user = requireAdmin(event)

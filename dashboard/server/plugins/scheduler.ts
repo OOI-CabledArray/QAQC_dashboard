@@ -1,17 +1,14 @@
-import cron from 'node-cron'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { readFileSync } from 'node:fs'
 
-import { createArchive, runRetention } from '../utils/archive'
-import { deleteExpiredSessions } from '../utils/auth'
-import { getDatabase } from '../utils/db'
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import cron from 'node-cron'
 
-const ENABLE_JOBS = process.env.ENABLE_SCHEDULED_JOBS !== 'false'
+const ENABLE_JOBS = process.env.ENABLE_SCHEDULED_JOBS === 'true'
 const BUCKET = process.env.QAQC_S3_BUCKET || 'ooi-rca-qaqc-prod'
 
 export default defineNitroPlugin(() => {
   if (!ENABLE_JOBS) {
-    console.log('Scheduled jobs disabled (ENABLE_SCHEDULED_JOBS=false)')
+    console.log('Scheduled jobs disabled (set ENABLE_SCHEDULED_JOBS=true to enable)')
     return
   }
 

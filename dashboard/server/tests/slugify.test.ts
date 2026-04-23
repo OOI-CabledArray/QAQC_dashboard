@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { slugify } from '../utils/slugify'
+import { slugify } from '#server/utils/slugify'
 
 describe('slugify', () => {
   it('should convert a name to a URL-safe slug', () => {

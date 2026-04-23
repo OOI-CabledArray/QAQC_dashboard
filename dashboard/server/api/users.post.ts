@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
-import { requireAdmin, hashPassword } from '../utils/auth'
-import { getDatabase } from '../utils/db'
+import { requireAdmin, hashPassword } from '#server/utils/auth'
+import { getDatabase } from '#server/utils/db'
 
 export default defineEventHandler(async (event) => {
   requireAdmin(event)

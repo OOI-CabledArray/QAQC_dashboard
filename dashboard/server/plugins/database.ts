@@ -1,8 +1,7 @@
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 
-import { runMigrations } from '../database/migrations'
-import { getDatabase } from '../utils/db'
+import { runMigrations } from '#server/database/migrations'
 
 export default defineNitroPlugin(() => {
   const database = getDatabase()

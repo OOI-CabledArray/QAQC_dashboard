@@ -1,4 +1,4 @@
-import { getDatabase } from '../utils/db'
+import { getDatabase } from '#server/utils/db'
 
 export default defineEventHandler(() => {
   const database = getDatabase()
