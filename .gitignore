@@ -136,6 +136,11 @@ dashboard/public/QAQC_plots/
 dashboard/public/spectrograms/
 dashboard/public/discrete/
 
+# SQLite database files
+dashboard/data/*.sqlite
+dashboard/data/*.sqlite-wal
+dashboard/data/*.sqlite-shm
+
 # mac
 .DS_Store
 
