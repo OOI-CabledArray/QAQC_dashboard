@@ -400,7 +400,8 @@ function downloadPDF() {
           Download as PDF
         </u-button>
       </div>
-      <div class="flex gap-3 items-end">
+      <div class="flex gap-3 items-end justify-between">
+        <div class="flex gap-3 items-end">
         <div class="flex flex-col gap-1 items-center">
           <u-tooltip text="Tsunami" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
             <u-button
@@ -483,6 +484,11 @@ function downloadPDF() {
             maxlength="10"
           />
         </div>
+        </div>
+        <p class="max-w-xs pb-1 text-gray-400 text-right text-xs">
+          Click an event emoji to load a preset collection of plots. Set a UTC date to populate
+          acoustic instrument panels.
+        </p>
       </div>
     </div>
 
