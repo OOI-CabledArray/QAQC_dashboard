@@ -17,7 +17,7 @@ const migrations: Migration[] = [
           email TEXT NOT NULL UNIQUE,
           name TEXT NOT NULL,
           password TEXT NOT NULL,
-          role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('admin', 'viewer')),
+          role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
           created_at TEXT NOT NULL DEFAULT (datetime('now')),
           updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
