@@ -16,7 +16,7 @@ export interface User {
   id: number
   email: string
   name: string
-  role: 'admin' | 'user'
+  role: 'admin' | 'viewer'
   created_at: string
   updated_at: string
 }
