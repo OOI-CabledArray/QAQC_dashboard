@@ -230,6 +230,7 @@ const overlays = [
   { key: 'anno', label: 'Annotations' },
   { key: 'time', label: 'Time' },
   { key: 'clim', label: 'Climatology' },
+  { key: 'profile', label: 'Profile' },
 ]
 
 const panels = $ref<Panel[]>([
@@ -317,6 +318,7 @@ function getMatchingPlots(panel: Panel): string[] {
       )
         return false
       if (plot.includes('meters')) return false
+      if (plot.includes('profile') && panel.overlay !== 'profile') return false
       if (panel.parameter && !plot.includes(panel.parameter)) return false
       if (panel.overlay && !plot.includes(panel.overlay)) return false
       return true
