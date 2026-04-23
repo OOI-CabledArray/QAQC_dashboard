@@ -403,7 +403,7 @@ function downloadPDF() {
       <div class="flex gap-3 items-end justify-between">
         <div class="flex gap-3 items-end">
           <div class="flex flex-col gap-1 items-center">
-            <u-tooltip text="Tsunami" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
+            <u-tooltip :content="{ side: 'top' }" :ui="{ text: 'font-bold' }" text="Tsunami">
               <u-button
                 class="text-4xl"
                 size="lg"
@@ -421,7 +421,7 @@ function downloadPDF() {
             />
           </div>
           <div class="flex flex-col gap-1 items-center">
-            <u-tooltip text="Earthquake" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
+            <u-tooltip :content="{ side: 'top' }" :ui="{ text: 'font-bold' }" text="Earthquake">
               <u-button
                 class="text-4xl"
                 size="lg"
@@ -439,7 +439,7 @@ function downloadPDF() {
             />
           </div>
           <div class="flex flex-col gap-1 items-center">
-            <u-tooltip text="Eruption" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
+            <u-tooltip :content="{ side: 'top' }" :ui="{ text: 'font-bold' }" text="Eruption">
               <u-button
                 class="text-4xl"
                 size="lg"
@@ -458,9 +458,9 @@ function downloadPDF() {
           </div>
           <div class="flex flex-col gap-1 items-center">
             <u-tooltip
-              text="Marine Heatwave"
               :content="{ side: 'top' }"
               :ui="{ text: 'font-bold' }"
+              text="Marine Heatwave"
             >
               <u-button
                 class="text-4xl"
@@ -483,9 +483,9 @@ function downloadPDF() {
             <input
               v-model="eventDate"
               class="border border-gray-300 px-2 py-1 rounded text-xs w-24"
+              maxlength="10"
               placeholder="YYYY-MM-DD"
               type="text"
-              maxlength="10"
             />
           </div>
         </div>
