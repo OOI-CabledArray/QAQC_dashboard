@@ -153,8 +153,11 @@ const PRESET_MARINE_HEATWAVE: PresetEntry[] = [
   { instrument: 'CE04OSPS-PC01B-4A-CTDPFA109', parameter: 'temperature', overlay: 'clim' },
   { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'temperature', overlay: 'clim' },
   { instrument: 'RS01SBPS-SF01A-2A-CTDPFA102', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'RS01SBPS-SF01A-2A-CTDPFA102', parameter: 'temperature', overlay: 'none' },
   { instrument: 'CE04OSPS-SF01B-2A-CTDPFA107', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'CE04OSPS-SF01B-2A-CTDPFA107', parameter: 'temperature', overlay: 'none' },
   { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'temperature', overlay: 'none' },
 ]
 // ─────────────────────────────────────────────────────────────────────────────
 
