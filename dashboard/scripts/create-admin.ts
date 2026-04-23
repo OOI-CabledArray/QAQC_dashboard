@@ -1,8 +1,10 @@
 import Database from 'better-sqlite3'
 import { scrypt, randomBytes, randomUUID } from 'node:crypto'
-import { promisify } from 'node:util'
-import { join } from 'node:path'
+import { createInterface } from 'node:readline'
 import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
+import { parseArgs } from 'node:util'
+import { promisify } from 'node:util'
 import { runMigrations } from '../server/database/migrations'
 
 const scryptAsync = promisify(scrypt)
@@ -13,13 +15,58 @@ async function hashPassword(password: string): Promise<string> {
   return `${salt}:${derived.toString('hex')}`
 }
 
-async function main() {
-  const email = process.argv[2]
-  const name = process.argv[3]
-  const password = process.argv[4]
+async function readPassword(): Promise<string> {
+  return new Promise((resolve) => {
+    const rl = createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    })
 
-  if (!email || !name || !password) {
-    console.error('Usage: npx tsx scripts/create-admin.ts <email> <name> <password>')
+    process.stdout.write('Password: ')
+    const originalWrite = process.stdout.write.bind(process.stdout)
+    process.stdin.setRawMode(true)
+
+    let password = ''
+    process.stdin.on('data', (chunk) => {
+      const character = chunk.toString()
+      if (character === '\n' || character === '\r' || character === '') {
+        process.stdin.setRawMode(false)
+        originalWrite('\n')
+        rl.close()
+        resolve(password)
+      } else if (character === '') {
+        process.stdin.setRawMode(false)
+        originalWrite('\n')
+        rl.close()
+        process.exit(1)
+      } else if (character === '' || character === '\b') {
+        if (password.length > 0) {
+          password = password.slice(0, -1)
+        }
+      } else {
+        password += character
+      }
+    })
+  })
+}
+
+async function main() {
+  const { values } = parseArgs({
+    options: {
+      email: { type: 'string' },
+      name: { type: 'string' },
+    },
+    strict: true,
+  })
+
+  if (!values.email || !values.name) {
+    console.error('Usage: npx tsx scripts/create-admin.ts --email <email> --name <name>')
+    process.exit(1)
+  }
+
+  const password = await readPassword()
+  if (!password) {
+    console.error('Password cannot be empty.')
     process.exit(1)
   }
 
@@ -37,11 +84,11 @@ async function main() {
   try {
     database
       .prepare('INSERT INTO users (id, email, name, password, role) VALUES (?, ?, ?, ?, ?)')
-      .run(id, email, name, hashed, 'admin')
-    console.log(`Admin user created: ${email}`)
+      .run(id, values.email, values.name, hashed, 'admin')
+    console.log(`Admin user created: ${values.email}`)
   } catch (error: any) {
     if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      console.error(`A user with email ${email} already exists.`)
+      console.error(`A user with email ${values.email} already exists.`)
       process.exit(1)
     }
     throw error
