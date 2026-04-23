@@ -21,6 +21,9 @@ useHead({
         <div class="flex-none h-lvh sm:w-56 w-26" />
         <!-- Page Container -->
         <div class="flex-auto">
+          <client-only>
+            <archive-banner />
+          </client-only>
           <suspense>
             <nuxt-layout>
               <nuxt-page />

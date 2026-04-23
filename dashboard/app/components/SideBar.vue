@@ -33,6 +33,26 @@ async function logout() {
   authUser = null
 }
 
+let archiveName = $ref('')
+let archiving = $ref(false)
+let showArchiveDialog = $ref(false)
+
+async function triggerArchive() {
+  archiving = true
+  try {
+    await $fetch('/api/archives', {
+      method: 'POST',
+      body: archiveName ? { name: archiveName } : {},
+    })
+    archiveName = ''
+    showArchiveDialog = false
+  } catch (error: any) {
+    console.error('Archive failed:', error)
+  } finally {
+    archiving = false
+  }
+}
+
 if (import.meta.client) {
   fetchAuthUser()
 }
@@ -201,11 +221,33 @@ const accordionItems = $computed(() => {
       Event Report
     </u-button>
 
+    <div class="bg-white h-px mb-2 mt-3 opacity-20" />
+    <span class="font-bold mb-1 not-sm:text-center opacity-50 text-xs uppercase">Archives</span>
+    <archive-dropdown />
+
     <!-- Auth -->
     <div class="bg-white h-px mb-2 mt-auto opacity-20" />
     <div class="text-center">
       <template v-if="authUser">
         <span class="block text-xs text-gray-400 mb-1">{{ authUser.name }}</span>
+        <u-button
+          class="hover:text-white mb-1 px-0 text-[13px] text-gray-300"
+          variant="link"
+          @click="showArchiveDialog = !showArchiveDialog"
+        >
+          Archive now
+        </u-button>
+        <div v-if="showArchiveDialog" class="mb-2 space-y-1">
+          <u-input
+            v-model="archiveName"
+            class="text-xs"
+            placeholder="Name (optional)"
+            size="xs"
+          />
+          <u-button block size="xs" :loading="archiving" @click="triggerArchive">
+            Create archive
+          </u-button>
+        </div>
         <u-button
           class="hover:text-white px-0 text-[13px] text-gray-300"
           variant="link"
