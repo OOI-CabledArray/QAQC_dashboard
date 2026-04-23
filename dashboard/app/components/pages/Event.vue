@@ -99,22 +99,14 @@ const PRESET_TSUNAMI: PresetEntry[] = [
 // prettier-ignore
 const PRESET_EARTHQUAKE: PresetEntry[] = [
   // BOTPT — all params
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_10m',           overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_5m',            overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'mean_seafloor_depth',           overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_predicted_tide', overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_10m',           overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_5m',            overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'mean_seafloor_depth',           overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_predicted_tide', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_10m',           overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_5m',            overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'mean_seafloor_depth',           overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_predicted_tide', overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_10m',           overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_5m',            overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'mean_seafloor_depth',           overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_predicted_tide', overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_10m', overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'mean_seafloor_depth', overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_10m', overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'mean_seafloor_depth', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_10m', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'mean_seafloor_depth', overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_10m', overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'mean_seafloor_depth', overlay: 'none' },
   // OBSBB
   { instrument: 'RS01SLBS-MJ01A-05-OBSBBA102', parameter: '', overlay: 'none' },
   { instrument: 'RS01SUM1-LJ01B-05-OBSBBA101', parameter: '', overlay: 'none' },
@@ -135,14 +127,14 @@ const PRESET_EARTHQUAKE: PresetEntry[] = [
 // prettier-ignore
 const PRESET_VOLCANO: PresetEntry[] = [
   // BOTPT
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'botsflu_meandepth', overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'botsflu_10minrate', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'botsflu_meandepth', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'botsflu_10minrate', overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'botsflu_meandepth', overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'botsflu_10minrate', overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'botsflu_meandepth', overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'botsflu_10minrate', overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'mean_seafloor_depth',  overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_10m',  overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'mean_seafloor_depth',  overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_10m',  overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'mean_seafloor_depth',  overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_10m',  overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'mean_seafloor_depth',  overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_10m',  overlay: 'none' },
   // OBSBB
   { instrument: 'RS03CCAL-MJ03F-06-OBSBBA301', parameter: '', overlay: 'none' },
   { instrument: 'RS03ECAL-MJ03E-09-OBSBBA302', parameter: '', overlay: 'none' },
@@ -369,7 +361,11 @@ function downloadPDF() {
       <div class="flex gap-2 items-center">
         <h1 class="font-bold mr-3 text-2xl">Event Report</h1>
         <div class="flex flex-col gap-1 items-center">
-          <u-button class="text-4xl" @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami)"
+          <u-button
+            class="text-4xl"
+            size="lg"
+            variant="ghost"
+            @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami)"
             >🌊</u-button
           >
           <u-select-menu
