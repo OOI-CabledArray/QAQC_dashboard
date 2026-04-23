@@ -54,7 +54,7 @@ const dateLabel = $computed(() => {
     class="flex items-center justify-between bg-amber-100 border-b border-amber-300 px-4 py-2 text-amber-900"
   >
     <span class="text-sm font-medium">
-      Viewing archive: {{ dateLabel }}<template v-if="archiveName"> — {{ archiveName }}</template>
+      Viewing archive: {{ dateLabel }}<template v-if="archiveName">, {{ archiveName }}</template>
     </span>
     <u-button size="xs" variant="soft" color="amber" @click="backToLive">Back to live</u-button>
   </div>

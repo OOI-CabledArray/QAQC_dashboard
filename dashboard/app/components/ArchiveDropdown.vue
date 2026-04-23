@@ -25,7 +25,7 @@ function formatLabel(archive: Archive): string {
     year: 'numeric',
   })
   if (archive.name) {
-    return `${date} — ${archive.name}`
+    return `${date}, ${archive.name}`
   }
   return `${date} (daily)`
 }
