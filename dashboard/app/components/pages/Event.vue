@@ -402,8 +402,7 @@ function downloadPDF() {
       </div>
       <div class="flex gap-3 items-end">
         <div class="flex flex-col gap-1 items-center">
-          <u-tooltip :content="{ side: 'top' }">
-            <template #text><span class="font-bold">Tsunami</span></template>
+          <u-tooltip text="Tsunami" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
             <u-button
               class="text-4xl"
               size="lg"
@@ -421,8 +420,7 @@ function downloadPDF() {
           />
         </div>
         <div class="flex flex-col gap-1 items-center">
-          <u-tooltip :content="{ side: 'top' }">
-            <template #text><span class="font-bold">Earthquake</span></template>
+          <u-tooltip text="Earthquake" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
             <u-button
               class="text-4xl"
               size="lg"
@@ -440,8 +438,7 @@ function downloadPDF() {
           />
         </div>
         <div class="flex flex-col gap-1 items-center">
-          <u-tooltip :content="{ side: 'top' }">
-            <template #text><span class="font-bold">Eruption</span></template>
+          <u-tooltip text="Eruption" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
             <u-button
               class="text-4xl"
               size="lg"
@@ -459,8 +456,7 @@ function downloadPDF() {
           />
         </div>
         <div class="flex flex-col gap-1 items-center">
-          <u-tooltip :content="{ side: 'top' }">
-            <template #text><span class="font-bold">Marine Heatwave</span></template>
+          <u-tooltip text="Marine Heatwave" :content="{ side: 'top' }" :ui="{ text: 'font-bold' }">
             <u-button
               class="text-4xl"
               size="lg"
