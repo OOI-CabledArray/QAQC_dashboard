@@ -13,6 +13,30 @@ const isWide = $computed(() => (import.meta.client ? breakpoints.greaterOrEqual(
 
 const isShowingTopLinksPopover = $ref(false)
 
+type AuthUser = { id: string; email: string; name: string; role: string }
+let authUser = $ref<AuthUser | null>(null)
+
+async function fetchAuthUser() {
+  try {
+    authUser = await $fetch('/api/me')
+  } catch {
+    authUser = null
+  }
+}
+
+async function logout() {
+  try {
+    await $fetch('/api/logout', { method: 'POST' })
+  } catch {
+    // Ignore errors
+  }
+  authUser = null
+}
+
+if (import.meta.client) {
+  fetchAuthUser()
+}
+
 type Item = (typeof store.mainNav)[number]
 
 const [DefineLinksTemplate, LinksTemplate] = createReusableTemplate({
@@ -176,6 +200,29 @@ const accordionItems = $computed(() => {
     >
       Event Report
     </u-button>
+
+    <!-- Auth -->
+    <div class="bg-white h-px mb-2 mt-auto opacity-20" />
+    <div class="text-center">
+      <template v-if="authUser">
+        <span class="block text-xs text-gray-400 mb-1">{{ authUser.name }}</span>
+        <u-button
+          class="hover:text-white px-0 text-[13px] text-gray-300"
+          variant="link"
+          @click="logout"
+        >
+          Log out
+        </u-button>
+      </template>
+      <u-button
+        v-else
+        class="hover:text-white px-0 text-[13px] text-gray-300"
+        to="/login"
+        variant="link"
+      >
+        Log in
+      </u-button>
+    </div>
   </div>
 </template>
 
