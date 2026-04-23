@@ -1,0 +1,18 @@
+[Unit]
+Description=QAQC Dashboard (Nuxt SSR)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/qaqc-dashboard/dashboard
+Environment=NODE_ENV=production
+Environment=QAQC_DB_PATH=/home/ubuntu/qaqc-dashboard/dashboard/data/qaqc.sqlite
+Environment=QAQC_S3_BUCKET=ooi-rca-qaqc-prod
+Environment=AWS_REGION=us-west-2
+ExecStart=/usr/bin/node .output/server/index.mjs
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
