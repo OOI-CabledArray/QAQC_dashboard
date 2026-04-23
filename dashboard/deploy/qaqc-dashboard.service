@@ -10,6 +10,7 @@ Environment=NODE_ENV=production
 Environment=QAQC_DB_PATH=/home/ubuntu/qaqc-dashboard/dashboard/data/qaqc.sqlite
 Environment=QAQC_S3_BUCKET=ooi-rca-qaqc-prod
 Environment=AWS_REGION=us-west-2
+Environment=ENABLE_SCHEDULED_JOBS=true
 ExecStart=/usr/bin/node .output/server/index.mjs
 Restart=on-failure
 RestartSec=5
