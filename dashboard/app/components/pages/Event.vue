@@ -134,9 +134,66 @@ const PRESET_EARTHQUAKE: PresetEntry[] = [
 
 // prettier-ignore
 const PRESET_VOLCANO: PresetEntry[] = [
-  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'temperature', overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'temperature', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'temperature', overlay: 'none' },
+  // BOTPT
+  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'botsflu_meandepth', overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'botsflu_10minrate', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'botsflu_meandepth', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'botsflu_10minrate', overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'botsflu_meandepth', overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'botsflu_10minrate', overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'botsflu_meandepth', overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'botsflu_10minrate', overlay: 'none' },
+  // OBSBB
+  { instrument: 'RS03CCAL-MJ03F-06-OBSBBA301', parameter: '', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-09-OBSBBA302', parameter: '', overlay: 'none' },
+  { instrument: 'RS03AXBS-MJ03A-05-OBSBBA303', parameter: '', overlay: 'none' },
+  // OBSSP
+  { instrument: 'RS03ASHS-MJ03B-06-OBSSPA301', parameter: '', overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-05-OBSSPA302', parameter: '', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-05-OBSSPA303', parameter: '', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-08-OBSSPA304', parameter: '', overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-05-OBSSPA305', parameter: '', overlay: 'none' },
+  // TRHPH
+  { instrument: 'RS03INT1-MJ03C-10-TRHPHA301', parameter: 'vent_fluid_temperature', overlay: 'none' },
+  { instrument: 'RS03INT1-MJ03C-10-TRHPHA301', parameter: 'resistivity_5',          overlay: 'none' },
+  { instrument: 'RS03INT1-MJ03C-09-TRHPHA302', parameter: 'vent_fluid_temperature', overlay: 'none' },
+  { instrument: 'RS03INT1-MJ03C-09-TRHPHA302', parameter: 'resistivity_5',          overlay: 'none' },
+  // TMPSF
+  { instrument: 'RS03ASHS-MJ03B-07-TMPSFA301', parameter: 'temperature01',          overlay: 'none' },
+  // CTD — Chadwick (no oxygen)
+  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'temperature',       overlay: 'none' },
+  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'salinity',           overlay: 'none' },
+  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'density',            overlay: 'none' },
+  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'temperature',       overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'salinity',           overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'density',            overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'temperature',       overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'salinity',           overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'density',            overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'temperature',       overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'salinity',           overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'density',            overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'temperature',       overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'salinity',           overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'density',            overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'sea_water_pressure', overlay: 'none' },
+  // CTD — non-Chadwick (with oxygen)
+  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'temperature',        overlay: 'none' },
+  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'salinity',            overlay: 'none' },
+  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'density',             overlay: 'none' },
+  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'sea_water_pressure',  overlay: 'none' },
+  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'dissolved_oxygen',    overlay: 'none' },
+  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'temperature',        overlay: 'none' },
+  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'salinity',            overlay: 'none' },
+  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'density',             overlay: 'none' },
+  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'sea_water_pressure',  overlay: 'none' },
+  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'dissolved_oxygen',    overlay: 'none' },
+  // PREST
+  { instrument: 'RS03AXBS-MJ03A-06-PRESTA301', parameter: 'seafloor_pressure',  overlay: 'none' },
 ]
 
 // prettier-ignore
