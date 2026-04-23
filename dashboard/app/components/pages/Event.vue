@@ -145,6 +145,12 @@ const PRESET_VOLCANO: PresetEntry[] = [
   { instrument: 'RS03ECAL-MJ03E-05-OBSSPA303', parameter: '', overlay: 'none' },
   { instrument: 'RS03ECAL-MJ03E-08-OBSSPA304', parameter: '', overlay: 'none' },
   { instrument: 'RS03INT2-MJ03D-05-OBSSPA305', parameter: '', overlay: 'none' },
+  // HYDLF
+  { instrument: 'RS03AXBS-MJ03A-05-HYDLFA301', parameter: '', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-09-HYDLFA304', parameter: '', overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-06-HYDLFA305', parameter: '', overlay: 'none' },
+  // HYDBB
+  { instrument: 'RS03AXBS-LJ03A-09-HYDBBA302', parameter: '', overlay: 'none' },
   // TRHPH
   { instrument: 'RS03INT1-MJ03C-10-TRHPHA301', parameter: 'vent_fluid_temperature', overlay: 'none' },
   { instrument: 'RS03INT1-MJ03C-10-TRHPHA301', parameter: 'resistivity_5',          overlay: 'none' },
@@ -233,6 +239,28 @@ const overlays = [
   { key: 'profile', label: 'Profile' },
 ]
 
+const eventDate = $ref('')
+let imageLoadErrors = $ref<string[]>([])
+
+function isAcoustic(instrument: string): boolean {
+  const id = instrument.split('-').pop() ?? ''
+  return id.startsWith('HYDBB') || id.startsWith('HYDLF') || id.startsWith('ZPLS')
+}
+
+function getAcousticUrl(instrument: string): string | null {
+  if (!eventDate) return null
+  const id = instrument.split('-').pop() ?? ''
+  const dateStr = eventDate.replace(/-/g, '')
+  const year = eventDate.slice(0, 4)
+  const base = id.startsWith('ZPLS') ? store.echogramsURL : store.spectrogramsURL
+  return `${base}/${year}/${id}/${id}_${dateStr}.png`
+}
+
+function hasVisibleImages(panel: Panel): boolean {
+  const urls = getMatchingPlots(panel)
+  return urls.length > 0 && urls.some((u) => !imageLoadErrors.includes(u))
+}
+
 const panels = $ref<Panel[]>([
   {
     instrument: '',
@@ -307,7 +335,12 @@ function removePanel(i: number) {
 }
 
 function getMatchingPlots(panel: Panel): string[] {
-  if (!panel.instrument || !panel.timespan) return []
+  if (!panel.instrument) return []
+  if (isAcoustic(panel.instrument)) {
+    const url = getAcousticUrl(panel.instrument)
+    return url ? [url] : []
+  }
+  if (!panel.timespan) return []
   return store.plotList
     .filter((plot) => {
       if (
@@ -428,7 +461,15 @@ function downloadPDF() {
           />
         </div>
       </div>
-      <u-button icon="i-lucide-file-down" size="lg" @click="downloadPDF">
+      <div class="flex flex-col items-center gap-1 ml-4">
+        <label class="text-xs text-gray-500 uppercase font-semibold">Event Date (UTC)</label>
+        <input
+          v-model="eventDate"
+          type="date"
+          class="border border-gray-300 rounded px-2 py-1 text-sm"
+        />
+      </div>
+      <u-button icon="i-lucide-file-down" size="lg" class="ml-auto" @click="downloadPDF">
         Download as PDF
       </u-button>
     </div>
@@ -485,7 +526,7 @@ function downloadPDF() {
       </div>
 
       <!-- Print-only label -->
-      <div v-if="panel.instrument && panel.timespan" class="mb-2 print-only">
+      <div v-if="panel.instrument" class="mb-2 print-only">
         <p class="font-semibold text-lg">
           {{ instrumentLabel(panel.instrument) }} — {{ timespanLabel(panel.timespan) }}
         </p>
@@ -493,8 +534,8 @@ function downloadPDF() {
       </div>
 
       <!-- Images -->
-      <template v-if="panel.instrument && panel.timespan">
-        <template v-if="getMatchingPlots(panel).length > 0">
+      <template v-if="panel.instrument">
+        <template v-if="hasVisibleImages(panel)">
           <img
             v-for="url in getMatchingPlots(panel)"
             :key="url"
@@ -502,6 +543,7 @@ function downloadPDF() {
             class="h-auto max-w-full mb-4 rounded"
             loading="lazy"
             :src="url"
+            @error="imageLoadErrors.push(url)"
           />
         </template>
         <div v-else class="bg-gray-100 no-print p-6 rounded text-center text-gray-500">
