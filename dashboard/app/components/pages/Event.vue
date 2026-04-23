@@ -393,9 +393,14 @@ function downloadPDF() {
 <template>
   <div class="image-report-root p-6">
     <!-- Page header (hidden when printing) -->
-    <div class="flex items-center justify-between mb-6 no-print">
-      <div class="flex gap-2 items-end">
-        <h1 class="font-bold mb-2 mr-3 text-2xl">Event Report</h1>
+    <div class="mb-4 no-print">
+      <div class="flex items-center justify-between mb-3">
+        <h1 class="font-bold text-2xl">Event Report</h1>
+        <u-button class="ml-auto" icon="i-lucide-file-down" size="lg" @click="downloadPDF">
+          Download as PDF
+        </u-button>
+      </div>
+      <div class="flex gap-3 items-end">
         <div class="flex flex-col gap-1 items-center">
           <u-tooltip text="Tsunami">
             <u-button
@@ -468,20 +473,17 @@ function downloadPDF() {
             value-key="key"
           />
         </div>
+        <div class="flex flex-col gap-1 items-center">
+          <span class="text-gray-400 text-xs">UTC Date</span>
+          <input
+            v-model="eventDate"
+            class="border border-gray-300 px-2 py-1 rounded text-xs w-24"
+            placeholder="YYYY-MM-DD"
+            type="text"
+            maxlength="10"
+          />
+        </div>
       </div>
-      <div class="flex flex-col gap-1 items-center ml-2">
-        <span class="text-gray-400 text-xs">UTC Date</span>
-        <input
-          v-model="eventDate"
-          class="border border-gray-300 px-2 py-1 rounded text-xs w-24"
-          placeholder="YYYY-MM-DD"
-          type="text"
-          maxlength="10"
-        />
-      </div>
-      <u-button class="ml-auto" icon="i-lucide-file-down" size="lg" @click="downloadPDF">
-        Download as PDF
-      </u-button>
     </div>
 
     <div class="bg-gray-200 h-px mb-6 no-print" />
