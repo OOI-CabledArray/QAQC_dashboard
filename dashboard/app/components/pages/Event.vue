@@ -240,7 +240,7 @@ const overlays = [
 ]
 
 const eventDate = $ref('')
-let imageLoadErrors = $ref<string[]>([])
+const imageLoadErrors = $ref<string[]>([])
 
 function isAcoustic(instrument: string): boolean {
   const id = instrument.split('-').pop() ?? ''
@@ -461,15 +461,15 @@ function downloadPDF() {
           />
         </div>
       </div>
-      <div class="flex flex-col items-center gap-1 ml-4">
-        <label class="text-xs text-gray-500 uppercase font-semibold">Event Date (UTC)</label>
+      <div class="flex flex-col gap-1 items-center ml-4">
+        <label class="font-semibold text-gray-500 text-xs uppercase">Event Date (UTC)</label>
         <input
           v-model="eventDate"
+          class="border border-gray-300 px-2 py-1 rounded text-sm"
           type="date"
-          class="border border-gray-300 rounded px-2 py-1 text-sm"
         />
       </div>
-      <u-button icon="i-lucide-file-down" size="lg" class="ml-auto" @click="downloadPDF">
+      <u-button class="ml-auto" icon="i-lucide-file-down" size="lg" @click="downloadPDF">
         Download as PDF
       </u-button>
     </div>
