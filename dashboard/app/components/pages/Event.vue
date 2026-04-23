@@ -378,6 +378,8 @@ function downloadPDF() {
       </u-button>
     </div>
 
+    <div class="no-print h-px bg-gray-200 mb-6" />
+
     <div v-if="isLoading" class="no-print text-gray-500 py-8 text-center">Loading plot list…</div>
 
     <!-- Panels -->
