@@ -76,100 +76,94 @@ type PresetEntry = Partial<Omit<Panel, 'description' | 'descriptionOpen'>> & { i
 
 // prettier-ignore
 const PRESET_TSUNAMI: PresetEntry[] = [
-  { instrument: 'RS03AXBS-MJ03A-06-PRESTA301', parameter: 'seafloor_pressure',   overlay: 'none', timespan: 'week' },
-  { instrument: 'RS01SLBS-MJ01A-06-PRESTA101', parameter: 'seafloor_pressure',   overlay: 'none', timespan: 'week' },
-  { instrument: 'RS01SUM1-LJ01B-09-PRESTB102', parameter: 'seafloor_pressure',   overlay: 'none', timespan: 'week' },
-  { instrument: 'CE02SHBP-LJ01D-06-CTDBPN106', parameter: 'sea_water_pressure',  overlay: 'none', timespan: 'week' },
-  { instrument: 'CE04OSBP-LJ01C-06-CTDBPO108', parameter: 'sea_water_pressure',  overlay: 'none', timespan: 'week' },
-  { instrument: 'RS01SLBS-LJ01A-12-CTDPFB101', parameter: 'sea_water_pressure',  overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'sea_water_pressure',  overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'sea_water_pressure',  overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'sea_water_pressure',  overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'sea_water_pressure',  overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'sea_water_pressure',  overlay: 'none', timespan: 'week' },
-  { instrument: 'RS01SBPS-PC01A-4A-CTDPFA103', parameter: 'sea_water_pressure',  overlay: 'none', timespan: 'week' },
-  { instrument: 'CE04OSPS-PC01B-4A-CTDPFA109', parameter: 'sea_water_pressure',  overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'sea_water_pressure',  overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_5m',  overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_5m',  overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_5m',  overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_5m',  overlay: 'none', timespan: 'week' },
+  { instrument: 'RS03AXBS-MJ03A-06-PRESTA301', parameter: 'seafloor_pressure',  overlay: 'none' },
+  { instrument: 'RS01SLBS-MJ01A-06-PRESTA101', parameter: 'seafloor_pressure',  overlay: 'none' },
+  { instrument: 'RS01SUM1-LJ01B-09-PRESTB102', parameter: 'seafloor_pressure',  overlay: 'none' },
+  { instrument: 'CE02SHBP-LJ01D-06-CTDBPN106', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'CE04OSBP-LJ01C-06-CTDBPO108', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'RS01SLBS-LJ01A-12-CTDPFB101', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'RS01SBPS-PC01A-4A-CTDPFA103', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'CE04OSPS-PC01B-4A-CTDPFA109', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'sea_water_pressure', overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_5m', overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_5m', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_5m', overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_5m', overlay: 'none' },
 ]
 
 // prettier-ignore
 const PRESET_EARTHQUAKE: PresetEntry[] = [
-  // BOTPT — all params, 1 week
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_10m',          overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_5m',           overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'mean_seafloor_depth',          overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_predicted_tide', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_10m',          overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_5m',           overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'mean_seafloor_depth',          overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_predicted_tide', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_10m',          overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_5m',           overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'mean_seafloor_depth',          overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_predicted_tide', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_10m',          overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_5m',           overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'mean_seafloor_depth',          overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_predicted_tide', overlay: 'none', timespan: 'week' },
-  // OBSBB — 1 week + 1 day
-  { instrument: 'RS01SLBS-MJ01A-05-OBSBBA102', parameter: '', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS01SLBS-MJ01A-05-OBSBBA102', parameter: '', overlay: 'none', timespan: 'day' },
-  { instrument: 'RS01SUM1-LJ01B-05-OBSBBA101', parameter: '', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS01SUM1-LJ01B-05-OBSBBA101', parameter: '', overlay: 'none', timespan: 'day' },
-  { instrument: 'RS03AXBS-MJ03A-05-OBSBBA303', parameter: '', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03AXBS-MJ03A-05-OBSBBA303', parameter: '', overlay: 'none', timespan: 'day' },
-  { instrument: 'RS03CCAL-MJ03F-06-OBSBBA301', parameter: '', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03CCAL-MJ03F-06-OBSBBA301', parameter: '', overlay: 'none', timespan: 'day' },
-  { instrument: 'RS03ECAL-MJ03E-09-OBSBBA302', parameter: '', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ECAL-MJ03E-09-OBSBBA302', parameter: '', overlay: 'none', timespan: 'day' },
-  // OBSSP — 1 week + 1 day
-  { instrument: 'RS01SUM1-LJ01B-06-OBSSPA103', parameter: '', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS01SUM1-LJ01B-06-OBSSPA103', parameter: '', overlay: 'none', timespan: 'day' },
-  { instrument: 'RS01SUM1-LJ01B-07-OBSSPA102', parameter: '', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS01SUM1-LJ01B-07-OBSSPA102', parameter: '', overlay: 'none', timespan: 'day' },
-  { instrument: 'RS01SUM1-LJ01B-08-OBSSPA101', parameter: '', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS01SUM1-LJ01B-08-OBSSPA101', parameter: '', overlay: 'none', timespan: 'day' },
-  { instrument: 'RS03ASHS-MJ03B-05-OBSSPA302', parameter: '', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ASHS-MJ03B-05-OBSSPA302', parameter: '', overlay: 'none', timespan: 'day' },
-  { instrument: 'RS03ASHS-MJ03B-06-OBSSPA301', parameter: '', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ASHS-MJ03B-06-OBSSPA301', parameter: '', overlay: 'none', timespan: 'day' },
-  { instrument: 'RS03ECAL-MJ03E-05-OBSSPA303', parameter: '', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ECAL-MJ03E-05-OBSSPA303', parameter: '', overlay: 'none', timespan: 'day' },
-  { instrument: 'RS03ECAL-MJ03E-08-OBSSPA304', parameter: '', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ECAL-MJ03E-08-OBSSPA304', parameter: '', overlay: 'none', timespan: 'day' },
-  { instrument: 'RS03INT2-MJ03D-05-OBSSPA305', parameter: '', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03INT2-MJ03D-05-OBSSPA305', parameter: '', overlay: 'none', timespan: 'day' },
+  // BOTPT — all params
+  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_10m',           overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_5m',            overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'mean_seafloor_depth',           overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_predicted_tide', overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_10m',           overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_5m',            overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'mean_seafloor_depth',           overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_predicted_tide', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_10m',           overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_5m',            overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'mean_seafloor_depth',           overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_predicted_tide', overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_10m',           overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_5m',            overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'mean_seafloor_depth',           overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_predicted_tide', overlay: 'none' },
+  // OBSBB
+  { instrument: 'RS01SLBS-MJ01A-05-OBSBBA102', parameter: '', overlay: 'none' },
+  { instrument: 'RS01SUM1-LJ01B-05-OBSBBA101', parameter: '', overlay: 'none' },
+  { instrument: 'RS03AXBS-MJ03A-05-OBSBBA303', parameter: '', overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-06-OBSBBA301', parameter: '', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-09-OBSBBA302', parameter: '', overlay: 'none' },
+  // OBSSP
+  { instrument: 'RS01SUM1-LJ01B-06-OBSSPA103', parameter: '', overlay: 'none' },
+  { instrument: 'RS01SUM1-LJ01B-07-OBSSPA102', parameter: '', overlay: 'none' },
+  { instrument: 'RS01SUM1-LJ01B-08-OBSSPA101', parameter: '', overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-05-OBSSPA302', parameter: '', overlay: 'none' },
+  { instrument: 'RS03ASHS-MJ03B-06-OBSSPA301', parameter: '', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-05-OBSSPA303', parameter: '', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-08-OBSSPA304', parameter: '', overlay: 'none' },
+  { instrument: 'RS03INT2-MJ03D-05-OBSSPA305', parameter: '', overlay: 'none' },
 ]
 
 // prettier-ignore
 const PRESET_VOLCANO: PresetEntry[] = [
-  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'temperature', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'temperature', overlay: 'none', timespan: 'week' },
-  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'temperature', overlay: 'none', timespan: 'week' },
+  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'temperature', overlay: 'none' },
+  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'temperature', overlay: 'none' },
+  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'temperature', overlay: 'none' },
 ]
 
 // prettier-ignore
 const PRESET_MARINE_HEATWAVE: PresetEntry[] = [
-  { instrument: 'CE02SHBP-LJ01D-06-CTDBPN106', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
-  { instrument: 'CE04OSBP-LJ01C-06-CTDBPO108', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
-  { instrument: 'RS01SLBS-LJ01A-12-CTDPFB101', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
-  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
-  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
-  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
-  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
-  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
-  { instrument: 'RS01SBPS-PC01A-4A-CTDPFA103', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
-  { instrument: 'CE04OSPS-PC01B-4A-CTDPFA109', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
-  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
-  { instrument: 'RS01SBPS-SF01A-2A-CTDPFA102', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
-  { instrument: 'CE04OSPS-SF01B-2A-CTDPFA107', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
-  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'temperature', overlay: 'clim', timespan: 'month' },
+  { instrument: 'CE02SHBP-LJ01D-06-CTDBPN106', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'CE04OSBP-LJ01C-06-CTDBPO108', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'RS01SLBS-LJ01A-12-CTDPFB101', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'RS01SBPS-PC01A-4A-CTDPFA103', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'CE04OSPS-PC01B-4A-CTDPFA109', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'RS01SBPS-SF01A-2A-CTDPFA102', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'CE04OSPS-SF01B-2A-CTDPFA107', parameter: 'temperature', overlay: 'clim' },
+  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'temperature', overlay: 'clim' },
 ]
 // ─────────────────────────────────────────────────────────────────────────────
+
+const presetTimespans = $ref({
+  tsunami: ['week'],
+  earthquake: ['week'],
+  volcano: ['week'],
+  marineHeatwave: ['month'],
+})
 
 const timeSpans = [
   { key: 'day', label: '1 Day' },
@@ -286,18 +280,20 @@ function timespanLabel(key: string): string {
   return timeSpans.find((t) => t.key === key)?.label ?? key
 }
 
-function loadPreset(preset: PresetEntry[]) {
+function loadPreset(preset: PresetEntry[], timespans: string[]) {
   panels.splice(
     0,
     panels.length,
-    ...preset.map((entry) => ({
-      instrument: entry.instrument,
-      timespan: entry.timespan ?? 'week',
-      overlay: entry.overlay ?? 'none',
-      parameter: entry.parameter ?? '',
-      description: '',
-      descriptionOpen: false,
-    })),
+    ...timespans.flatMap((timespan) =>
+      preset.map((entry) => ({
+        instrument: entry.instrument,
+        timespan,
+        overlay: entry.overlay ?? 'none',
+        parameter: entry.parameter ?? '',
+        description: '',
+        descriptionOpen: false,
+      })),
+    ),
   )
 }
 
@@ -312,34 +308,70 @@ function downloadPDF() {
     <div class="no-print flex items-center justify-between mb-6">
       <div class="flex items-center gap-2">
         <h1 class="font-bold text-2xl mr-3">Event Report</h1>
-        <u-tooltip text="Tsunami">
-          <u-button variant="ghost" size="lg" class="text-4xl" @click="loadPreset(PRESET_TSUNAMI)"
+        <div class="flex flex-col items-center gap-1">
+          <u-button
+            variant="ghost"
+            size="lg"
+            class="text-4xl"
+            @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami)"
             >🌊</u-button
           >
-        </u-tooltip>
-        <u-tooltip text="Earthquake">
+          <u-select-menu
+            v-model="presetTimespans.tsunami"
+            :items="timeSpans"
+            value-key="key"
+            multiple
+            class="w-24 text-xs"
+          />
+        </div>
+        <div class="flex flex-col items-center gap-1">
           <u-button
             variant="ghost"
             size="lg"
             class="text-4xl"
-            @click="loadPreset(PRESET_EARTHQUAKE)"
+            @click="loadPreset(PRESET_EARTHQUAKE, presetTimespans.earthquake)"
             >🌍</u-button
           >
-        </u-tooltip>
-        <u-tooltip text="Volcano">
-          <u-button variant="ghost" size="lg" class="text-4xl" @click="loadPreset(PRESET_VOLCANO)"
-            >🌋</u-button
-          >
-        </u-tooltip>
-        <u-tooltip text="Marine Heatwave">
+          <u-select-menu
+            v-model="presetTimespans.earthquake"
+            :items="timeSpans"
+            value-key="key"
+            multiple
+            class="w-24 text-xs"
+          />
+        </div>
+        <div class="flex flex-col items-center gap-1">
           <u-button
             variant="ghost"
             size="lg"
             class="text-4xl"
-            @click="loadPreset(PRESET_MARINE_HEATWAVE)"
+            @click="loadPreset(PRESET_VOLCANO, presetTimespans.volcano)"
+            >🌋</u-button
+          >
+          <u-select-menu
+            v-model="presetTimespans.volcano"
+            :items="timeSpans"
+            value-key="key"
+            multiple
+            class="w-24 text-xs"
+          />
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <u-button
+            variant="ghost"
+            size="lg"
+            class="text-4xl"
+            @click="loadPreset(PRESET_MARINE_HEATWAVE, presetTimespans.marineHeatwave)"
             >🌡️</u-button
           >
-        </u-tooltip>
+          <u-select-menu
+            v-model="presetTimespans.marineHeatwave"
+            :items="timeSpans"
+            value-key="key"
+            multiple
+            class="w-24 text-xs"
+          />
+        </div>
       </div>
       <u-button icon="i-lucide-file-down" size="lg" @click="downloadPDF">
         Download as PDF
