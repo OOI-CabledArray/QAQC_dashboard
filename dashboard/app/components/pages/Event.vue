@@ -152,9 +152,9 @@ const PRESET_VOLCANO: PresetEntry[] = [
   // HYDBB
   { instrument: 'RS03AXBS-LJ03A-09-HYDBBA302', parameter: '', overlay: 'none' },
   // TRHPH
-  { instrument: 'RS03INT1-MJ03C-10-TRHPHA301', parameter: 'vent_fluid_temperature', overlay: 'none' },
+  { instrument: 'RS03INT1-MJ03C-10-TRHPHA301', parameter: 'vent_temperature', overlay: 'none' },
   { instrument: 'RS03INT1-MJ03C-10-TRHPHA301', parameter: 'resistivity_5',          overlay: 'none' },
-  { instrument: 'RS03INT1-MJ03C-09-TRHPHA302', parameter: 'vent_fluid_temperature', overlay: 'none' },
+  { instrument: 'RS03INT1-MJ03C-09-TRHPHA302', parameter: 'vent_temperature', overlay: 'none' },
   { instrument: 'RS03INT1-MJ03C-09-TRHPHA302', parameter: 'resistivity_5',          overlay: 'none' },
   // TMPSF
   { instrument: 'RS03ASHS-MJ03B-07-TMPSFA301', parameter: 'temperature01',          overlay: 'none' },
@@ -397,13 +397,15 @@ function downloadPDF() {
       <div class="flex gap-2 items-center">
         <h1 class="font-bold mr-3 text-2xl">Event Report</h1>
         <div class="flex flex-col gap-1 items-center">
-          <u-button
-            class="text-4xl"
-            size="lg"
-            variant="ghost"
-            @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami)"
-            >🌊</u-button
-          >
+          <u-tooltip text="Tsunami">
+            <u-button
+              class="text-4xl"
+              size="lg"
+              variant="ghost"
+              @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami)"
+              >🌊</u-button
+            >
+          </u-tooltip>
           <u-select-menu
             v-model="presetTimespans.tsunami"
             class="text-xs w-24"
@@ -413,13 +415,15 @@ function downloadPDF() {
           />
         </div>
         <div class="flex flex-col gap-1 items-center">
-          <u-button
-            class="text-4xl"
-            size="lg"
-            variant="ghost"
-            @click="loadPreset(PRESET_EARTHQUAKE, presetTimespans.earthquake)"
-            >🌍</u-button
-          >
+          <u-tooltip text="Earthquake">
+            <u-button
+              class="text-4xl"
+              size="lg"
+              variant="ghost"
+              @click="loadPreset(PRESET_EARTHQUAKE, presetTimespans.earthquake)"
+              >🌍</u-button
+            >
+          </u-tooltip>
           <u-select-menu
             v-model="presetTimespans.earthquake"
             class="text-xs w-24"
@@ -429,13 +433,15 @@ function downloadPDF() {
           />
         </div>
         <div class="flex flex-col gap-1 items-center">
-          <u-button
-            class="text-4xl"
-            size="lg"
-            variant="ghost"
-            @click="loadPreset(PRESET_VOLCANO, presetTimespans.volcano)"
-            >🌋</u-button
-          >
+          <u-tooltip text="Eruption">
+            <u-button
+              class="text-4xl"
+              size="lg"
+              variant="ghost"
+              @click="loadPreset(PRESET_VOLCANO, presetTimespans.volcano)"
+              >🌋</u-button
+            >
+          </u-tooltip>
           <u-select-menu
             v-model="presetTimespans.volcano"
             class="text-xs w-24"
@@ -445,13 +451,15 @@ function downloadPDF() {
           />
         </div>
         <div class="flex flex-col gap-1 items-center">
-          <u-button
-            class="text-4xl"
-            size="lg"
-            variant="ghost"
-            @click="loadPreset(PRESET_MARINE_HEATWAVE, presetTimespans.marineHeatwave)"
-            >🌡️</u-button
-          >
+          <u-tooltip text="Marine Heatwave">
+            <u-button
+              class="text-4xl"
+              size="lg"
+              variant="ghost"
+              @click="loadPreset(PRESET_MARINE_HEATWAVE, presetTimespans.marineHeatwave)"
+              >🌡️</u-button
+            >
+          </u-tooltip>
           <u-select-menu
             v-model="presetTimespans.marineHeatwave"
             class="text-xs w-24"
@@ -461,12 +469,14 @@ function downloadPDF() {
           />
         </div>
       </div>
-      <div class="flex flex-col gap-1 items-center ml-4">
-        <label class="font-semibold text-gray-500 text-xs uppercase">Event Date (UTC)</label>
+      <div class="flex flex-col gap-1 items-center ml-2">
+        <span class="text-gray-400 text-xs">UTC Date</span>
         <input
           v-model="eventDate"
-          class="border border-gray-300 px-2 py-1 rounded text-sm"
-          type="date"
+          class="border border-gray-300 px-2 py-1 rounded text-xs w-24"
+          placeholder="YYYY-MM-DD"
+          type="text"
+          maxlength="10"
         />
       </div>
       <u-button class="ml-auto" icon="i-lucide-file-down" size="lg" @click="downloadPDF">
