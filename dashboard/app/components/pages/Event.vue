@@ -178,12 +178,12 @@ const PRESET_VOLCANO: PresetEntry[] = [
   { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'salinity',            overlay: 'none' },
   { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'density',             overlay: 'none' },
   { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'sea_water_pressure',  overlay: 'none' },
-  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'dissolved_oxygen',    overlay: 'none' },
+  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'oxygen',    overlay: 'none' },
   { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'temperature',        overlay: 'none' },
   { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'salinity',            overlay: 'none' },
   { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'density',             overlay: 'none' },
   { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'sea_water_pressure',  overlay: 'none' },
-  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'dissolved_oxygen',    overlay: 'none' },
+  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'oxygen',    overlay: 'none' },
   // PREST
   { instrument: 'RS03AXBS-MJ03A-06-PRESTA301', parameter: 'seafloor_pressure',  overlay: 'none' },
 ]
@@ -319,6 +319,7 @@ function getMatchingPlots(panel: Panel): string[] {
         return false
       if (plot.includes('meters')) return false
       if (plot.includes('profile') && panel.overlay !== 'profile') return false
+      if (panel.overlay === 'profile' && !plot.includes('none')) return false
       if (panel.parameter && !plot.includes(panel.parameter)) return false
       if (panel.overlay && !plot.includes(panel.overlay)) return false
       return true
