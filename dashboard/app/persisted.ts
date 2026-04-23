@@ -84,15 +84,17 @@ export function usePersisted<TData extends BaseData<TSchema>, TSchema extends Ba
     }
   }
 
-  read()
-  write()
+  if (import.meta.client) {
+    read()
+    write()
 
-  watch(
-    data,
-    debounce(() => {
-      write()
-    }, 50),
-  )
+    watch(
+      data,
+      debounce(() => {
+        write()
+      }, 50),
+    )
+  }
 
   return data
 }
