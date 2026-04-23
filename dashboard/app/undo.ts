@@ -1,21 +1,23 @@
 import { useEventListener } from '@vueuse/core'
 import { cloneDeep, isEqual } from 'lodash-es'
 
+const maxHistoryLength = 250
+
 export type UndoRedoOptions<T> = {
-  initial: T
+  current: () => T
   onUndo?: (state: T) => void
   onRedo?: (state: T) => void
   handleKeypresses?: MaybeRefOrGetter<boolean>
 }
 
 export function useUndo<T>({
-  initial,
+  current,
   onUndo = () => {},
   onRedo = () => {},
   ...options
 }: UndoRedoOptions<T>) {
   const handleKeypress = $computed(() => toValue(options.handleKeypresses) ?? true)
-  const history = shallowReactive<T[]>([cloneDeep(initial)])
+  const history = shallowReactive<T[]>([cloneDeep(current())])
 
   const canUndo = $computed(() => history.length > 0 && index > 0)
   const canRedo = $computed(() => index < history.length - 1)
@@ -40,11 +42,16 @@ export function useUndo<T>({
     }
   }
 
-  function save(state: T) {
+  function save(state?: T) {
+    const value = state !== undefined ? state : current()
+
     history.splice(index + 1)
     // Only save the new state if it's different from the previous saved state.
-    if (history.length === 0 || !isEqual(state, history[history.length - 1])) {
-      history.push(cloneDeep(state))
+    if (history.length === 0 || !isEqual(value, history[history.length - 1])) {
+      history.push(cloneDeep(value))
+      if (history.length > maxHistoryLength) {
+        history.splice(0, history.length - maxHistoryLength)
+      }
     }
 
     index = history.length - 1

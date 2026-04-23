@@ -47,7 +47,7 @@ function parseCSVRow(row: string): string[] {
   return result
 }
 
-/** Strip a single layer of surrounding double-quotes if present (artifact of triple-quoting in CSV). */
+// Strip a single layer of surrounding double-quotes if present (artifact of triple-quoting in CSV).
 function stripQuotes(s: string): string {
   return s.startsWith('"') && s.endsWith('"') ? s.slice(1, -1) : s
 }
@@ -308,71 +308,67 @@ function downloadPDF() {
 <template>
   <div class="image-report-root p-6">
     <!-- Page header (hidden when printing) -->
-    <div class="no-print flex items-center justify-between mb-6">
-      <div class="flex items-center gap-2">
-        <h1 class="font-bold text-2xl mr-3">Event Report</h1>
-        <div class="flex flex-col items-center gap-1">
-          <u-button
-            variant="ghost"
-            size="lg"
-            class="text-4xl"
-            @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami)"
+    <div class="flex items-center justify-between mb-6 no-print">
+      <div class="flex gap-2 items-center">
+        <h1 class="font-bold mr-3 text-2xl">Event Report</h1>
+        <div class="flex flex-col gap-1 items-center">
+          <u-button class="text-4xl" @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami)"
             >🌊</u-button
           >
           <u-select-menu
             v-model="presetTimespans.tsunami"
+            class="text-xs w-24"
             :items="timeSpans"
-            value-key="key"
             multiple
-            class="w-24 text-xs"
+            value-key="key"
           />
         </div>
-        <div class="flex flex-col items-center gap-1">
+        <div class="flex flex-col gap-1 items-center">
           <u-button
-            variant="ghost"
-            size="lg"
             class="text-4xl"
+            size="lg"
+            variant="ghost"
             @click="loadPreset(PRESET_EARTHQUAKE, presetTimespans.earthquake)"
             >🌍</u-button
           >
           <u-select-menu
             v-model="presetTimespans.earthquake"
+            class="text-xs w-24"
             :items="timeSpans"
-            value-key="key"
             multiple
-            class="w-24 text-xs"
+            value-key="key"
           />
         </div>
-        <div class="flex flex-col items-center gap-1">
+        <div class="flex flex-col gap-1 items-center">
           <u-button
-            variant="ghost"
-            size="lg"
             class="text-4xl"
+            size="lg"
+            variant="ghost"
             @click="loadPreset(PRESET_VOLCANO, presetTimespans.volcano)"
             >🌋</u-button
           >
           <u-select-menu
             v-model="presetTimespans.volcano"
+            class="text-xs w-24"
             :items="timeSpans"
-            value-key="key"
             multiple
-            class="w-24 text-xs"
+            value-key="key"
           />
         </div>
-        <div class="flex flex-col items-center gap-1">
+        <div class="flex flex-col gap-1 items-center">
           <u-button
-            variant="ghost"
-            size="lg"
             class="text-4xl"
+            size="lg"
+            variant="ghost"
             @click="loadPreset(PRESET_MARINE_HEATWAVE, presetTimespans.marineHeatwave)"
             >🌡️</u-button
           >
           <u-select-menu
             v-model="presetTimespans.marineHeatwave"
+            class="text-xs w-24"
             :items="timeSpans"
-            value-key="key"
             multiple
-            class="w-24 text-xs"
+            value-key="key"
           />
         </div>
       </div>
@@ -381,47 +377,47 @@ function downloadPDF() {
       </u-button>
     </div>
 
-    <div class="no-print h-px bg-gray-200 mb-6" />
+    <div class="bg-gray-200 h-px mb-6 no-print" />
 
-    <div v-if="isLoading" class="no-print text-gray-500 py-8 text-center">Loading plot list…</div>
+    <div v-if="isLoading" class="no-print py-8 text-center text-gray-500">Loading plot list…</div>
 
     <!-- Panels -->
-    <div v-for="(panel, i) in panels" :key="i" class="panel mb-10">
+    <div v-for="(panel, i) in panels" :key="i" class="mb-10 panel">
       <!-- Controls row (hidden when printing) -->
-      <div class="no-print flex flex-wrap items-center gap-3 mb-4">
+      <div class="flex flex-wrap gap-3 items-center mb-4 no-print">
         <u-select-menu
           v-model="panel.instrument"
-          :items="instruments.map((inst) => ({ label: inst.label, value: inst.key }))"
-          value-key="value"
           class="min-w-72"
+          :items="instruments.map((inst) => ({ label: inst.label, value: inst.key }))"
           placeholder="Select instrument…"
+          value-key="value"
           @update:model-value="panel.parameter = ''"
         />
         <u-select-menu
           v-model="panel.timespan"
-          :items="timeSpans.map((t) => ({ label: t.label, value: t.key }))"
-          value-key="value"
           class="min-w-36"
+          :items="timeSpans.map((t) => ({ label: t.label, value: t.key }))"
           placeholder="Time span…"
+          value-key="value"
         />
         <u-select-menu
           v-model="panel.parameter"
+          class="min-w-48"
           :items="
             getParametersForInstrument(panel.instrument).map((p) => ({
               label: p.label,
               value: p.key,
             }))
           "
-          value-key="value"
-          class="min-w-48"
           placeholder="Parameter…"
+          value-key="value"
         />
         <u-select-menu
           v-model="panel.overlay"
-          :items="overlays.map((o) => ({ label: o.label, value: o.key }))"
-          value-key="value"
           class="min-w-36"
+          :items="overlays.map((o) => ({ label: o.label, value: o.key }))"
           placeholder="Overlay…"
+          value-key="value"
         />
         <u-button
           v-if="panels.length > 1"
@@ -433,7 +429,7 @@ function downloadPDF() {
       </div>
 
       <!-- Print-only label -->
-      <div v-if="panel.instrument && panel.timespan" class="print-only mb-2">
+      <div v-if="panel.instrument && panel.timespan" class="mb-2 print-only">
         <p class="font-semibold text-lg">
           {{ instrumentLabel(panel.instrument) }} — {{ timespanLabel(panel.timespan) }}
         </p>
@@ -446,19 +442,22 @@ function downloadPDF() {
           <img
             v-for="url in getMatchingPlots(panel)"
             :key="url"
-            :src="url"
             alt="Plot"
             class="h-auto max-w-full mb-4 rounded"
             loading="lazy"
+            :src="url"
           />
         </template>
-        <div v-else class="no-print bg-gray-100 p-6 rounded text-gray-500 text-center">
+        <div v-else class="bg-gray-100 no-print p-6 rounded text-center text-gray-500">
           No images found for this selection.
         </div>
       </template>
       <div
         v-else
-        class="no-print bg-gray-50 border border-dashed border-gray-300 p-6 rounded text-center text-gray-400"
+        :class="[
+          'bg-gray-50 border border-dashed border-gray-300 no-print p-6 rounded text-center',
+          'text-gray-400',
+        ]"
       >
         Select instrument and parameters to load images.
       </div>
@@ -466,7 +465,7 @@ function downloadPDF() {
       <!-- Description -->
       <div class="mt-2">
         <button
-          class="no-print flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+          class="flex gap-1 hover:text-gray-700 items-center no-print text-gray-500 text-sm"
           @click="panel.descriptionOpen = !panel.descriptionOpen"
         >
           <u-icon
@@ -477,18 +476,18 @@ function downloadPDF() {
         <textarea
           v-if="panel.descriptionOpen"
           v-model="panel.description"
-          class="no-print mt-2 w-full rounded border border-gray-300 p-2 text-sm"
-          rows="3"
+          class="border border-gray-300 mt-2 no-print p-2 rounded text-sm w-full"
           placeholder="Add notes or description for this panel…"
+          rows="3"
         />
-        <p v-if="panel.description" class="print-only text-sm text-gray-700 mt-1">
+        <p v-if="panel.description" class="mt-1 print-only text-gray-700 text-sm">
           {{ panel.description }}
         </p>
       </div>
     </div>
 
     <!-- Add panel button (hidden when printing) -->
-    <div class="no-print mt-2">
+    <div class="mt-2 no-print">
       <u-button icon="i-lucide-plus" variant="outline" @click="addPanel">
         Add Image Selection
       </u-button>

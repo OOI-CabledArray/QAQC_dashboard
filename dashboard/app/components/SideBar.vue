@@ -168,7 +168,7 @@ const accordionItems = $computed(() => {
     >
       Discrete Data
     </u-button>
-    <div class="bg-white h-px mt-2 mb-1 opacity-20" />
+    <div class="bg-white h-px mb-1 mt-2 opacity-20" />
     <u-button
       class="hover:text-white mt-1 px-0 sm:text-[16px] text-[13px] text-gray-300"
       to="/event-report"

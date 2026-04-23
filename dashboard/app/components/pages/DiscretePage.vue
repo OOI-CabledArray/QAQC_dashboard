@@ -1,16 +1,18 @@
 <script lang="ts" setup>
 import { useEventListener } from '@vueuse/core'
+import Color from 'color'
 import type { SeriesOption } from 'echarts'
 import {
   cloneDeep,
   compact,
+  groupBy,
   orderBy,
   truncate,
   uniq,
   uniqBy,
   upperFirst,
-  min,
-  max,
+  min as minOf,
+  max as maxOf,
   range,
   omit,
 } from 'lodash-es'
@@ -18,7 +20,7 @@ import Zod from 'zod'
 
 import type { Option } from '~/chart'
 import type Chart from '~/components/Chart.vue'
-import type { Sample, SampleSchemaFieldDefinition, SampleValue } from '~/discrete'
+import type { Sample, SampleData, SampleSchemaFieldDefinition, SampleValue } from '~/discrete'
 import { useDiscrete } from '~/discrete'
 import { usePersisted } from '~/persisted'
 import { isMac } from '~/platform'
@@ -28,15 +30,11 @@ useHead({
   titleTemplate: 'Discrete Data | %s',
 })
 
-const minOf = min
-const maxOf = max
-
 // Reference to the `Chart` component instance, used to dispatch actions and listen for events.
 const chartInstance = $ref<InstanceType<typeof Chart> | null>(null)
 
 // Load discrete data.
 const discrete = useDiscrete()
-await discrete.load()
 
 // Pre-defined colors for new series when first inserted.
 const chartColors = [
@@ -68,7 +66,11 @@ function getRandomColor() {
   )
 }
 
-// Schema for data series objects in form.
+// Generate a random UUID for a series.
+function createSeriesId() {
+  return crypto.randomUUID()
+}
+
 const SeriesSchema = Zod.object({
   // Note that we need to convert these possibly `undefined` values to `null` before passing them to
   // the `model-value` of a NuxtUI select or select menu component because they seem to treat
@@ -81,7 +83,12 @@ const SeriesSchema = Zod.object({
   year: Zod.number().optional(),
   display: Zod.enum(['scatter', 'line']).default('scatter'),
   enabled: Zod.boolean().default(true),
+  showCasts: Zod.boolean().default(false).catch(false),
   color: Zod.string().default(chartColors[0]),
+  // Internal ID for tracking series identity. Last so it appears at the end of the URL.
+  id: Zod.string()
+    .default(() => createSeriesId())
+    .catch(() => createSeriesId()),
 })
 
 function createDefaultZoom(): ZoomState {
@@ -112,7 +119,7 @@ const state = usePersisted({
       .default(createDefaultZoom)
       .catch(createDefaultZoom),
   }),
-  methods: [{ type: 'url' }],
+  methods: [{ type: 'url', omit: ['id'] }],
 })
 
 onMounted(() => {
@@ -128,8 +135,11 @@ const ctrlKey = isMac ? 'Command' : 'Ctrl'
 // Omit `zoom` and any other other unintuitive visual-related changes from undo/redo history.
 const historyOmit: ReadonlyArray<keyof typeof state> = ['zoom', 'seriesCollapsed']
 // Implement undo/redo for modifying the page's state.
+// Internal IDs for tracking series identity. Not persisted to the URL. Stored as a non-enumerable
+// property directly on each series object so it survives reactive proxy wrapping and spread copies
+// won't include it.
 const history = useUndo({
-  initial: state,
+  current: () => state,
   onUndo(values) {
     Object.assign(state, omit(values, historyOmit))
   },
@@ -145,8 +155,9 @@ type Series = Required<PartialSeries>
 // Fields in series objects used for filtering samples.
 type SampleFilter = Pick<PartialSeries, 'asset' | 'x' | 'y' | 'year'>
 
-// Assets that can be selected for plotting.
-const selectableAssets = $computed(() => discrete.assets.filter((asset) => asset !== 'PI_REQUEST'))
+const selectableAssets = $computed(() =>
+  compact(discrete.assets.filter((asset) => asset !== 'PI_REQUEST')),
+)
 
 // All series with filter fields completely filled out.
 const series = $computed(
@@ -167,15 +178,21 @@ const series = $computed(
 const xAxesAreSame = $computed(() => uniq(compact(series.map((series) => series.x))).length <= 1)
 // True if all series share the same Y axis value.
 const yAxesAreSame = $computed(() => uniq(compact(series.map((series) => series.y))).length <= 1)
-// True if all series share the same X and Y axis values.
-const allAxesAreSame = $computed(() => xAxesAreSame && yAxesAreSame)
 
-// Cache for `getSamplesFor` below.
-const getSamplesForCache: Record<string, Sample[]> = {}
+// Cache for `getSamplesFor` below, invalidated when discrete samples change.
+let getSamplesForCache: Record<string, Sample[]> = {}
+let getSamplesForCacheSource: readonly Sample[] = []
 
 // Return all samples matching the provided filter.
 function getSamplesFor(filter: SampleFilter): Sample[] {
+  // Invalidate cache when the underlying samples change.
+  if (discrete.samples !== getSamplesForCacheSource) {
+    getSamplesForCache = {}
+    getSamplesForCacheSource = discrete.samples
+  }
+
   const key = [filter.asset ?? '-', filter.x ?? '-', filter.y ?? '-', filter.year ?? '-'].join('&&')
+
   const cached = getSamplesForCache[key]
   if (cached != null) {
     return cached
@@ -198,8 +215,21 @@ function hasDataFor(filter: SampleFilter) {
   return getSamplesFor(filter).length > 0
 }
 
-function getNoDataIndicator(filter: SampleFilter) {
-  return !hasDataFor(filter) ? ' (No Data)' : ''
+function getNoDataIndicator(
+  filter: SampleFilter,
+  forOppositeAxis?: { opposite: 'x' | 'y'; value: string | undefined },
+) {
+  if (!hasDataFor(filter)) {
+    return ' (No Data)'
+  }
+
+  if (forOppositeAxis != null) {
+    if (!hasDataFor({ ...filter, [forOppositeAxis.opposite]: forOppositeAxis.value })) {
+      return ` (No Data for ${forOppositeAxis.opposite.toUpperCase()})`
+    }
+  }
+
+  return ''
 }
 
 const currentYear = new Date().getFullYear()
@@ -221,6 +251,8 @@ type ChartedSeries = Omit<SeriesOption, 'data'> & {
 
   name: string
   data: [SampleValue, SampleValue][]
+  // Source samples aligned with `data` for tooltip access.
+  sources: Sample[]
   itemStyle?: any
   lineStyle?: any
 
@@ -229,55 +261,143 @@ type ChartedSeries = Omit<SeriesOption, 'data'> & {
   yAxisLabel: string
 }
 
+// Generate a color shifted from a base color, enough to distinguish but close enough to recognize.
+function varyColor(baseColor: string, index: number, length: number): string {
+  if (index === 0) {
+    return baseColor
+  }
+
+  const base = Color(baseColor).hsl()
+  const maxSpread = Math.min(60, length * 20)
+  const hueStep = maxSpread / length
+  const lightnessStep = 14 / length
+  return base
+    .hue((base.hue() + hueStep * index) % 360)
+    .lightness(Math.max(30, Math.min(70, base.lightness() + lightnessStep * index - 7)))
+    .hex()
+}
+
+// Per-entry legend selection overrides for cast sub-series that have been individually toggled.
+const legendSelectionOverrides = reactive(new Map<string, boolean>())
+
+// A plottable data point with its source sample.
+type DataPoint = {
+  x: SampleValue
+  y: SampleValue
+  source: Sample
+}
+
+// Extract x/y values from samples into data points, filter out nulls, sort by x, and dedupe.
+function extractDataPoints(
+  samples: Sample[],
+  x: string | undefined,
+  y: string | undefined,
+): DataPoint[] {
+  let points = samples
+    .map((sample) => ({
+      x: sample.data[x!] ?? null,
+      y: sample.data[y!] ?? null,
+      source: sample,
+    }))
+    .filter((point) => point.x != null && point.y != null)
+
+  points = orderBy(points, (point) => point.x)
+  points = uniqBy(points, (point) => point.x + '|' + point.y)
+  return points
+}
+
+function createChartedSeries(
+  series: Series,
+  id: string,
+  index: number,
+  name: string,
+  color: string,
+  points: DataPoint[],
+): ChartedSeries {
+  const castSeries = isCTDCastSeries(series)
+  return {
+    original: series,
+    id,
+    name,
+    type: series.display,
+    z: index + 2,
+    emphasis: { focus: 'series' },
+    ...({
+      showSymbol: series.display !== 'line' || !castSeries,
+      ...(castSeries ? { symbolSize: 8 } : {}),
+    } as any),
+    data: points.map((point) => [point.x, point.y]),
+    sources: points.map((point) => point.source),
+    itemStyle: { color },
+    lineStyle: series.display === 'line' ? { color } : undefined,
+    xAxisLabel: series.x,
+    yAxisLabel: series.y,
+  }
+}
+
 // Computed ECharts series options with data points.
 const chartedSeries = $computed(() => {
-  return series.map((series, i) => {
-    let data = getSamplesFor(series)
-      // Convert samples to [X value, Y value] data points for ECharts.
-      .map((sample) => [sample.data[series.x], sample.data[series.y]] as [SampleValue, SampleValue])
-      // Shouldn't be necessary because the samples match, but just in case.
-      .filter(([x, y]) => x != null && y != null)
+  return series.flatMap((series, i) => {
+    const samples = getSamplesFor(series)
 
-    // We need to create unique series names depending on which axes are the same/different.
-    let name: string
-    if (allAxesAreSame) {
-      // All axes are the same, so just specify asset and year.
-      name = `${series.asset} (${series.year})`
-    } else if (xAxesAreSame) {
-      // Only X axes are the same, so specify asset, year and the distinct Y axis.
-      name = `${series.asset} (${series.year}) — ${series.y}`
-    } else if (yAxesAreSame) {
-      // Only Y axes are the same, so specify asset, year and the distinct X axis.
-      name = `${series.asset} (${series.year}) — ${series.x}`
-    } else {
-      // Both axes are the different, so specify asset, year, and both the Y and X axis.
-      name = `${series.asset} (${series.year}) — ${series.y} / ${series.x}`
+    // Build unique series names depending on which axes are the same/different.
+    let baseName = `${series.asset} (${series.year})`
+    if (!xAxesAreSame && !yAxesAreSame) {
+      baseName += ` — ${series.y} / ${series.x}`
+    } else if (!xAxesAreSame) {
+      baseName += ` — ${series.x}`
+    } else if (!yAxesAreSame) {
+      baseName += ` — ${series.y}`
     }
 
-    if (data.length === 0) {
-      name += ' (No Data)'
-    } else {
-      // Order by the X-axis.
-      data = orderBy(data, ([x]) => x)
-      // Ensure all data points are unique.
-      data = uniqBy(data, ([x, y]) => x + '|' + y)
+    // Split into per-cast series when enabled and cast data is available.
+    const castSamples = series.showCasts
+      ? samples.filter((sample) => sample.data['Cast'] != null)
+      : []
+    if (castSamples.length > 0) {
+      const casts = groupBy(
+        castSamples,
+        (sample) => `${sample.data['Cast']}__${sample.timestamp.toString()}`,
+      )
+      const castKeys = Object.keys(casts).sort((left, right) => {
+        const leftTimestamp = casts[left]![0]!.timestamp
+        const rightTimestamp = casts[right]![0]!.timestamp
+        return leftTimestamp.compare(rightTimestamp)
+      })
+
+      // Check if any casts share the same date (need cast number to disambiguate).
+      const castDates = castKeys.map((key) => {
+        const sample = casts[key]![0]!
+        return sample.timestamp.toString().split('T')[0] ?? ''
+      })
+      const hasDuplicateDates = new Set(castDates).size < castDates.length
+
+      return castKeys.map((castKey, castIndex) => {
+        const points = extractDataPoints(casts[castKey]!, series.x, series.y)
+        const firstSample = casts[castKey]![0]!
+        const rawCast = firstSample.data['Cast']
+        const castNumber = rawCast != null ? Number(rawCast) || rawCast : castIndex + 1
+        const castDate = castDates[castIndex]
+        const dateLabel = hasDuplicateDates ? `${castDate}, Cast ${castNumber}` : castDate
+        const name = baseName.replace(`(${series.year})`, `(${dateLabel})`)
+        const color = varyColor(series.color, castIndex, castKeys.length)
+
+        return createChartedSeries(series, `${series.id}-${castIndex}`, i, name, color, points)
+      })
     }
 
-    return {
-      original: series,
-      id: i,
-      name,
-      type: series.display,
-      emphasis: { focus: 'series' },
-      data,
-      itemStyle: { color: series.color },
-      lineStyle: series.display === 'line' ? { color: series.color } : undefined,
-      // Not used by ECharts, stored here for tooltip rendering.
-      xAxisLabel: series.x,
-      yAxisLabel: series.y,
-    } satisfies ChartedSeries
+    const points = extractDataPoints(samples, series.x, series.y)
+    const name = points.length === 0 ? baseName + ' (No Data)' : baseName
+
+    return createChartedSeries(series, series.id, i, name, series.color, points)
   })
 })
+
+// Clear stale legend overrides when the set of charted series names changes.
+watch(
+  () => chartedSeries.map((charted) => charted.name).join('\0'),
+  () => legendSelectionOverrides.clear(),
+)
 
 // Calculate R-squared value for correlation analysis.
 function calculateRSquared(datasets: [SampleValue, SampleValue][][]) {
@@ -365,12 +485,12 @@ function computeDataExtents(selectedOnly: boolean) {
 
   return {
     x: {
-      min: minOf(series.flatMap((series) => series.data.map(([x]) => x))) ?? 0,
-      max: maxOf(series.flatMap((series) => series.data.map(([x]) => x))) ?? 1,
+      min: minOf(series.flatMap((series) => series.data.map(([x]: any) => x))) ?? 0,
+      max: maxOf(series.flatMap((series) => series.data.map(([x]: any) => x))) ?? 1,
     },
     y: {
-      min: minOf(series.flatMap((series) => series.data.map(([_, y]) => y))) ?? 0,
-      max: maxOf(series.flatMap((series) => series.data.map(([_, y]) => y))) ?? 1,
+      min: minOf(series.flatMap((series) => series.data.map(([_, y]: any) => y))) ?? 0,
+      max: maxOf(series.flatMap((series) => series.data.map(([_, y]: any) => y))) ?? 1,
     },
   }
 }
@@ -421,6 +541,56 @@ function isInvertedAxis(axis: string) {
   return lower.includes('depth') || lower.includes('pressure')
 }
 
+function isCTDCastField(field: string | undefined): boolean {
+  return typeof field === 'string' && field.startsWith('CTD Cast ')
+}
+
+function isCTDCastSeries(series: { x?: string; y?: string }): boolean {
+  return isCTDCastField(series.x) || isCTDCastField(series.y)
+}
+
+// Build axis select items from plottable fields, inserting a separator between CTD Cast and non-CTD
+// Cast fields. If the opposite axis has a CTD Cast value selected, CTD Cast fields come first,
+// otherwise non-CTD Cast fields come first.
+function axisSelectItems(series: PartialSeries, axis: 'x' | 'y') {
+  const opposite = axis === 'x' ? 'y' : 'x'
+  const oppositeValue = axis === 'x' ? series.y : series.x
+  const castFirst = isCTDCastField(oppositeValue)
+
+  const castFields: string[] = []
+  const otherFields: string[] = []
+  for (const field of discrete.plottableFields) {
+    if (isCTDCastField(field)) {
+      castFields.push(field)
+    } else {
+      otherFields.push(field)
+    }
+  }
+
+  const ordered = castFirst ? [...castFields, ...otherFields] : [...otherFields, ...castFields]
+
+  const items: any[] = []
+  let prevWasCast: boolean | null = null
+  for (const field of ordered) {
+    const isCast = isCTDCastField(field)
+    if (prevWasCast !== null && isCast !== prevWasCast) {
+      items.push({ type: 'separator' })
+    }
+    prevWasCast = isCast
+    items.push({
+      label:
+        `${field} ` +
+        getNoDataIndicator(
+          { asset: series.asset, [axis]: field },
+          { opposite, value: oppositeValue },
+        ),
+      value: field as string | null,
+    })
+  }
+
+  return items
+}
+
 // Invert the Y axis if depth is selected.
 const invertYAxis = $computed(() => series.every((series) => isInvertedAxis(series.y ?? '')))
 
@@ -452,7 +622,7 @@ const option = $computed(() => {
       top: '24px',
       left: '0',
       right: '32px',
-      bottom: '140px',
+      bottom: '100px',
     },
     tooltip: {
       confine: true,
@@ -460,35 +630,60 @@ const option = $computed(() => {
       trigger: 'axis',
       // Show both axis values for all hovered points.
       formatter: (points: any) => {
-        const content = ['<div class="space-y-2">']
+        const sections: string[] = []
         for (const point of points) {
           const {
             seriesName,
-            seriesIndex,
+            dataIndex,
             data: [x, y],
             color,
           } = point
 
-          const series = chartedSeries[seriesIndex]
+          const series = chartedSeries.find((charted) => charted.name === seriesName)
           if (series == null) {
             continue
           }
 
-          content.push(`
-            <div>
-              <div class="flex items-center mb-1">
-                <div class="w-3 h-3 rounded-full mr-1.5" style="background-color: ${color}">
-              </div>
-              <b>${seriesName}</b>
-              </div>
-              ${series.yAxisLabel}: <b>${formatValue(y, decimalPlacesInTooltip)}</b><br/>
-              ${series.xAxisLabel}: <b>${formatValue(x, decimalPlacesInTooltip)}</b><br/>
-            </div>
-          `)
+          const source = series.sources[dataIndex]
+          const latitude = source != null ? findFieldValue(source.data, 'latitude') : null
+          const longitude = source != null ? findFieldValue(source.data, 'longitude') : null
+
+          const rows: string[] = []
+          rows.push(
+            `<tr>` +
+              `<td class="text-right text-gray-500 pr-2">${series.yAxisLabel}</td>` +
+              `<td class="font-bold">${formatValue(y, decimalPlacesInTooltip)}</td>` +
+              `</tr>`,
+          )
+          rows.push(
+            `<tr>` +
+              `<td class="text-right text-gray-500 pr-2">${series.xAxisLabel}</td>` +
+              `<td class="font-bold">${formatValue(x, decimalPlacesInTooltip)}</td>` +
+              `</tr>`,
+          )
+          if (latitude != null && longitude != null) {
+            rows.push(
+              `<tr>` +
+                `<td class="text-right text-gray-500 pr-2">Location</td>` +
+                `<td class="text-gray-500">` +
+                `(${formatValue(latitude, 6)}°, ${formatValue(longitude, 6)}°)` +
+                `</td>` +
+                `</tr>`,
+            )
+          }
+
+          sections.push(
+            `<div>` +
+              `<div class="flex items-center mb-1">` +
+              `<div class="w-3 h-3 rounded-full mr-1.5" style="background-color: ${color}"></div>` +
+              `<b>${seriesName.replace(/ — .*$/, '')}</b>` +
+              `</div>` +
+              `<table class="[&_td+td]:border-l [&_td+td]:border-gray-700 [&_td+td]:pl-2">${rows.join('')}</table>` +
+              `</div>`,
+          )
         }
 
-        content.push('</div>')
-        return content.join('')
+        return `<div class="space-y-2">${sections.join('')}</div>`
       },
     },
     xAxis: {
@@ -525,20 +720,23 @@ const option = $computed(() => {
         xAxisIndex: 0,
         moveOnMouseWheel: 'alt',
         disabled: isShiftPressed,
+        filterMode: 'none',
       },
       {
         id: 'y-inside',
         type: 'inside',
         yAxisIndex: 0,
         disabled: isCtrlPressed,
+        filterMode: 'none',
       },
       {
         id: 'x-slider',
         type: 'slider',
-        bottom: 80,
+        bottom: 48,
         height: 22,
         showDetail: false,
         showDataShadow: false,
+        filterMode: 'none',
       },
       {
         id: 'y-slider',
@@ -549,13 +747,19 @@ const option = $computed(() => {
         right: 4,
         showDetail: false,
         showDataShadow: false,
+        filterMode: 'none',
       },
     ],
     legend: {
+      data: chartedSeries.map((current) => current.name),
       selected: Object.fromEntries(
-        chartedSeries.map((current) => [current.name, current.original.enabled]),
+        chartedSeries.map((current) => [
+          current.name,
+          legendSelectionOverrides.get(current.name) ?? current.original.enabled,
+        ]),
       ),
       show: chartedSeries.length <= 20,
+      type: 'scroll',
       bottom: 0,
     },
     series: chartedSeries as any,
@@ -597,11 +801,12 @@ function addSeries({
     ...cloneDeep(copy ?? {}),
     color,
     ...changes,
+    id: createSeriesId(),
   })
 
   state.series.splice(index, 0, created)
   if (saveUndo) {
-    history.save(state)
+    history.save()
   }
 
   return created
@@ -619,9 +824,19 @@ function removeSeries(index?: number) {
   }
 
   const removed = state.series.splice(index, 1)[0]
-  history.save(state)
+  history.save()
 
   return removed
+}
+
+function removeOtherSeries(index: number) {
+  const series = state.series[index]
+  if (series == null) {
+    return
+  }
+
+  state.series = [series]
+  history.save()
 }
 
 // Move the series at the given index up one position, if possible.
@@ -635,7 +850,7 @@ function moveSeriesUp(index: number) {
   state.series[index - 1] = series
   state.series[index] = previous
 
-  history.save(state)
+  history.save()
 }
 
 // Move the series at the given index down one position, if possible.
@@ -649,7 +864,7 @@ function moveSeriesDown(index: number) {
   state.series[index + 1] = series
   state.series[index] = next
 
-  history.save(state)
+  history.save()
 }
 
 // Indicates the "Shift" key is currently held.
@@ -685,19 +900,18 @@ useEventListener('keyup', (event: KeyboardEvent) => {
 })
 
 // Reset modifier keys when the browser tab loses focus. Otherwise, they can get stuck in the
-// pressed state if the user switches away from the page while holding them, due to the key up event
-// never being received.
+// pressed state if the user switches away from the page while holding them, due to the key up
+// event never being received.
 useEventListener('blur', () => {
   isShiftPressed = false
   isCtrlPressed = false
 })
 
-// Return a new series object with the provided `field` set to `value` while keeping the order
-// of fields consistent with the `SeriesSchema` definition. The reason being: the JSON of each
-// series object is displayed in the browser's URL, and having a consistent order with `asset`
-// displayed first makes the URL more readable. In addition, when opening a shared link to this
-// page, the URL won't appear to suddenly change when the data is re-parsed from the URL on load
-// anyway.
+// Return a new series object with the provided `field` set to `value` while keeping the order of
+// fields consistent with the `SeriesSchema` definition. The reason being: the JSON of each series
+// object is displayed in the browser's URL, and having a consistent order with `asset` displayed
+// first makes the URL more readable. In addition, when opening a shared link to this page, the URL
+// won't appear to suddenly change when the data is re-parsed from the URL on load anyway.
 function withSeriesFieldSet(series: PartialSeries, field: keyof PartialSeries, value: any) {
   const data = { ...series, [field]: value }
   try {
@@ -722,6 +936,19 @@ function setSeriesField<K extends keyof PartialSeries>(
     value = undefined
   }
 
+  // Clear legend selection overrides for this series when toggling enabled, so cast sub-series
+  // reset to match the parent state.
+  if (field === 'enabled') {
+    const target = state.series[index]
+    if (target != null) {
+      for (const charted of chartedSeries) {
+        if (charted.original.id === target.id) {
+          legendSelectionOverrides.delete(charted.name)
+        }
+      }
+    }
+  }
+
   // The series (possibly) being modified.
   const series = state.series[index]
   if (series == null) {
@@ -735,13 +962,13 @@ function setSeriesField<K extends keyof PartialSeries>(
     // Apply the change to all series.
     state.series = state.series.map((current) => withSeriesFieldSet(current, field, value))
     if (saveUndo) {
-      history.save(state)
+      history.save()
     }
   } else {
     // Apply the change to just the current series.
     state.series[index] = withSeriesFieldSet(series, field, value)
     if (saveUndo) {
-      history.save(state)
+      history.save()
     }
   }
 }
@@ -812,13 +1039,13 @@ function duplicateSeriesForAllYears(
   clonedOriginal.color = series.color
 
   // Save undo history.
-  history.save(state)
+  history.save()
   return clones
 }
 
 // Create series with the same (`x`, `y`, `year`) of the given series at `index` for all assets. If
-// `withMatchingData` is `true`, do this only for assets for which we have data for matching
-// the original series' filter fields. All generated series objects will be inserted after `index`.
+// `withMatchingData` is `true`, do this only for assets for which we have data matching the
+// original series' filter fields. All generated series objects will be inserted after `index`.
 function duplicateSeriesForAllAssets(
   index: number,
   { withMatchingData = true }: { withMatchingData?: boolean } = {},
@@ -862,7 +1089,7 @@ function duplicateSeriesForAllAssets(
   }
 
   // Save undo history.
-  history.save(state)
+  history.save()
   return clones
 }
 
@@ -906,40 +1133,90 @@ watchEffect((onInvalidate) => {
     }
   })
 
-  // Keep the the series `enabled` states synced with the selected legend items of the chart.
-  const legendSelectChangedEventName = 'legendselectchanged'
-  chartInstance?.on(legendSelectChangedEventName, (event: any) => {
-    const selected: Record<string, boolean> | undefined = event.selected
-    if (selected == null) {
+  // Click a data point to isolate its series, click again to restore all.
+  let isolatedSeriesName: string | null = null
+  chartInstance?.on('click', (event: any) => {
+    if (event.seriesName == null) {
       return
     }
 
-    const currentSelectedStates = Object.values(selected)
-    const previousSelectedStates = state.series.map((series) => series.enabled)
-
-    console.debug('Series selection changed from legend.', selected)
-    for (const [i, isSelected] of currentSelectedStates.entries()) {
-      const previousIsSelected = previousSelectedStates[i]
-      if (isSelected !== previousIsSelected) {
-        setSeriesField(i, 'enabled', isSelected)
-        return
+    if (isolatedSeriesName === event.seriesName) {
+      // Restore all series.
+      for (const series of chartedSeries) {
+        chartInstance?.dispatchAction({
+          type: 'legendSelect',
+          name: series.name,
+        })
       }
+      isolatedSeriesName = null
+    } else {
+      // Isolate the clicked series.
+      for (const series of chartedSeries) {
+        chartInstance?.dispatchAction({
+          type: series.name === event.seriesName ? 'legendSelect' : 'legendUnSelect',
+          name: series.name,
+        })
+      }
+      isolatedSeriesName = event.seriesName
+    }
+  })
+  // Keep the series `enabled` states synced with the selected legend items of the chart.
+  const legendSelectChangedEventName = 'legendselectchanged'
+  chartInstance?.on(legendSelectChangedEventName, (event: any) => {
+    const selected: Record<string, boolean> | undefined = event.selected
+    const clickedName: string | undefined = event.name
+    if (selected == null || clickedName == null) {
+      return
     }
 
-    for (const [i, isSelected] of Object.values(selected).entries()) {
-      const series = state.series[i]
-      if (series != null) {
-        series.enabled = isSelected
-      }
+    console.debug('Series selection changed from legend.', clickedName, selected)
+
+    const clicked = chartedSeries.find((charted) => charted.name === clickedName)
+    if (clicked == null) {
+      return
     }
 
-    history.save(state)
+    const isSelected = selected[clickedName] ?? true
+    const group = chartedSeries.filter((charted) => charted.original.id === clicked.original.id)
+    const seriesIndex = state.series.findIndex((current) => current.id === clicked.original.id)
+    const series = seriesIndex !== -1 ? state.series[seriesIndex]! : null
+
+    // When shift is held, toggle all series in the same original group together.
+    if (isShiftPressed) {
+      for (const charted of group) {
+        legendSelectionOverrides.set(charted.name, isSelected)
+      }
+      if (series != null && series.enabled !== isSelected) {
+        setSeriesField(seriesIndex, 'enabled', isSelected)
+      }
+      return
+    }
+
+    // Store the override for the individual legend entry.
+    legendSelectionOverrides.set(clickedName, isSelected)
+
+    // Sync the parent `enabled` state when all sub-series in the group agree.
+    if (series != null) {
+      const allSelected = group.every(
+        (charted) => legendSelectionOverrides.get(charted.name) ?? charted.original.enabled,
+      )
+      const noneSelected = group.every(
+        (charted) => !(legendSelectionOverrides.get(charted.name) ?? charted.original.enabled),
+      )
+
+      if (noneSelected && series.enabled) {
+        setSeriesField(seriesIndex, 'enabled', false)
+      } else if (allSelected && !series.enabled) {
+        setSeriesField(seriesIndex, 'enabled', true)
+      }
+    }
   })
 
   // Unregister event handlers when invalidated.
   onInvalidate(() => {
+    chartInstance?.off('click')
     chartInstance?.off(dataZoomEventName)
-    chartInstance?.off(dataZoomEventName)
+    chartInstance?.off(legendSelectChangedEventName)
   })
 })
 
@@ -969,6 +1246,18 @@ function resetZoom() {
 }
 
 // Format a value for display in an axis label or tooltip.
+function findFieldValue(data: SampleData, substring: string): SampleValue | null {
+  // Find the first field value in sample data where the field name contains the given substring
+  // (case-insensitive).
+  const lower = substring.toLowerCase()
+  for (const [name, value] of Object.entries(data)) {
+    if (name.toLowerCase().includes(lower) && value != null) {
+      return value
+    }
+  }
+  return null
+}
+
 function formatValue(value: unknown, maxDecimalPlaces: number) {
   // The value should almost always be a number, but just in case, only try to format decimal
   // places if it is.
@@ -1052,99 +1341,106 @@ async function copyToClipboard() {
   <u-page>
     <u-page-body class="mb-24 px-8 space-y-4">
       <u-page-header title="Discrete Data" />
-      <div>
-        <div v-if="option != null" class="pb-10">
-          <div class="relative">
-            <chart ref="chartInstance" class="h-150" :option="option" />
-            <div class="-bottom-12 absolute flex justify-center left-0 right-0 space-x-2">
-              <u-form-field class="flex items-center" size="sm">
-                <template #label><div class="pt-1 text-xs">Bounds =</div></template>
-                <u-tooltip
-                  text="Choose how the min and max values on the X and Y axes are calculated."
-                >
-                  <u-select
-                    v-model="state.bounds"
-                    class="min-w-50 ml-1"
-                    :items="[
-                      { label: 'Selected Data Min/Max', value: 'selected-data' },
-                      { label: 'Data Min/Max', value: 'all-data' },
-                      { label: 'From Zero', value: 'from-zero' },
-                      { label: 'From Zero (X)', value: 'from-zero-x' },
-                      { label: 'From Zero (Y)', value: 'from-zero-y' },
-                    ]"
-                    size="sm"
-                    @update:model-value="history.save(state)"
-                  />
-                </u-tooltip>
-              </u-form-field>
-              <u-tooltip text="Reset Zoom">
-                <u-button
-                  class="mt-1"
-                  color="primary"
-                  :disabled="!isZoomedIn"
-                  icon="i-lucide-zoom-out"
-                  label="Reset"
-                  size="xs"
-                  variant="subtle"
-                  @click="resetZoom"
-                />
-              </u-tooltip>
-              <u-tooltip text="Swap X and Y Axes">
-                <u-button
-                  class="mt-1"
-                  color="primary"
-                  :disabled="state.series.length === 0"
-                  size="xs"
-                  variant="subtle"
-                  @click="
-                    () => {
-                      for (const series of state.series) {
-                        const { x, y } = series
-                        series.x = y
-                        series.y = x
-                      }
-
-                      history.save(state)
-                    }
-                  "
-                >
-                  X <u-icon name="i-lucide-arrow-left-right" /> Y
-                </u-button>
-              </u-tooltip>
-              <u-tooltip text="Share Plot Link">
-                <u-button
-                  class="cursor-pointer mt-1 px-2"
-                  :disabled="!canShare"
-                  icon="i-lucide-share"
-                  size="xs"
-                  variant="subtle"
-                  @click="share()"
-                />
-              </u-tooltip>
-              <u-tooltip text="Copy Plot Link to Clipboard">
-                <u-button
-                  class="cursor-pointer mt-1 px-2"
-                  icon="i-lucide-link"
-                  size="xs"
-                  variant="subtle"
-                  @click="copyToClipboard()"
-                />
-              </u-tooltip>
+      <div v-if="discrete.loading" class="flex flex-col items-center justify-center py-32">
+        <u-icon class="animate-spin text-4xl text-primary" name="i-lucide-loader-2" />
+        <p class="mt-4 text-gray-500">Loading discrete samples...</p>
+      </div>
+      <div v-else>
+        <div v-if="option != null" class="relative">
+          <chart ref="chartInstance" class="min-h-150" :option="option" />
+          <u-tooltip
+            v-if="rSquared != null"
+            class="absolute cursor-default right-8 top-0.75"
+            text="The R-squared value for all currently selected data."
+          >
+            <div
+              class="text-[12.5px] text-center text-gray-600"
+              style="font-family: 'Helvetica Neue', 'Helvetica'"
+            >
+              <span class="mr-1.5 relative">
+                R
+                <span class="-right-0.5 -top-0.5 absolute text-[10px]">2</span>
+              </span>
+              = {{ formatValue(rSquared, 6) }}
             </div>
-            <u-tooltip text="The R-squared value for all currently selected data.">
-              <div>
-                <div v-if="rSquared != null" class="mt-3 text-[14px] text-center">
-                  <span class="mr-1 relative">
-                    R
-                    <span class="-right-0.5 -top-0.5 absolute text-[10px]">2</span>
-                  </span>
-                  = {{ formatValue(rSquared, 6) }}
-                </div>
-              </div>
+          </u-tooltip>
+          <div class="flex justify-center mb-4 mt-4 space-x-2">
+            <u-form-field class="flex items-center" size="sm">
+              <template #label><div class="text-nowrap text-xs">Bounds =</div></template>
+              <u-tooltip
+                text="Choose how the min and max values on the X and Y axes are calculated."
+              >
+                <u-select
+                  v-model="state.bounds"
+                  class="min-w-50 ml-1"
+                  :items="[
+                    { label: 'Selected Data Min/Max', value: 'selected-data' },
+                    { label: 'Data Min/Max', value: 'all-data' },
+                    { label: 'From Zero', value: 'from-zero' },
+                    { label: 'From Zero (X)', value: 'from-zero-x' },
+                    { label: 'From Zero (Y)', value: 'from-zero-y' },
+                  ]"
+                  size="sm"
+                  @update:model-value="history.save()"
+                />
+              </u-tooltip>
+            </u-form-field>
+            <u-tooltip text="Reset Zoom">
+              <u-button
+                class="mt-1"
+                color="primary"
+                :disabled="!isZoomedIn"
+                icon="i-lucide-zoom-out"
+                label="Reset"
+                size="xs"
+                variant="subtle"
+                @click="resetZoom"
+              />
+            </u-tooltip>
+            <u-tooltip text="Swap X and Y Axes">
+              <u-button
+                class="mt-1"
+                color="primary"
+                :disabled="state.series.length === 0"
+                size="xs"
+                variant="subtle"
+                @click="
+                  () => {
+                    for (const series of state.series) {
+                      const { x, y } = series
+                      series.x = y
+                      series.y = x
+                    }
+
+                    history.save()
+                  }
+                "
+              >
+                X <u-icon name="i-lucide-arrow-left-right" /> Y
+              </u-button>
+            </u-tooltip>
+            <u-tooltip text="Share Plot Link">
+              <u-button
+                class="cursor-pointer mt-1 px-2"
+                :disabled="!canShare"
+                icon="i-lucide-share"
+                size="xs"
+                variant="subtle"
+                @click="share()"
+              />
+            </u-tooltip>
+            <u-tooltip text="Copy Plot Link to Clipboard">
+              <u-button
+                class="cursor-pointer mt-1 px-2"
+                icon="i-lucide-link"
+                size="xs"
+                variant="subtle"
+                @click="copyToClipboard()"
+              />
             </u-tooltip>
           </div>
         </div>
-        <p v-else class="opacity-80 text-center text-sm">
+        <p v-else class="mb-2 opacity-80 text-center text-sm">
           <template v-if="state.series.length > 0">
             Enter the asset, X/Y axis and year of data to plot.
           </template>
@@ -1239,7 +1535,7 @@ async function copyToClipboard() {
                 () => {
                   state.series = []
                   state.seriesCollapsed = false
-                  history.save(state)
+                  history.save()
                 }
               "
             />
@@ -1323,6 +1619,18 @@ async function copyToClipboard() {
                           },
                           { type: 'separator' },
                           {
+                            icon: 'i-lucide-trash-2',
+                            label: 'Remove',
+                            onSelect: () => removeSeries(i),
+                          },
+                          {
+                            icon: 'i-lucide-brush-cleaning',
+                            label: 'Remove Other Series',
+                            disabled: state.series.length < 2,
+                            onSelect: () => removeOtherSeries(i),
+                          },
+                          { type: 'separator' },
+                          {
                             icon: 'i-lucide-square-stack',
                             label: `Duplicate For All Years (${possibleYears.length})`,
                             onSelect: () =>
@@ -1344,7 +1652,7 @@ async function copyToClipboard() {
                           { type: 'separator' },
                           {
                             icon: 'i-lucide-square-stack',
-                            label: `Duplicate For All Assets (${discrete.assets.length})`,
+                            label: 'Duplicate For All Assets ' + `(${selectableAssets.length})`,
                             onSelect: () =>
                               duplicateSeriesForAllAssets(i, { withMatchingData: false }),
                           },
@@ -1353,9 +1661,9 @@ async function copyToClipboard() {
                             label:
                               'Duplicate For All Assets With Matching Data (' +
                               uniq(
-                                getSamplesFor(omit(series, ['asset'])).map(
-                                  (current) => current.asset,
-                                ),
+                                getSamplesFor(omit(series, ['asset']))
+                                  .map((current) => current.asset)
+                                  .filter((asset) => selectableAssets.includes(asset ?? '')),
                               ).length +
                               ')',
                             onSelect: () =>
@@ -1379,7 +1687,9 @@ async function copyToClipboard() {
                     :items="[
                       ...selectableAssets.map((asset) => ({
                         label:
-                          `${asset} (${discrete.assetToStation[asset]})` +
+                          (asset.includes('(')
+                            ? asset
+                            : `${asset} (${discrete.assetToStation[asset]})`) +
                           `${getNoDataIndicator({ asset })}`,
                         value: asset as string | null,
                       })),
@@ -1398,12 +1708,7 @@ async function copyToClipboard() {
                 <u-form-field class="flex-1 min-w-80" label="X-Axis" size="sm">
                   <u-select-menu
                     class="w-full"
-                    :items="
-                      discrete.plottableFields.map((field) => ({
-                        label: `${field} ${getNoDataIndicator({ asset: series.asset, x: field })}`,
-                        value: field as string | null,
-                      }))
-                    "
+                    :items="axisSelectItems(series, 'x')"
                     label-key="label"
                     :model-value="series.x ?? null"
                     size="sm"
@@ -1413,12 +1718,23 @@ async function copyToClipboard() {
                     <template #item-label="{ item }">
                       <span
                         :class="
-                          !hasDataFor({ asset: series.asset, x: (item as any).value }) &&
-                          'opacity-75'
+                          !hasDataFor({
+                            asset: series.asset,
+                            x: (item as any).value,
+                            y: series.y,
+                          }) && 'opacity-75'
                         "
                       >
                         {{ (item as any).value }}
-                        {{ getNoDataIndicator({ asset: series.asset, x: (item as any).value }) }}
+                        {{
+                          getNoDataIndicator(
+                            {
+                              asset: series.asset,
+                              x: (item as any).value,
+                            },
+                            { opposite: 'y', value: series.y },
+                          )
+                        }}
                         {{ itemLabelModifier }}
                       </span>
                     </template>
@@ -1443,12 +1759,7 @@ async function copyToClipboard() {
                 <u-form-field class="flex-1 min-w-80" label="Y-Axis" size="sm">
                   <u-select-menu
                     class="w-full"
-                    :items="
-                      discrete.plottableFields.map((field) => ({
-                        label: `${field} ${getNoDataIndicator({ asset: series.asset, y: field })}`,
-                        value: field ?? null,
-                      }))
-                    "
+                    :items="axisSelectItems(series, 'y')"
                     label-key="label"
                     :model-value="series.y"
                     size="sm"
@@ -1458,19 +1769,48 @@ async function copyToClipboard() {
                     <template #item-label="{ item }">
                       <span
                         :class="
-                          !hasDataFor({ asset: series.asset, y: (item as any).value }) &&
-                          'opacity-75'
+                          !hasDataFor({
+                            asset: series.asset,
+                            x: series.x,
+                            y: (item as any).value,
+                          }) && 'opacity-75'
                         "
                       >
                         {{ (item as any).value }}
-                        {{ getNoDataIndicator({ asset: series.asset, x: (item as any).value }) }}
+                        {{
+                          getNoDataIndicator(
+                            {
+                              asset: series.asset,
+                              y: (item as any).value,
+                            },
+                            { opposite: 'x', value: series.x },
+                          )
+                        }}
                         {{ itemLabelModifier }}
                       </span>
                     </template>
                   </u-select-menu>
                 </u-form-field>
                 <div class="flex flex-1 flex-row shrink space-x-2">
-                  <u-form-field class="basis-0 grow min-w-34" label="Year" size="sm">
+                  <u-form-field class="basis-0 grow min-w-24" label="Year" size="sm">
+                    <template #hint>
+                      <u-tooltip text="Show separate chart series for each CTD cast collected.">
+                        <u-checkbox
+                          :class="[
+                            'flex-row-reverse gap-1 items-center hover:opacity-100 ',
+                            'whitespace-nowrap mr-3',
+                            series.showCasts ? 'opacity-100' : 'opacity-70',
+                          ]"
+                          label="Show Casts"
+                          :model-value="series.showCasts ?? false"
+                          size="xs"
+                          :ui="{ label: 'text-[9px]' }"
+                          @update:model-value="
+                            (value) => setSeriesField(i, 'showCasts', value && true)
+                          "
+                        />
+                      </u-tooltip>
+                    </template>
                     <u-select-menu
                       :key="series.year"
                       class="w-full"

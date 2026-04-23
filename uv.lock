@@ -1735,15 +1735,19 @@ name = "qaqc-dashboard-environment"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "beautifulsoup4" },
     { name = "pip" },
     { name = "rca-data-tools" },
+    { name = "requests" },
     { name = "tqdm" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "beautifulsoup4", specifier = ">=4.14.2" },
     { name = "pip" },
     { name = "rca-data-tools", git = "https://github.com/OOI-CabledArray/rca-data-tools.git" },
+    { name = "requests", specifier = ">=2.32.5" },
     { name = "tqdm" },
 ]
 
