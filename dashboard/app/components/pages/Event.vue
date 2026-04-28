@@ -65,6 +65,7 @@ function getParametersForInstrument(refDes: string): { key: string; label: strin
 type Panel = {
   instrument: string
   timespan: string
+  range: string
   overlay: string
   parameter: string
   description: string
@@ -239,6 +240,12 @@ const overlays = [
   { key: 'profile', label: 'Profile' },
 ]
 
+const ranges = [
+  { key: 'full', label: 'Full' },
+  { key: 'local', label: 'Local' },
+  { key: 'standard', label: 'Standard' },
+]
+
 const eventDate = $ref('')
 const imageLoadErrors = $ref<string[]>([])
 
@@ -265,6 +272,7 @@ const panels = $ref<Panel[]>([
   {
     instrument: '',
     timespan: 'week',
+    range: 'full',
     overlay: 'none',
     parameter: '',
     description: '',
@@ -323,6 +331,7 @@ function addPanel() {
   panels.push({
     instrument: '',
     timespan: 'week',
+    range: 'full',
     overlay: 'none',
     parameter: '',
     description: '',
@@ -346,7 +355,7 @@ function getMatchingPlots(panel: Panel): string[] {
       if (
         !plot.includes(panel.instrument) ||
         !plot.includes(panel.timespan) ||
-        !plot.includes('full') ||
+        !plot.includes(panel.range) ||
         !plot.endsWith('.png')
       )
         return false
@@ -376,6 +385,7 @@ function loadPreset(preset: PresetEntry[], timespans: string[]) {
       preset.map((entry) => ({
         instrument: entry.instrument,
         timespan,
+        range: 'full',
         overlay: entry.overlay ?? 'none',
         parameter: entry.parameter ?? '',
         description: '',
@@ -517,6 +527,13 @@ function downloadPDF() {
           class="min-w-36"
           :items="timeSpans.map((t) => ({ label: t.label, value: t.key }))"
           placeholder="Time span…"
+          value-key="value"
+        />
+        <u-select-menu
+          v-model="panel.range"
+          class="min-w-32"
+          :items="ranges.map((r) => ({ label: r.label, value: r.key }))"
+          placeholder="Range…"
           value-key="value"
         />
         <u-select-menu
