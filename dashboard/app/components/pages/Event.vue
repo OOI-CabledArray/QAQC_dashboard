@@ -449,7 +449,7 @@ async function downloadImages() {
           >
             Download Images
           </u-button>
-          <u-button icon="i-lucide-file-down" size="lg" @click="downloadPDF">
+          <u-button icon="i-lucide-file-down" size="lg" variant="outline" @click="downloadPDF">
             Download as PDF
           </u-button>
         </div>
