@@ -250,17 +250,7 @@ const ranges = [
 const eventDate = $ref('')
 let eventName = $ref('')
 const imageLoadErrors = $ref<string[]>([])
-let isDownloadingMd = $ref(false)
 let isDownloadingZip = $ref(false)
-
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(blob)
-  })
-}
 
 function isAcoustic(instrument: string): boolean {
   const id = instrument.split('-').pop() ?? ''
@@ -413,46 +403,6 @@ function downloadPDF() {
   window.print()
 }
 
-async function downloadMarkdown() {
-  isDownloadingMd = true
-  try {
-    let md = '# Event Report\n\n'
-    if (eventDate) md += `**Date:** ${eventDate}\n\n`
-
-    for (const panel of panels) {
-      if (!panel.instrument) continue
-      const plots = getMatchingPlots(panel)
-      if (plots.length === 0) continue
-
-      md += `## ${instrumentLabel(panel.instrument)} — ${timespanLabel(panel.timespan)}`
-      if (panel.parameter) md += ` — ${panel.parameter}`
-      md += '\n\n'
-
-      for (const url of plots) {
-        try {
-          const res = await fetch(url)
-          const dataUrl = await blobToDataUrl(await res.blob())
-          const filename = url.split('/').pop() ?? 'image.png'
-          md += `![${filename}](${dataUrl})\n\n`
-        } catch {
-          md += `_(image unavailable: ${url})_\n\n`
-        }
-      }
-
-      if (panel.description) md += `${panel.description}\n\n`
-      md += '---\n\n'
-    }
-
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(new Blob([md], { type: 'text/markdown' }))
-    a.download = `event-report${eventDate ? `-${eventDate}` : ''}.md`
-    a.click()
-    URL.revokeObjectURL(a.href)
-  } finally {
-    isDownloadingMd = false
-  }
-}
-
 async function downloadImages() {
   isDownloadingZip = true
   try {
@@ -490,15 +440,6 @@ async function downloadImages() {
       <div class="flex items-center justify-between mb-3">
         <h1 class="font-bold text-2xl">Event Report</h1>
         <div class="flex gap-2">
-          <u-button
-            icon="i-lucide-file-text"
-            :loading="isDownloadingMd"
-            size="lg"
-            variant="outline"
-            @click="downloadMarkdown"
-          >
-            Download as MD
-          </u-button>
           <u-button
             icon="i-lucide-images"
             :loading="isDownloadingZip"
