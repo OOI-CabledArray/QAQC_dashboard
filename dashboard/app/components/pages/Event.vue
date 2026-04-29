@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { onMounted } from 'vue'
+import JSZip from 'jszip'
 
 import { useStore } from '~/store'
 
@@ -247,7 +248,19 @@ const ranges = [
 ]
 
 const eventDate = $ref('')
+let eventName = $ref('')
 const imageLoadErrors = $ref<string[]>([])
+let isDownloadingMd = $ref(false)
+let isDownloadingZip = $ref(false)
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
 
 function isAcoustic(instrument: string): boolean {
   const id = instrument.split('-').pop() ?? ''
@@ -377,7 +390,8 @@ function timespanLabel(key: string): string {
   return timeSpans.find((t) => t.key === key)?.label ?? key
 }
 
-function loadPreset(preset: PresetEntry[], timespans: string[]) {
+function loadPreset(preset: PresetEntry[], timespans: string[], name = '') {
+  if (name) eventName = name
   panels.splice(
     0,
     panels.length,
@@ -398,6 +412,75 @@ function loadPreset(preset: PresetEntry[], timespans: string[]) {
 function downloadPDF() {
   window.print()
 }
+
+async function downloadMarkdown() {
+  isDownloadingMd = true
+  try {
+    let md = '# Event Report\n\n'
+    if (eventDate) md += `**Date:** ${eventDate}\n\n`
+
+    for (const panel of panels) {
+      if (!panel.instrument) continue
+      const plots = getMatchingPlots(panel)
+      if (plots.length === 0) continue
+
+      md += `## ${instrumentLabel(panel.instrument)} — ${timespanLabel(panel.timespan)}`
+      if (panel.parameter) md += ` — ${panel.parameter}`
+      md += '\n\n'
+
+      for (const url of plots) {
+        try {
+          const res = await fetch(url)
+          const dataUrl = await blobToDataUrl(await res.blob())
+          const filename = url.split('/').pop() ?? 'image.png'
+          md += `![${filename}](${dataUrl})\n\n`
+        } catch {
+          md += `_(image unavailable: ${url})_\n\n`
+        }
+      }
+
+      if (panel.description) md += `${panel.description}\n\n`
+      md += '---\n\n'
+    }
+
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([md], { type: 'text/markdown' }))
+    a.download = `event-report${eventDate ? `-${eventDate}` : ''}.md`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  } finally {
+    isDownloadingMd = false
+  }
+}
+
+async function downloadImages() {
+  isDownloadingZip = true
+  try {
+    const zip = new JSZip()
+    const folderName = eventName || 'event'
+    const folder = zip.folder(folderName)!
+
+    for (const panel of panels) {
+      if (!panel.instrument) continue
+      for (const url of getMatchingPlots(panel)) {
+        try {
+          const res = await fetch(url)
+          folder.file(url.split('/').pop() ?? 'image.png', await res.blob())
+        } catch {
+          // skip unavailable images
+        }
+      }
+    }
+
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(await zip.generateAsync({ type: 'blob' }))
+    a.download = `${folderName}.zip`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  } finally {
+    isDownloadingZip = false
+  }
+}
 </script>
 
 <template>
@@ -406,9 +489,29 @@ function downloadPDF() {
     <div class="mb-4 no-print">
       <div class="flex items-center justify-between mb-3">
         <h1 class="font-bold text-2xl">Event Report</h1>
-        <u-button class="ml-auto" icon="i-lucide-file-down" size="lg" @click="downloadPDF">
-          Download as PDF
-        </u-button>
+        <div class="flex gap-2">
+          <u-button
+            icon="i-lucide-file-text"
+            :loading="isDownloadingMd"
+            size="lg"
+            variant="outline"
+            @click="downloadMarkdown"
+          >
+            Download as MD
+          </u-button>
+          <u-button
+            icon="i-lucide-images"
+            :loading="isDownloadingZip"
+            size="lg"
+            variant="outline"
+            @click="downloadImages"
+          >
+            Download Images
+          </u-button>
+          <u-button icon="i-lucide-file-down" size="lg" @click="downloadPDF">
+            Download as PDF
+          </u-button>
+        </div>
       </div>
       <div class="flex gap-3 items-end justify-between">
         <div class="flex gap-3 items-end">
@@ -418,7 +521,7 @@ function downloadPDF() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami)"
+                @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami, 'tsunami')"
                 >🌊</u-button
               >
             </u-tooltip>
@@ -436,7 +539,7 @@ function downloadPDF() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_EARTHQUAKE, presetTimespans.earthquake)"
+                @click="loadPreset(PRESET_EARTHQUAKE, presetTimespans.earthquake, 'earthquake')"
                 >🌍</u-button
               >
             </u-tooltip>
@@ -454,7 +557,7 @@ function downloadPDF() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_VOLCANO, presetTimespans.volcano)"
+                @click="loadPreset(PRESET_VOLCANO, presetTimespans.volcano, 'volcano')"
                 >🌋</u-button
               >
             </u-tooltip>
@@ -476,7 +579,13 @@ function downloadPDF() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_MARINE_HEATWAVE, presetTimespans.marineHeatwave)"
+                @click="
+                  loadPreset(
+                    PRESET_MARINE_HEATWAVE,
+                    presetTimespans.marineHeatwave,
+                    'marine-heatwave',
+                  )
+                "
                 >🌡️</u-button
               >
             </u-tooltip>
@@ -495,6 +604,15 @@ function downloadPDF() {
               class="border border-gray-300 px-2 py-1 rounded text-xs w-24"
               maxlength="10"
               placeholder="YYYY-MM-DD"
+              type="text"
+            />
+          </div>
+          <div class="flex flex-col gap-1 items-center">
+            <span class="text-gray-400 text-xs">Event Name</span>
+            <input
+              v-model="eventName"
+              class="border border-gray-300 px-2 py-1 rounded text-xs w-24"
+              placeholder="e.g. tsunami"
               type="text"
             />
           </div>
