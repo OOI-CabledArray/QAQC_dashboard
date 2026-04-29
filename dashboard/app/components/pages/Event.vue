@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
 import JSZip from 'jszip'
+import { useDebounceFn } from '@vueuse/core'
 
 import { useStore } from '~/store'
 
@@ -247,8 +248,9 @@ const ranges = [
   { key: 'standard', label: 'Standard' },
 ]
 
-const eventDate = $ref('')
+let eventDate = $ref('')
 let eventName = $ref('')
+let linkCopied = $ref(false)
 const imageLoadErrors = $ref<string[]>([])
 let isDownloadingZip = $ref(false)
 
@@ -285,6 +287,7 @@ const panels = $ref<Panel[]>([
 let isLoading = $ref(false)
 
 onMounted(async () => {
+  restoreFromUrl()
   isLoading = true
   await Promise.all([
     store.plotList.length === 0 ? store.getPlots() : Promise.resolve(),
@@ -399,6 +402,83 @@ function loadPreset(preset: PresetEntry[], timespans: string[], name = '') {
   )
 }
 
+function encodeState(): string {
+  return btoa(
+    encodeURIComponent(
+      JSON.stringify({
+        d: eventDate,
+        n: eventName,
+        p: panels.map((panel) => ({
+          i: panel.instrument,
+          t: panel.timespan,
+          r: panel.range,
+          o: panel.overlay,
+          v: panel.parameter,
+        })),
+      }),
+    ),
+  )
+}
+
+function restoreFromUrl() {
+  const param = new URL(window.location.href).searchParams.get('s')
+  if (!param) return
+  try {
+    const state = JSON.parse(decodeURIComponent(atob(param)))
+    if (state.d) eventDate = state.d
+    if (state.n) eventName = state.n
+    if (Array.isArray(state.p) && state.p.length > 0) {
+      panels.splice(
+        0,
+        panels.length,
+        ...state.p.map((p: { i: string; t: string; r: string; o: string; v: string }) => ({
+          instrument: p.i ?? '',
+          timespan: p.t ?? 'week',
+          range: p.r ?? 'full',
+          overlay: p.o ?? 'none',
+          parameter: p.v ?? '',
+          description: '',
+          descriptionOpen: false,
+        })),
+      )
+    }
+  } catch {
+    // invalid URL state — ignore
+  }
+}
+
+const syncUrl = useDebounceFn(() => {
+  const url = new URL(window.location.href)
+  url.searchParams.set('s', encodeState())
+  history.replaceState(null, '', url.toString())
+}, 600)
+
+watch(
+  () => ({
+    p: panels.map((p) => ({
+      i: p.instrument,
+      t: p.timespan,
+      r: p.range,
+      o: p.overlay,
+      v: p.parameter,
+    })),
+    d: eventDate,
+    n: eventName,
+  }),
+  syncUrl,
+  { deep: true },
+)
+
+async function copyLink() {
+  const url = new URL(window.location.href)
+  url.searchParams.set('s', encodeState())
+  await navigator.clipboard.writeText(url.toString())
+  linkCopied = true
+  setTimeout(() => {
+    linkCopied = false
+  }, 2000)
+}
+
 function downloadPDF() {
   window.print()
 }
@@ -440,6 +520,14 @@ async function downloadImages() {
       <div class="flex items-center justify-between mb-3">
         <h1 class="font-bold text-2xl">Event Report</h1>
         <div class="flex gap-2">
+          <u-button
+            :icon="linkCopied ? 'i-lucide-check' : 'i-lucide-link'"
+            size="lg"
+            variant="outline"
+            @click="copyLink"
+          >
+            {{ linkCopied ? 'Copied!' : 'Copy Link' }}
+          </u-button>
           <u-button
             icon="i-lucide-images"
             :loading="isDownloadingZip"
