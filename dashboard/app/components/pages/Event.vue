@@ -553,7 +553,7 @@ async function downloadImages() {
             <input
               v-model="eventName"
               class="border border-gray-300 px-2 py-1 rounded text-xs w-24"
-              placeholder="e.g. tsunami"
+              placeholder="e.g. axial_2015"
               type="text"
             />
           </div>
