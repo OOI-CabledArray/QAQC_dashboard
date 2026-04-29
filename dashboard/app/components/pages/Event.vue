@@ -566,8 +566,8 @@ function downloadPDF() {
 
       <!-- Print-only label -->
       <div v-if="panel.instrument" class="mb-2 print-only">
-        <p class="font-semibold text-lg">
-          {{ instrumentLabel(panel.instrument) }} — {{ timespanLabel(panel.timespan) }}
+        <p class="font-semibold text-sm">
+          {{ instrumentLabel(panel.instrument) }} — {{ timespanLabel(panel.timespan) }}<template v-if="panel.parameter"> — {{ panel.parameter }}</template>
         </p>
         <hr class="my-2" />
       </div>
