@@ -219,12 +219,7 @@ const PRESET_MARINE_HEATWAVE: PresetEntry[] = [
 ]
 // ─────────────────────────────────────────────────────────────────────────────
 
-const presetTimespans = $ref({
-  tsunami: ['week'],
-  earthquake: ['week'],
-  volcano: ['week'],
-  marineHeatwave: ['month'],
-})
+const presetTimespans = $ref<string>('week')
 
 const timeSpans = [
   { key: 'day', label: '1 Day' },
@@ -518,7 +513,7 @@ async function downloadImages() {
     <!-- Page header (hidden when printing) -->
     <div class="mb-4 no-print">
       <div class="flex items-center justify-between mb-3">
-        <h1 class="font-bold text-2xl">Event Report</h1>
+        <h1 class="font-bold text-3xl sm:text-4xl text-highlighted">Event Report</h1>
         <div class="flex gap-2">
           <u-button
             :icon="linkCopied ? 'i-lucide-check' : 'i-lucide-link'"
@@ -550,17 +545,11 @@ async function downloadImages() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami, 'tsunami')"
+                @click="loadPreset(PRESET_TSUNAMI, [presetTimespans], 'tsunami')"
                 >🌊</u-button
               >
             </u-tooltip>
-            <u-select-menu
-              v-model="presetTimespans.tsunami"
-              class="text-xs w-24"
-              :items="timeSpans"
-              multiple
-              value-key="key"
-            />
+            <span class="text-xs font-medium text-gray-600">Tsunami</span>
           </div>
           <div class="flex flex-col gap-1 items-center">
             <u-tooltip :content="{ side: 'top' }" :ui="{ text: 'font-bold' }" text="Earthquake">
@@ -568,17 +557,11 @@ async function downloadImages() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_EARTHQUAKE, presetTimespans.earthquake, 'earthquake')"
+                @click="loadPreset(PRESET_EARTHQUAKE, [presetTimespans], 'earthquake')"
                 >🌍</u-button
               >
             </u-tooltip>
-            <u-select-menu
-              v-model="presetTimespans.earthquake"
-              class="text-xs w-24"
-              :items="timeSpans"
-              multiple
-              value-key="key"
-            />
+            <span class="text-xs font-medium text-gray-600">Earthquake</span>
           </div>
           <div class="flex flex-col gap-1 items-center">
             <u-tooltip :content="{ side: 'top' }" :ui="{ text: 'font-bold' }" text="Eruption">
@@ -586,17 +569,11 @@ async function downloadImages() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_VOLCANO, presetTimespans.volcano, 'volcano')"
+                @click="loadPreset(PRESET_VOLCANO, [presetTimespans], 'volcano')"
                 >🌋</u-button
               >
             </u-tooltip>
-            <u-select-menu
-              v-model="presetTimespans.volcano"
-              class="text-xs w-24"
-              :items="timeSpans"
-              multiple
-              value-key="key"
-            />
+            <span class="text-xs font-medium text-gray-600">Eruption</span>
           </div>
           <div class="flex flex-col gap-1 items-center">
             <u-tooltip
@@ -608,21 +585,18 @@ async function downloadImages() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="
-                  loadPreset(
-                    PRESET_MARINE_HEATWAVE,
-                    presetTimespans.marineHeatwave,
-                    'marine-heatwave',
-                  )
-                "
+                @click="loadPreset(PRESET_MARINE_HEATWAVE, [presetTimespans], 'marine-heatwave')"
                 >🌡️</u-button
               >
             </u-tooltip>
+            <span class="text-xs font-medium text-gray-600">Marine Heatwave</span>
+          </div>
+          <div class="flex flex-col gap-1 items-center">
+            <span class="text-gray-400 text-xs">Timespans</span>
             <u-select-menu
-              v-model="presetTimespans.marineHeatwave"
+              v-model="presetTimespans"
               class="text-xs w-24"
               :items="timeSpans"
-              multiple
               value-key="key"
             />
           </div>
