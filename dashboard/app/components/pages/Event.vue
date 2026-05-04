@@ -233,7 +233,7 @@ const timeSpans = [
 const overlays = [
   { key: 'none', label: 'None' },
   { key: 'anno', label: 'Annotations' },
-  { key: 'time', label: 'Time' },
+  { key: 'time', label: 'Time Machine' },
   { key: 'clim', label: 'Climatology' },
   { key: 'profile', label: 'Profile' },
 ]
@@ -489,6 +489,20 @@ function downloadPDF() {
   window.print()
 }
 
+function resetReport() {
+  eventDate = ''
+  eventName = ''
+  panels.splice(0, panels.length, {
+    instrument: '',
+    timespan: 'week',
+    range: 'full',
+    overlay: 'none',
+    parameter: '',
+    description: '',
+    descriptionOpen: false,
+  })
+}
+
 async function downloadImages() {
   isDownloadingZip = true
   try {
@@ -526,6 +540,15 @@ async function downloadImages() {
       <div class="flex items-center justify-between mb-3">
         <h1 class="font-bold text-3xl sm:text-4xl text-highlighted">Event Report</h1>
         <div class="flex gap-2">
+          <u-button
+            icon="i-lucide-rotate-ccw"
+            size="lg"
+            variant="outline"
+            color="neutral"
+            @click="resetReport"
+          >
+            Reset
+          </u-button>
           <u-button
             :icon="linkCopied ? 'i-lucide-check' : 'i-lucide-link'"
             size="lg"
