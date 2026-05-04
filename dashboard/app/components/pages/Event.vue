@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import { onMounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import JSZip from 'jszip'
 import { useDebounceFn } from '@vueuse/core'
+import { parseDate, type CalendarDate } from '@internationalized/date'
 
 import { useStore } from '~/store'
 
@@ -219,11 +220,11 @@ const PRESET_MARINE_HEATWAVE: PresetEntry[] = [
 ]
 // ─────────────────────────────────────────────────────────────────────────────
 
-const presetTimespans = $ref({
-  tsunami: ['week'],
-  earthquake: ['week'],
-  volcano: ['week'],
-  marineHeatwave: ['month'],
+const presetTimespans = $ref<string>('week')
+let globalRange = $ref<string>('full')
+
+watch($$(globalRange), (val) => {
+  for (const panel of panels) panel.range = val
 })
 
 const timeSpans = [
@@ -237,7 +238,7 @@ const timeSpans = [
 const overlays = [
   { key: 'none', label: 'None' },
   { key: 'anno', label: 'Annotations' },
-  { key: 'time', label: 'Time' },
+  { key: 'time', label: 'Time Machine' },
   { key: 'clim', label: 'Climatology' },
   { key: 'profile', label: 'Profile' },
 ]
@@ -253,6 +254,16 @@ let eventName = $ref('')
 let linkCopied = $ref(false)
 const imageLoadErrors = $ref<string[]>([])
 let isDownloadingZip = $ref(false)
+
+const calendarDate = computed<CalendarDate | undefined>({
+  get() {
+    if (!eventDate) return undefined
+    try { return parseDate(eventDate) } catch { return undefined }
+  },
+  set(val) {
+    eventDate = val?.toString() ?? ''
+  },
+})
 
 function isAcoustic(instrument: string): boolean {
   const id = instrument.split('-').pop() ?? ''
@@ -483,6 +494,21 @@ function downloadPDF() {
   window.print()
 }
 
+function resetReport() {
+  eventDate = ''
+  eventName = ''
+  globalRange = 'full'
+  panels.splice(0, panels.length, {
+    instrument: '',
+    timespan: 'week',
+    range: 'full',
+    overlay: 'none',
+    parameter: '',
+    description: '',
+    descriptionOpen: false,
+  })
+}
+
 async function downloadImages() {
   isDownloadingZip = true
   try {
@@ -518,8 +544,17 @@ async function downloadImages() {
     <!-- Page header (hidden when printing) -->
     <div class="mb-4 no-print">
       <div class="flex items-center justify-between mb-3">
-        <h1 class="font-bold text-2xl">Event Report</h1>
+        <h1 class="font-bold text-3xl sm:text-4xl text-highlighted">Event Report</h1>
         <div class="flex gap-2">
+          <u-button
+            icon="i-lucide-rotate-ccw"
+            size="lg"
+            variant="outline"
+            color="neutral"
+            @click="resetReport"
+          >
+            Reset
+          </u-button>
           <u-button
             :icon="linkCopied ? 'i-lucide-check' : 'i-lucide-link'"
             size="lg"
@@ -550,17 +585,11 @@ async function downloadImages() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_TSUNAMI, presetTimespans.tsunami, 'tsunami')"
+                @click="loadPreset(PRESET_TSUNAMI, [presetTimespans], 'tsunami')"
                 >🌊</u-button
               >
             </u-tooltip>
-            <u-select-menu
-              v-model="presetTimespans.tsunami"
-              class="text-xs w-24"
-              :items="timeSpans"
-              multiple
-              value-key="key"
-            />
+            <span class="text-xs font-medium text-gray-600">Tsunami</span>
           </div>
           <div class="flex flex-col gap-1 items-center">
             <u-tooltip :content="{ side: 'top' }" :ui="{ text: 'font-bold' }" text="Earthquake">
@@ -568,17 +597,11 @@ async function downloadImages() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_EARTHQUAKE, presetTimespans.earthquake, 'earthquake')"
+                @click="loadPreset(PRESET_EARTHQUAKE, [presetTimespans], 'earthquake')"
                 >🌍</u-button
               >
             </u-tooltip>
-            <u-select-menu
-              v-model="presetTimespans.earthquake"
-              class="text-xs w-24"
-              :items="timeSpans"
-              multiple
-              value-key="key"
-            />
+            <span class="text-xs font-medium text-gray-600">Earthquake</span>
           </div>
           <div class="flex flex-col gap-1 items-center">
             <u-tooltip :content="{ side: 'top' }" :ui="{ text: 'font-bold' }" text="Eruption">
@@ -586,17 +609,11 @@ async function downloadImages() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_VOLCANO, presetTimespans.volcano, 'volcano')"
+                @click="loadPreset(PRESET_VOLCANO, [presetTimespans], 'volcano')"
                 >🌋</u-button
               >
             </u-tooltip>
-            <u-select-menu
-              v-model="presetTimespans.volcano"
-              class="text-xs w-24"
-              :items="timeSpans"
-              multiple
-              value-key="key"
-            />
+            <span class="text-xs font-medium text-gray-600">Eruption</span>
           </div>
           <div class="flex flex-col gap-1 items-center">
             <u-tooltip
@@ -608,39 +625,51 @@ async function downloadImages() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="
-                  loadPreset(
-                    PRESET_MARINE_HEATWAVE,
-                    presetTimespans.marineHeatwave,
-                    'marine-heatwave',
-                  )
-                "
+                @click="loadPreset(PRESET_MARINE_HEATWAVE, [presetTimespans], 'marine-heatwave')"
                 >🌡️</u-button
               >
             </u-tooltip>
+            <span class="text-xs font-medium text-gray-600">Marine Heatwave</span>
+          </div>
+          <div class="flex flex-col gap-1 items-center">
+            <span class="text-gray-400 text-xs">Timespan</span>
             <u-select-menu
-              v-model="presetTimespans.marineHeatwave"
+              v-model="presetTimespans"
               class="text-xs w-24"
               :items="timeSpans"
-              multiple
+              value-key="key"
+            />
+          </div>
+          <div class="flex flex-col gap-1 items-center">
+            <span class="text-gray-400 text-xs">Range</span>
+            <u-select-menu
+              v-model="globalRange"
+              class="text-xs w-24"
+              :items="ranges"
               value-key="key"
             />
           </div>
           <div class="flex flex-col gap-1 items-center">
             <span class="text-gray-400 text-xs">UTC Date</span>
-            <input
-              v-model="eventDate"
-              class="border border-gray-300 px-2 py-1 rounded text-xs w-24"
-              maxlength="10"
-              placeholder="YYYY-MM-DD"
-              type="text"
-            />
+            <u-popover>
+              <u-button
+                icon="i-lucide-calendar"
+                size="sm"
+                variant="outline"
+                class="text-xs w-28"
+              >
+                {{ eventDate || 'Pick date' }}
+              </u-button>
+              <template #content>
+                <u-calendar v-model="calendarDate" />
+              </template>
+            </u-popover>
           </div>
           <div class="flex flex-col gap-1 items-center">
             <span class="text-gray-400 text-xs">Event Name</span>
             <input
               v-model="eventName"
-              class="border border-gray-300 px-2 py-1 rounded text-xs w-24"
+              class="border border-gray-300 px-2 py-1 rounded text-xs w-44"
               placeholder="e.g. axial_2015"
               type="text"
             />
