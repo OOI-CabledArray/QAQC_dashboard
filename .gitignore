@@ -138,3 +138,6 @@ dashboard/public/discrete/
 
 # mac
 .DS_Store
+
+# vibe 
+.claude
