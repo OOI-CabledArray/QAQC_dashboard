@@ -258,7 +258,11 @@ let isDownloadingZip = $ref(false)
 const calendarDate = computed<CalendarDate | undefined>({
   get() {
     if (!eventDate) return undefined
-    try { return parseDate(eventDate) } catch { return undefined }
+    try {
+      return parseDate(eventDate)
+    } catch {
+      return undefined
+    }
   },
   set(val) {
     eventDate = val?.toString() ?? ''
@@ -652,12 +656,7 @@ async function downloadImages() {
           <div class="flex flex-col gap-1 items-center">
             <span class="text-gray-400 text-xs">UTC Date</span>
             <u-popover>
-              <u-button
-                icon="i-lucide-calendar"
-                size="sm"
-                variant="outline"
-                class="text-xs w-28"
-              >
+              <u-button icon="i-lucide-calendar" size="sm" variant="outline" class="text-xs w-28">
                 {{ eventDate || 'Pick date' }}
               </u-button>
               <template #content>
