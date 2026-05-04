@@ -17,7 +17,7 @@ export default defineNuxtConfig({
       dirs: ['server/database'],
     },
     externals: {
-      external: ['better-sqlite3', 'kysely', 'node-cron'],
+      external: ['better-sqlite3', 'kysely', 'node-cron', 'winston'],
     },
   },
   // Load main, custom CSS module.

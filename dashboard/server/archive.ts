@@ -9,7 +9,10 @@ import {
 } from '@aws-sdk/client-s3'
 
 import type { Archive } from '#server/database/types'
+import { createLogger } from '#server/utils/logging'
 import { slugify } from '#server/utils/slugify'
+
+const log = createLogger('archive')
 
 const SOURCE_PREFIX = 'QAQC_plots'
 
@@ -94,27 +97,42 @@ export async function createArchive(options: {
     })
     .execute()
 
-  console.log(`Archiving ${allKeys.length} files to ${prefix}.`)
+  log.info(`Archiving ${allKeys.length} files to ${prefix}.`)
 
-  const batchSize = 50
+  const concurrency = 200
+  let inFlight = 0
   let copied = 0
-  for (let i = 0; i < allKeys.length; i += batchSize) {
-    const batch = allKeys.slice(i, i + batchSize)
-    await Promise.all(
-      batch.map((sourceKey) => {
+  const queue = [...allKeys]
+
+  await new Promise<void>((resolve, reject) => {
+    function next() {
+      if (copied === allKeys.length) {
+        resolve()
+        return
+      }
+      while (inFlight < concurrency && queue.length > 0) {
+        const sourceKey = queue.shift()!
         const destinationKey = sourceKey.replace(SOURCE_PREFIX, prefix)
-        return s3.send(
+        inFlight++
+        s3.send(
           new CopyObjectCommand({
             Bucket: QAQC_AWS_S3_BUCKET,
             CopySource: `${QAQC_AWS_S3_BUCKET}/${sourceKey}`,
             Key: destinationKey,
           }),
         )
-      }),
-    )
-    copied += batch.length
-    console.log(`  Copied ${copied}/${allKeys.length} files.`)
-  }
+          .then(() => {
+            inFlight--
+            copied++
+            next()
+          })
+          .catch(reject)
+      }
+    }
+    next()
+  })
+
+  log.info(`Copied ${copied} files.`)
 
   await database.updateTable('archives').set({ status: 'complete' }).where('id', '=', id).execute()
 
@@ -202,7 +220,7 @@ export async function cleanupArchives() {
   for (const archive of stalePending) {
     await deleteArchiveFromS3(archive.prefix)
     await database.deleteFrom('archives').where('id', '=', archive.id).execute()
-    console.log(`Cleaned up stale pending archive ${archive.prefix}.`)
+    log.info(`Cleaned up stale pending archive ${archive.prefix}.`)
   }
 
   const completeArchives = archives.filter((archive) => archive.status === 'complete')
@@ -213,7 +231,7 @@ export async function cleanupArchives() {
     if (archive) {
       await deleteArchiveFromS3(archive.prefix)
       await database.deleteFrom('archives').where('id', '=', id).execute()
-      console.log(`Deleted archive ${archive.prefix} per retention policy.`)
+      log.info(`Deleted ${archive.prefix} per retention policy.`)
     }
   }
 }
