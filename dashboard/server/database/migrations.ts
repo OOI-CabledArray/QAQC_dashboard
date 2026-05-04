@@ -55,6 +55,17 @@ const migrations: Migration[] = [
       `)
     },
   },
+  {
+    version: '003',
+    description: 'add-archive-status',
+    up(database) {
+      database.exec(`
+        ALTER TABLE archives
+          ADD COLUMN status TEXT NOT NULL DEFAULT 'complete'
+            CHECK (status IN ('pending', 'complete'));
+      `)
+    },
+  },
 ]
 
 export function runMigrations(database: Database.Database): void {
@@ -85,6 +96,6 @@ export function runMigrations(database: Database.Database): void {
         .run(migration.version, migration.description)
     })()
 
-    console.log(`Applied migration ${migration.version}: ${migration.description}`)
+    console.log(`Applied migration ${migration.version}, ${migration.description}.`)
   }
 }

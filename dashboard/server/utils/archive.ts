@@ -33,6 +33,7 @@ export type ArchiveRow = {
   trigger_type: 'scheduled' | 'manual'
   triggered_by: string | null
   image_count: number
+  status: 'pending' | 'complete'
   created_at: string
 }
 
@@ -84,7 +85,27 @@ export async function createArchive(options: {
 
   const allKeys = [`${SOURCE_PREFIX}/index.json`, ...plotFiles.map((f) => `${SOURCE_PREFIX}/${f}`)]
 
+  const id = randomUUID()
+  database
+    .prepare(
+      `INSERT INTO archives (id, date, slug, prefix, name, trigger_type, triggered_by, image_count, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+    )
+    .run(
+      id,
+      today,
+      finalSlug,
+      prefix,
+      options.name || null,
+      triggerType,
+      options.triggeredBy || null,
+      plotFiles.length,
+    )
+
+  console.log(`Archiving ${allKeys.length} files to ${prefix}.`)
+
   const batchSize = 50
+  let copied = 0
   for (let i = 0; i < allKeys.length; i += batchSize) {
     const batch = allKeys.slice(i, i + batchSize)
     await Promise.all(
@@ -99,24 +120,11 @@ export async function createArchive(options: {
         )
       }),
     )
+    copied += batch.length
+    console.log(`  Copied ${copied}/${allKeys.length} files.`)
   }
 
-  const id = randomUUID()
-  database
-    .prepare(
-      `INSERT INTO archives (id, date, slug, prefix, name, trigger_type, triggered_by, image_count)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      id,
-      today,
-      finalSlug,
-      prefix,
-      options.name || null,
-      triggerType,
-      options.triggeredBy || null,
-      plotFiles.length,
-    )
+  database.prepare("UPDATE archives SET status = 'complete' WHERE id = ?").run(id)
 
   return database.prepare('SELECT * FROM archives WHERE id = ?').get(id) as ArchiveRow
 }
@@ -181,17 +189,33 @@ export function findArchivesToDelete(
   return toDelete
 }
 
-export async function runRetention() {
+export async function runCleanup() {
   const database = getDatabase()
   const archives = database.prepare('SELECT * FROM archives').all() as ArchiveRow[]
-  const toDelete = findArchivesToDelete(archives, new Date())
+
+  const stalePending = archives.filter((archive) => {
+    if (archive.status !== 'pending') {
+      return false
+    }
+    const created = new Date(archive.created_at + 'Z')
+    return Date.now() - created.getTime() > 60 * 60 * 1000
+  })
+
+  for (const archive of stalePending) {
+    await deleteArchiveFromS3(archive.prefix)
+    database.prepare('DELETE FROM archives WHERE id = ?').run(archive.id)
+    console.log(`Cleaned up stale pending archive ${archive.prefix}.`)
+  }
+
+  const completeArchives = archives.filter((archive) => archive.status === 'complete')
+  const toDelete = findArchivesToDelete(completeArchives, new Date())
 
   for (const id of toDelete) {
-    const archive = archives.find((a) => a.id === id)
+    const archive = completeArchives.find((row) => row.id === id)
     if (archive) {
       await deleteArchiveFromS3(archive.prefix)
       database.prepare('DELETE FROM archives WHERE id = ?').run(id)
-      console.log(`Retention: deleted archive ${archive.prefix}`)
+      console.log(`Deleted archive ${archive.prefix} per retention policy.`)
     }
   }
 }

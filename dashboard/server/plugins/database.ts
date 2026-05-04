@@ -7,5 +7,5 @@ export default defineNitroPlugin(() => {
   const database = getDatabase()
   mkdirSync(dirname(database.name), { recursive: true })
   runMigrations(database)
-  console.log(`Database initialized at ${database.name}`)
+  console.log(`Database initialized at ${database.name}.`)
 })
