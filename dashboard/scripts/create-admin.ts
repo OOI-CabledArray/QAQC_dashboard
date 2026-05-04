@@ -3,8 +3,7 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs, promisify } from 'node:util'
 
-import Database from 'better-sqlite3'
-
+import { openDatabase } from '../server/database'
 import { runMigrations } from '../server/database/migrations'
 
 const scryptAsync = promisify(scrypt)
@@ -64,12 +63,10 @@ async function main() {
     process.exit(1)
   }
 
-  const databasePath = process.env.QAQC_DB_PATH || join(process.cwd(), 'data', 'qaqc.sqlite')
+  const databasePath = process.env.QAQC_DATABASE || join(process.cwd(), 'data', 'database.sqlite')
   mkdirSync(join(process.cwd(), 'data'), { recursive: true })
 
-  const database = new Database(databasePath)
-  database.pragma('journal_mode = WAL')
-  database.pragma('foreign_keys = ON')
+  const database = openDatabase(databasePath)
   runMigrations(database)
 
   const id = randomUUID()

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { findArchivesToDelete } from '#server/utils/archive'
+import { findArchivesToDelete } from '#server/archive'
 
 type ArchiveRow = {
   id: string

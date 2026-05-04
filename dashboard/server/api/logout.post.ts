@@ -1,5 +1,3 @@
-import { requireAuth, deleteSession } from '#server/utils/auth'
-
 export default defineEventHandler((event) => {
   requireAuth(event)
 

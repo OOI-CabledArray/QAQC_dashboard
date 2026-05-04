@@ -1,30 +1,33 @@
-import { join } from 'node:path'
-
 import Database from 'better-sqlite3'
 import { Kysely, SqliteDialect } from 'kysely'
 
 import type { Database as DatabaseSchema } from '#server/database/types'
 
-const DB_PATH = process.env.QAQC_DB_PATH || join(process.cwd(), 'data', 'qaqc.sqlite')
+export function openDatabase(path: string): Database.Database {
+  const database = new Database(path)
+  database.pragma('foreign_keys = ON')
+  return database
+}
 
-let rawDatabase: Database.Database | null = null
+let raw: Database.Database | null = null
 let database: Kysely<DatabaseSchema> | null = null
 
 export function getRawDatabase(): Database.Database {
-  if (!rawDatabase) {
-    rawDatabase = new Database(DB_PATH)
-    rawDatabase.pragma('foreign_keys = ON')
+  if (raw == null) {
+    raw = openDatabase(QAQC_DATABASE)
   }
-  return rawDatabase
+
+  return raw
 }
 
 export function getDatabase(): Kysely<DatabaseSchema> {
-  if (!database) {
+  if (database == null) {
     database = new Kysely<DatabaseSchema>({
       dialect: new SqliteDialect({
         database: getRawDatabase(),
       }),
     })
   }
+
   return database
 }

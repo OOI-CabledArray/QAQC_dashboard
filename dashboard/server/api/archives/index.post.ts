@@ -1,5 +1,4 @@
-import { createArchive } from '#server/utils/archive'
-import { requireAuth } from '#server/utils/auth'
+import { createArchive } from '#server/archive'
 
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event)

@@ -13,6 +13,9 @@ export default defineNuxtConfig({
   },
   ssr: true,
   nitro: {
+    imports: {
+      dirs: ['server/database'],
+    },
     externals: {
       external: ['better-sqlite3', 'kysely', 'node-cron'],
     },

@@ -11,15 +11,13 @@ import {
 import type { Archive } from '#server/database/types'
 import { slugify } from '#server/utils/slugify'
 
-const BUCKET = process.env.QAQC_S3_BUCKET || 'ooi-rca-qaqc-prod'
-const REGION = process.env.AWS_REGION || 'us-west-2'
 const SOURCE_PREFIX = 'QAQC_plots'
 
 let s3Client: S3Client | null = null
 
 function getS3(): S3Client {
   if (!s3Client) {
-    s3Client = new S3Client({ region: REGION })
+    s3Client = new S3Client({ region: QAQC_AWS_REGION })
   }
   return s3Client
 }
@@ -73,7 +71,7 @@ export async function createArchive(options: {
   const prefix = buildArchivePrefix(today, finalSlug)
 
   const indexResponse = await s3.send(
-    new GetObjectCommand({ Bucket: BUCKET, Key: `${SOURCE_PREFIX}/index.json` }),
+    new GetObjectCommand({ Bucket: QAQC_AWS_S3_BUCKET, Key: `${SOURCE_PREFIX}/index.json` }),
   )
   const indexBody = await indexResponse.Body!.transformToString()
   const plotFiles = JSON.parse(indexBody) as string[]
@@ -107,8 +105,8 @@ export async function createArchive(options: {
         const destinationKey = sourceKey.replace(SOURCE_PREFIX, prefix)
         return s3.send(
           new CopyObjectCommand({
-            Bucket: BUCKET,
-            CopySource: `${BUCKET}/${sourceKey}`,
+            Bucket: QAQC_AWS_S3_BUCKET,
+            CopySource: `${QAQC_AWS_S3_BUCKET}/${sourceKey}`,
             Key: destinationKey,
           }),
         )
@@ -136,7 +134,7 @@ async function deleteArchiveFromS3(prefix: string) {
   do {
     const list = await s3.send(
       new ListObjectsV2Command({
-        Bucket: BUCKET,
+        Bucket: QAQC_AWS_S3_BUCKET,
         Prefix: prefix,
         ContinuationToken: continuationToken,
       }),
@@ -145,7 +143,7 @@ async function deleteArchiveFromS3(prefix: string) {
     if (list.Contents && list.Contents.length > 0) {
       await s3.send(
         new DeleteObjectsCommand({
-          Bucket: BUCKET,
+          Bucket: QAQC_AWS_S3_BUCKET,
           Delete: { Objects: list.Contents.map((object) => ({ Key: object.Key })) },
         }),
       )
@@ -189,7 +187,7 @@ export function findArchivesToDelete(
   return toDelete
 }
 
-export async function runCleanup() {
+export async function cleanupArchives() {
   const database = getDatabase()
   const archives = await database.selectFrom('archives').selectAll().execute()
 
@@ -223,7 +221,7 @@ export async function runCleanup() {
 export async function getArchiveIndex(key: string): Promise<string[]> {
   const s3 = getS3()
   const response = await s3.send(
-    new GetObjectCommand({ Bucket: BUCKET, Key: `archives/${key}/index.json` }),
+    new GetObjectCommand({ Bucket: QAQC_AWS_S3_BUCKET, Key: `archives/${key}/index.json` }),
   )
   const body = await response.Body!.transformToString()
   return JSON.parse(body)

@@ -3,14 +3,14 @@ import { createRequire } from 'node:module'
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 
+import { createArchive, cleanupArchives } from '#server/archive'
+import { ENABLE_SCHEDULED_JOBS, QAQC_AWS_REGION } from '#server/utils/environment'
+
 const require = createRequire(import.meta.url)
 const cron = require('node-cron')
 
-const ENABLE_JOBS = process.env.ENABLE_SCHEDULED_JOBS === 'true'
-const BUCKET = process.env.QAQC_S3_BUCKET || 'ooi-rca-qaqc-prod'
-
 export default defineNitroPlugin(() => {
-  if (!ENABLE_JOBS) {
+  if (!ENABLE_SCHEDULED_JOBS) {
     console.log('Scheduled jobs are disabled. Set ENABLE_SCHEDULED_JOBS=true to enable.')
     return
   }
@@ -28,7 +28,7 @@ export default defineNitroPlugin(() => {
   cron.schedule('0 3 * * 0', async () => {
     console.log('Running archive cleanup.')
     try {
-      await runCleanup()
+      await cleanupArchives()
       console.log('Archive cleanup complete.')
     } catch (error) {
       console.error('Archive cleanup failed.', error)
@@ -41,15 +41,15 @@ export default defineNitroPlugin(() => {
       const database = getRawDatabase()
       const backupData = readFileSync(database.name)
       const date = new Date().toISOString().slice(0, 10)
-      const s3 = new S3Client({ region: process.env.AWS_REGION || 'us-west-2' })
+      const s3 = new S3Client({ region: QAQC_AWS_REGION })
       await s3.send(
         new PutObjectCommand({
-          Bucket: BUCKET,
+          Bucket: QAQC_AWS_S3_BUCKET,
           Key: `backups/db/${date}.sqlite`,
           Body: backupData,
         }),
       )
-      console.log(`Database backed up to s3://${BUCKET}/backups/db/${date}.sqlite.`)
+      console.log(`Database backed up to s3://${QAQC_AWS_S3_BUCKET}/backups/db/${date}.sqlite.`)
     } catch (error) {
       console.error('Database backup failed.', error)
     }
