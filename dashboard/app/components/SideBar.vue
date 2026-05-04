@@ -12,6 +12,7 @@ const breakpoints = useBreakpoints()
 const isWide = $computed(() => (import.meta.client ? breakpoints.greaterOrEqual('sm').value : true))
 
 const isShowingTopLinksPopover = $ref(false)
+const isShowingArchivesPopover = $ref(false)
 
 type AuthUser = { id: string; email: string; name: string; role: string }
 let authUser = $ref<AuthUser | null>(null)
@@ -33,9 +34,14 @@ async function logout() {
   authUser = null
 }
 
-let archiveName = $ref('')
+let archiveName = $ref<string | null>(null)
 let archiving = $ref(false)
 let showArchiveDialog = $ref(false)
+
+function cancelArchiveDialog() {
+  showArchiveDialog = false
+  archiveName = null
+}
 
 async function triggerArchive() {
   archiving = true
@@ -44,7 +50,7 @@ async function triggerArchive() {
       method: 'POST',
       body: archiveName ? { name: archiveName } : {},
     })
-    archiveName = ''
+    archiveName = null
     showArchiveDialog = false
   } catch (error: any) {
     console.error('Archive failed:', error)
@@ -90,7 +96,11 @@ const accordionItems = $computed(() => {
 
     <!-- Top Links -->
     <div>
-      <u-popover v-model:open="isShowingTopLinksPopover" mode="click">
+      <u-popover
+        v-model:open="isShowingTopLinksPopover"
+        :content="{ side: 'right', sideOffset: 24 }"
+        mode="click"
+      >
         <u-button
           :class="[
             'cursor-pointer',
@@ -109,10 +119,8 @@ const accordionItems = $computed(() => {
           <i class="fa-chalkboard fas opacity-50" />
           <span class="not-sm:text-[8px] sm:ml-2 sm:pr-4 text-nowrap">APL + RCA Links</span>
           <i
-            :class="[
-              'fas not-sm:text-xs',
-              isShowingTopLinksPopover ? 'fa-chevron-down' : 'fa-chevron-right',
-            ]"
+            v-if="isWide"
+            :class="['fas', isShowingTopLinksPopover ? 'fa-chevron-down' : 'fa-chevron-right']"
           />
         </u-button>
         <template #content>
@@ -221,39 +229,83 @@ const accordionItems = $computed(() => {
       Event Report
     </u-button>
 
-    <div class="bg-white h-px mb-2 mt-3 opacity-20" />
-    <span class="font-bold mb-1 not-sm:text-center opacity-50 text-xs uppercase">Archives</span>
-    <archive-dropdown />
+    <!-- Archives -->
+    <div class="mt-auto pt-3">
+      <div class="bg-white h-px mb-2 opacity-20" />
+    </div>
+    <div>
+      <u-popover
+        v-model:open="isShowingArchivesPopover"
+        :content="{ side: 'right', sideOffset: 28 }"
+        mode="click"
+      >
+        <u-button
+          :class="[
+            'cursor-pointer',
+            'flex',
+            'flex-row',
+            'items-center',
+            'not-sm:flex-col',
+            'not-sm:justify-center',
+            'not-sm:pl-1',
+            'not-sm:space-y-1',
+            'text-gray-200',
+            'hover:text-white',
+            'w-full',
+          ]"
+          variant="link"
+        >
+          <i class="fa-archive fas opacity-50" />
+          <span class="grow not-sm:text-[8px] sm:ml-2 text-left text-nowrap">Archives</span>
+          <i
+            v-if="isWide"
+            :class="['fas', isShowingArchivesPopover ? 'fa-chevron-down' : 'fa-chevron-right']"
+          />
+        </u-button>
+        <template #content>
+          <div class="p-3 space-y-2 w-64">
+            <archive-dropdown />
+            <div v-if="authUser">
+              <div class="bg-gray-200 h-px my-2" />
+              <div v-if="!showArchiveDialog" class="flex justify-center">
+                <u-button size="xs" variant="ghost" @click="showArchiveDialog = true">
+                  <i class="fa-plus fas mr-1 text-xs" />
+                  Create Event Archive
+                </u-button>
+              </div>
+              <div v-else class="space-y-1">
+                <u-input
+                  v-model="archiveName"
+                  class="text-xs w-full"
+                  placeholder="Name (optional)"
+                  size="xs"
+                />
+                <div class="flex gap-1">
+                  <u-button block :loading="archiving" size="xs" @click="triggerArchive">
+                    Create
+                  </u-button>
+                  <u-button size="xs" variant="ghost" @click="cancelArchiveDialog">
+                    Cancel
+                  </u-button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </u-popover>
+    </div>
 
     <!-- Auth -->
-    <div class="bg-white h-px mb-2 mt-auto opacity-20" />
+    <div class="bg-white h-px mb-2 mt-2 opacity-20" />
     <div class="text-center">
       <template v-if="authUser">
-        <span class="block text-xs text-gray-400 mb-1">{{ authUser.name }}</span>
-        <u-button
-          class="hover:text-white mb-1 px-0 text-[13px] text-gray-300"
-          variant="link"
-          @click="showArchiveDialog = !showArchiveDialog"
-        >
-          Archive now
-        </u-button>
-        <div v-if="showArchiveDialog" class="mb-2 space-y-1">
-          <u-input
-            v-model="archiveName"
-            class="text-xs"
-            placeholder="Name (optional)"
-            size="xs"
-          />
-          <u-button block size="xs" :loading="archiving" @click="triggerArchive">
-            Create archive
-          </u-button>
-        </div>
+        <span class="block mb-1 text-gray-400 text-xs">{{ authUser.name }}</span>
         <u-button
           class="hover:text-white px-0 text-[13px] text-gray-300"
           variant="link"
           @click="logout"
         >
-          Log out
+          Log Out
         </u-button>
       </template>
       <u-button
@@ -262,7 +314,7 @@ const accordionItems = $computed(() => {
         to="/login"
         variant="link"
       >
-        Log in
+        Log In
       </u-button>
     </div>
   </div>

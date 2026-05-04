@@ -3,8 +3,8 @@ definePageMeta({
   layout: false,
 })
 
-let email = $ref('')
-let password = $ref('')
+const email = $ref('')
+const password = $ref('')
 let error = $ref('')
 let loading = $ref(false)
 
@@ -29,34 +29,42 @@ async function login() {
 </script>
 
 <template>
-  <div class="flex h-screen items-center justify-center bg-gray-50">
-    <div class="w-full max-w-sm rounded-lg bg-white p-8 shadow">
-      <h1 class="mb-6 text-center text-2xl font-bold">QAQC Dashboard</h1>
+  <div class="bg-gray-50 flex h-screen items-center justify-center">
+    <div class="bg-white max-w-sm p-8 rounded-lg shadow w-full">
+      <h1 class="font-bold mb-6 text-2xl text-center">QAQC Dashboard</h1>
 
       <form @submit.prevent="login">
         <div class="mb-4">
-          <label class="mb-1 block text-sm font-medium text-gray-700" for="email">Email</label>
-          <u-input id="email" v-model="email" type="email" placeholder="Email" required />
+          <label class="block font-medium mb-1 text-gray-700 text-sm" for="email">Email</label>
+          <u-input
+            id="email"
+            v-model="email"
+            class="w-full"
+            placeholder="Email"
+            required
+            type="email"
+          />
         </div>
 
         <div class="mb-6">
-          <label class="mb-1 block text-sm font-medium text-gray-700" for="password">
+          <label class="block font-medium mb-1 text-gray-700 text-sm" for="password">
             Password
           </label>
           <u-input
             id="password"
             v-model="password"
-            type="password"
+            class="w-full"
             placeholder="Password"
             required
+            type="password"
           />
         </div>
 
-        <div v-if="error" class="mb-4 rounded bg-red-50 p-3 text-sm text-red-600">
+        <div v-if="error" class="bg-red-50 mb-4 p-3 rounded text-red-600 text-sm">
           {{ error }}
         </div>
 
-        <u-button block type="submit" :loading="loading">Log in</u-button>
+        <u-button block :loading="loading" type="submit">Log In</u-button>
       </form>
     </div>
   </div>

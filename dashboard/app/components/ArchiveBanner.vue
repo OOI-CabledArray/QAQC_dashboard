@@ -51,11 +51,11 @@ const dateLabel = $computed(() => {
 <template>
   <div
     v-if="store.archiveKey"
-    class="flex items-center justify-between bg-amber-100 border-b border-amber-300 px-4 py-2 text-amber-900"
+    class="bg-amber-100 border-amber-300 border-b flex items-center justify-between px-4 py-2 text-amber-900"
   >
-    <span class="text-sm font-medium">
+    <span class="font-medium text-sm">
       Viewing archive: {{ dateLabel }}<template v-if="archiveName">, {{ archiveName }}</template>
     </span>
-    <u-button size="xs" variant="soft" color="amber" @click="backToLive">Back to live</u-button>
+    <u-button color="amber" size="xs" variant="soft" @click="backToLive">Back To Live</u-button>
   </div>
 </template>

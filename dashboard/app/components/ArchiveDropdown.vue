@@ -18,16 +18,23 @@ type Archive = {
 
 let archives = $ref<Archive[]>([])
 
+const eventArchives = $computed(() =>
+  archives.filter((archive) => archive.trigger_type === 'manual'),
+)
+const dailyArchives = $computed(() =>
+  archives.filter((archive) => archive.trigger_type === 'scheduled'),
+)
+
 function formatLabel(archive: Archive): string {
   const date = new Date(archive.date + 'T00:00:00').toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   })
-  if (archive.name) {
-    return `${date}, ${archive.name}`
+  if (archive.trigger_type === 'manual') {
+    return archive.name ? `${date}, ${archive.name}` : date
   }
-  return `${date} (daily)`
+  return date
 }
 
 function archiveKey(archive: Archive): string {
@@ -64,23 +71,50 @@ if (import.meta.client) {
 </script>
 
 <template>
-  <div v-if="archives.length > 0">
-    <u-select-menu
-      :model-value="store.archiveKey || undefined"
-      :items="archives.map((a) => ({ label: formatLabel(a), value: archiveKey(a) }))"
-      placeholder="View archive…"
-      value-key="value"
-      class="w-full"
-      @update:model-value="selectArchive($event)"
-    />
+  <div v-if="archives.length === 0">
+    <span class="text-gray-400 text-xs">No archives available.</span>
+  </div>
+  <div v-else class="space-y-3">
+    <div v-if="eventArchives.length > 0">
+      <span class="block font-semibold mb-1 text-xs">Event Archives</span>
+      <u-select-menu
+        class="w-full"
+        :items="
+          eventArchives.map((archive) => ({
+            label: formatLabel(archive),
+            value: archiveKey(archive),
+          }))
+        "
+        :model-value="store.archiveKey || undefined"
+        placeholder="Select event archive…"
+        value-key="value"
+        @update:model-value="selectArchive($event)"
+      />
+    </div>
+    <div v-if="dailyArchives.length > 0">
+      <span class="block font-semibold mb-1 text-xs">Daily Archives</span>
+      <u-select-menu
+        class="w-full"
+        :items="
+          dailyArchives.map((archive) => ({
+            label: formatLabel(archive),
+            value: archiveKey(archive),
+          }))
+        "
+        :model-value="store.archiveKey || undefined"
+        placeholder="Select daily archive…"
+        value-key="value"
+        @update:model-value="selectArchive($event)"
+      />
+    </div>
     <u-button
       v-if="store.archiveKey"
-      class="mt-1 w-full text-xs"
+      class="text-xs w-full"
       size="xs"
       variant="ghost"
       @click="selectArchive(null)"
     >
-      Back to live
+      Back To Live
     </u-button>
   </div>
 </template>
