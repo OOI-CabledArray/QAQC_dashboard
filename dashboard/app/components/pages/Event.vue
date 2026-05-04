@@ -221,6 +221,11 @@ const PRESET_MARINE_HEATWAVE: PresetEntry[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 const presetTimespans = $ref<string>('week')
+let globalRange = $ref<string>('full')
+
+watch($$(globalRange), (val) => {
+  for (const panel of panels) panel.range = val
+})
 
 const timeSpans = [
   { key: 'day', label: '1 Day' },
@@ -492,6 +497,7 @@ function downloadPDF() {
 function resetReport() {
   eventDate = ''
   eventName = ''
+  globalRange = 'full'
   panels.splice(0, panels.length, {
     instrument: '',
     timespan: 'week',
@@ -626,11 +632,20 @@ async function downloadImages() {
             <span class="text-xs font-medium text-gray-600">Marine Heatwave</span>
           </div>
           <div class="flex flex-col gap-1 items-center">
-            <span class="text-gray-400 text-xs">Timespans</span>
+            <span class="text-gray-400 text-xs">Timespan</span>
             <u-select-menu
               v-model="presetTimespans"
               class="text-xs w-24"
               :items="timeSpans"
+              value-key="key"
+            />
+          </div>
+          <div class="flex flex-col gap-1 items-center">
+            <span class="text-gray-400 text-xs">Range</span>
+            <u-select-menu
+              v-model="globalRange"
+              class="text-xs w-24"
+              :items="ranges"
               value-key="key"
             />
           </div>
