@@ -254,6 +254,12 @@ let eventName = $ref('')
 let linkCopied = $ref(false)
 const imageLoadErrors = $ref<string[]>([])
 let isDownloadingZip = $ref(false)
+let showDownloadConfirm = $ref(false)
+let downloadController: AbortController | null = null
+
+const totalPlotCount = computed(() =>
+  panels.reduce((sum, panel) => sum + getMatchingPlots(panel).length, 0),
+)
 
 const calendarDate = computed<CalendarDate | undefined>({
   get() {
@@ -514,7 +520,10 @@ function resetReport() {
 }
 
 async function downloadImages() {
+  showDownloadConfirm = false
   isDownloadingZip = true
+  downloadController = new AbortController()
+  const { signal } = downloadController
   try {
     const zip = new JSZip()
     const folderName = eventName || 'event'
@@ -523,23 +532,32 @@ async function downloadImages() {
     for (const panel of panels) {
       if (!panel.instrument) continue
       for (const url of getMatchingPlots(panel)) {
+        if (signal.aborted) break
         try {
-          const res = await fetch(url)
+          const res = await fetch(url, { signal })
           folder.file(url.split('/').pop() ?? 'image.png', await res.blob())
         } catch {
-          // skip unavailable images
+          // skip unavailable or aborted images
         }
       }
+      if (signal.aborted) break
     }
 
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(await zip.generateAsync({ type: 'blob' }))
-    a.download = `${folderName}.zip`
-    a.click()
-    URL.revokeObjectURL(a.href)
+    if (!signal.aborted) {
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(await zip.generateAsync({ type: 'blob' }))
+      a.download = `${folderName}.zip`
+      a.click()
+      URL.revokeObjectURL(a.href)
+    }
   } finally {
     isDownloadingZip = false
+    downloadController = null
   }
+}
+
+function cancelDownload() {
+  downloadController?.abort()
 }
 </script>
 
@@ -568,14 +586,45 @@ async function downloadImages() {
             {{ linkCopied ? 'Copied!' : 'Copy Link' }}
           </u-button>
           <u-button
+            v-if="!isDownloadingZip"
             icon="i-lucide-images"
-            :loading="isDownloadingZip"
             size="lg"
             variant="outline"
-            @click="downloadImages"
+            @click="showDownloadConfirm = true"
           >
             Download Images
           </u-button>
+          <u-button
+            v-else
+            icon="i-lucide-x"
+            size="lg"
+            variant="outline"
+            color="error"
+            @click="cancelDownload"
+          >
+            Cancel Download
+          </u-button>
+          <u-modal v-model:open="showDownloadConfirm">
+            <template #content>
+              <u-card>
+                <template #header>
+                  <p class="font-semibold text-base">Download Images</p>
+                </template>
+                <p class="text-sm text-gray-700">
+                  Download {{ totalPlotCount }} plot{{
+                    totalPlotCount === 1 ? '' : 's'
+                  }}
+                  as a ZIP file? This may take a moment.
+                </p>
+                <template #footer>
+                  <div class="flex justify-end gap-2">
+                    <u-button variant="ghost" @click="showDownloadConfirm = false">Cancel</u-button>
+                    <u-button icon="i-lucide-images" @click="downloadImages">Download</u-button>
+                  </div>
+                </template>
+              </u-card>
+            </template>
+          </u-modal>
           <u-button icon="i-lucide-file-down" size="lg" variant="outline" @click="downloadPDF">
             Download as PDF
           </u-button>
