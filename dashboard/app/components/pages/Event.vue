@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import { onMounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import JSZip from 'jszip'
 import { useDebounceFn } from '@vueuse/core'
+import { parseDate, type CalendarDate } from '@internationalized/date'
 
 import { useStore } from '~/store'
 
@@ -248,6 +249,16 @@ let eventName = $ref('')
 let linkCopied = $ref(false)
 const imageLoadErrors = $ref<string[]>([])
 let isDownloadingZip = $ref(false)
+
+const calendarDate = computed<CalendarDate | undefined>({
+  get() {
+    if (!eventDate) return undefined
+    try { return parseDate(eventDate) } catch { return undefined }
+  },
+  set(val) {
+    eventDate = val?.toString() ?? ''
+  },
+})
 
 function isAcoustic(instrument: string): boolean {
   const id = instrument.split('-').pop() ?? ''
@@ -602,13 +613,19 @@ async function downloadImages() {
           </div>
           <div class="flex flex-col gap-1 items-center">
             <span class="text-gray-400 text-xs">UTC Date</span>
-            <input
-              v-model="eventDate"
-              class="border border-gray-300 px-2 py-1 rounded text-xs w-24"
-              maxlength="10"
-              placeholder="YYYY-MM-DD"
-              type="text"
-            />
+            <u-popover>
+              <u-button
+                icon="i-lucide-calendar"
+                size="sm"
+                variant="outline"
+                class="text-xs w-28"
+              >
+                {{ eventDate || 'Pick date' }}
+              </u-button>
+              <template #content>
+                <u-calendar v-model="calendarDate" />
+              </template>
+            </u-popover>
           </div>
           <div class="flex flex-col gap-1 items-center">
             <span class="text-gray-400 text-xs">Event Name</span>
