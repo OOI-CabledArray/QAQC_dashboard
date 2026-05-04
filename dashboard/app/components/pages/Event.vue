@@ -631,7 +631,7 @@ async function downloadImages() {
             <span class="text-gray-400 text-xs">Event Name</span>
             <input
               v-model="eventName"
-              class="border border-gray-300 px-2 py-1 rounded text-xs w-24"
+              class="border border-gray-300 px-2 py-1 rounded text-xs w-44"
               placeholder="e.g. axial_2015"
               type="text"
             />
