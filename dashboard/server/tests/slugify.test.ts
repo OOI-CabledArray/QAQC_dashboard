@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+
 import { slugify } from '#server/utils/slugify'
 
 describe('slugify', () => {
