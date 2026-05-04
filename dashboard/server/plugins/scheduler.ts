@@ -38,7 +38,7 @@ export default defineNitroPlugin(() => {
   cron.schedule('0 4 * * *', async () => {
     console.log('Running database backup.')
     try {
-      const database = getDatabase()
+      const database = getRawDatabase()
       const backupData = readFileSync(database.name)
       const date = new Date().toISOString().slice(0, 10)
       const s3 = new S3Client({ region: process.env.AWS_REGION || 'us-west-2' })
@@ -55,8 +55,8 @@ export default defineNitroPlugin(() => {
     }
   })
 
-  cron.schedule('0 * * * *', () => {
-    deleteExpiredSessions()
+  cron.schedule('0 * * * *', async () => {
+    await deleteExpiredSessions()
   })
 
   console.log('Scheduled jobs registered.')

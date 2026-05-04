@@ -1,6 +1,3 @@
-import { verifyPassword, createSession } from '#server/utils/auth'
-import { getDatabase } from '#server/utils/db'
-
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60
 
 export default defineEventHandler(async (event) => {
@@ -12,11 +9,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const database = getDatabase()
-  const row = database
-    .prepare('SELECT id, email, name, role, password FROM users WHERE email = ?')
-    .get(email) as
-    | { id: string; email: string; name: string; role: string; password: string }
-    | undefined
+  const row = await database
+    .selectFrom('users')
+    .select(['id', 'email', 'name', 'role', 'password'])
+    .where('email', '=', email)
+    .executeTakeFirst()
 
   if (!row) {
     throw createError({ statusCode: 401, statusMessage: 'Invalid email or password' })
@@ -27,7 +24,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Invalid email or password' })
   }
 
-  const sessionId = createSession(row.id)
+  const sessionId = await createSession(row.id)
 
   setCookie(event, 'qaqc_session', sessionId, {
     httpOnly: true,

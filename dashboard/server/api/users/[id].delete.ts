@@ -1,7 +1,4 @@
-import { requireAdmin } from '#server/utils/auth'
-import { getDatabase } from '#server/utils/db'
-
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const user = requireAdmin(event)
 
   const id = getRouterParam(event, 'id')
@@ -10,9 +7,9 @@ export default defineEventHandler((event) => {
   }
 
   const database = getDatabase()
-  const result = database.prepare('DELETE FROM users WHERE id = ?').run(id)
+  const result = await database.deleteFrom('users').where('id', '=', id!).executeTakeFirst()
 
-  if (result.changes === 0) {
+  if (result.numDeletedRows === 0n) {
     throw createError({ statusCode: 404, statusMessage: 'User not found' })
   }
 

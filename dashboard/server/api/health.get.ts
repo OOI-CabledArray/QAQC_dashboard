@@ -1,7 +1,7 @@
-import { getDatabase } from '#server/utils/db'
+import { sql } from 'kysely'
 
-export default defineEventHandler(() => {
+export default defineEventHandler(async () => {
   const database = getDatabase()
-  const result = database.prepare('SELECT 1 AS ok').get() as { ok: number }
-  return { status: 'ok', database: result.ok === 1 }
+  const result = await sql<{ ok: number }>`SELECT 1 AS ok`.execute(database)
+  return { status: 'ok', database: result.rows[0]?.ok === 1 }
 })

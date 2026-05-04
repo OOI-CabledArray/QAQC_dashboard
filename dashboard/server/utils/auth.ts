@@ -3,7 +3,7 @@ import { promisify } from 'node:util'
 
 import { createError, type H3Event } from 'h3'
 
-import { getDatabase } from '#server/utils/db'
+import type { User } from '#server/database/types'
 
 const scryptAsync = promisify(scrypt)
 
@@ -12,14 +12,7 @@ const KEY_LENGTH = 64
 const SESSION_EXPIRY_DAYS = 7
 const SESSION_ID_BYTES = 32
 
-export interface User {
-  id: string
-  email: string
-  name: string
-  role: 'admin' | 'viewer'
-  created_at: string
-  updated_at: string
-}
+export type { User }
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(SALT_LENGTH).toString('hex')
@@ -37,48 +30,59 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return timingSafeEqual(derived, storedBuffer)
 }
 
-export function createSession(userId: string): string {
+export async function createSession(userId: string): Promise<string> {
   const sessionId = randomBytes(SESSION_ID_BYTES).toString('hex')
   const expiresAt = new Date(Date.now() + SESSION_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString()
   const database = getDatabase()
-  database
-    .prepare('INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)')
-    .run(sessionId, userId, expiresAt)
+  await database
+    .insertInto('sessions')
+    .values({ id: sessionId, user_id: userId, expires_at: expiresAt })
+    .execute()
   return sessionId
 }
 
-export function getSessionUser(sessionId: string): User | null {
+export async function getSessionUser(sessionId: string): Promise<User | null> {
   const database = getDatabase()
   const now = new Date().toISOString()
 
-  const row = database
-    .prepare(
-      `SELECT u.id, u.email, u.name, u.role, u.created_at, u.updated_at
-       FROM sessions s
-       JOIN users u ON s.user_id = u.id
-       WHERE s.id = ? AND s.expires_at > ?`,
-    )
-    .get(sessionId, now) as User | undefined
+  const row = await database
+    .selectFrom('sessions')
+    .innerJoin('users', 'users.id', 'sessions.user_id')
+    .select([
+      'users.id',
+      'users.email',
+      'users.name',
+      'users.role',
+      'users.created_at',
+      'users.updated_at',
+    ])
+    .where('sessions.id', '=', sessionId)
+    .where('sessions.expires_at', '>', now)
+    .executeTakeFirst()
 
   if (!row) {
     return null
   }
 
   const newExpiry = new Date(Date.now() + SESSION_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString()
-  database.prepare('UPDATE sessions SET expires_at = ? WHERE id = ?').run(newExpiry, sessionId)
+  await database
+    .updateTable('sessions')
+    .set({ expires_at: newExpiry })
+    .where('id', '=', sessionId)
+    .execute()
 
   return row
 }
 
-export function deleteSession(sessionId: string): void {
+export async function deleteSession(sessionId: string): Promise<void> {
   const database = getDatabase()
-  database.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId)
+  await database.deleteFrom('sessions').where('id', '=', sessionId).execute()
 }
 
-export function deleteExpiredSessions(): void {
+export async function deleteExpiredSessions(): Promise<void> {
   const database = getDatabase()
   const now = new Date().toISOString()
-  database.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(now)
+  await database.deleteFrom('sessions').where('expires_at', '<=', now).execute()
 }
 
 export function requireAuth(event: H3Event): User {

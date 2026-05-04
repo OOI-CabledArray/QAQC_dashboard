@@ -14,7 +14,7 @@ export default defineNuxtConfig({
   ssr: true,
   nitro: {
     externals: {
-      external: ['better-sqlite3', 'node-cron'],
+      external: ['better-sqlite3', 'kysely', 'node-cron'],
     },
   },
   // Load main, custom CSS module.

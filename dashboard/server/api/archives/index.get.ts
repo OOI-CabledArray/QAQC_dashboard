@@ -1,9 +1,10 @@
-import { getDatabase } from '#server/utils/db'
-
-export default defineEventHandler(() => {
+export default defineEventHandler(async () => {
   const database = getDatabase()
-  const archives = database
-    .prepare("SELECT * FROM archives WHERE status = 'complete' ORDER BY created_at DESC")
-    .all()
+  const archives = await database
+    .selectFrom('archives')
+    .selectAll()
+    .where('status', '=', 'complete')
+    .orderBy('created_at', 'desc')
+    .execute()
   return archives
 })

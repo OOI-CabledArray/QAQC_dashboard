@@ -8,7 +8,7 @@ import {
   GetObjectCommand,
 } from '@aws-sdk/client-s3'
 
-import { getDatabase } from '#server/utils/db'
+import type { Archive } from '#server/database/types'
 import { slugify } from '#server/utils/slugify'
 
 const BUCKET = process.env.QAQC_S3_BUCKET || 'ooi-rca-qaqc-prod'
@@ -24,18 +24,7 @@ function getS3(): S3Client {
   return s3Client
 }
 
-export type ArchiveRow = {
-  id: string
-  date: string
-  slug: string
-  prefix: string
-  name: string | null
-  trigger_type: 'scheduled' | 'manual'
-  triggered_by: string | null
-  image_count: number
-  status: 'pending' | 'complete'
-  created_at: string
-}
+export type { Archive }
 
 export function buildArchiveKey(date: string, slug: string): string {
   return `${date}-${slug}`
@@ -48,7 +37,7 @@ export function buildArchivePrefix(date: string, slug: string): string {
 export async function createArchive(options: {
   name?: string
   triggeredBy?: string
-}): Promise<ArchiveRow> {
+}): Promise<Archive> {
   const s3 = getS3()
   const database = getDatabase()
   const today = new Date().toISOString().slice(0, 10)
@@ -56,19 +45,25 @@ export async function createArchive(options: {
   const triggerType = options.name ? 'manual' : 'scheduled'
 
   let finalSlug = slug
-  const existing = database
-    .prepare('SELECT id FROM archives WHERE date = ? AND slug = ?')
-    .get(today, finalSlug) as { id: string } | undefined
+  const existing = await database
+    .selectFrom('archives')
+    .select('id')
+    .where('date', '=', today)
+    .where('slug', '=', finalSlug)
+    .executeTakeFirst()
 
   if (existing && finalSlug === 'auto') {
     await deleteArchiveFromS3(buildArchivePrefix(today, finalSlug))
-    database.prepare('DELETE FROM archives WHERE id = ?').run(existing.id)
+    await database.deleteFrom('archives').where('id', '=', existing.id).execute()
   } else if (existing) {
     let counter = 2
     while (
-      database
-        .prepare('SELECT id FROM archives WHERE date = ? AND slug = ?')
-        .get(today, `${slug}-${counter}`)
+      await database
+        .selectFrom('archives')
+        .select('id')
+        .where('date', '=', today)
+        .where('slug', '=', `${slug}-${counter}`)
+        .executeTakeFirst()
     ) {
       counter++
     }
@@ -86,21 +81,20 @@ export async function createArchive(options: {
   const allKeys = [`${SOURCE_PREFIX}/index.json`, ...plotFiles.map((f) => `${SOURCE_PREFIX}/${f}`)]
 
   const id = randomUUID()
-  database
-    .prepare(
-      `INSERT INTO archives (id, date, slug, prefix, name, trigger_type, triggered_by, image_count, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-    )
-    .run(
+  await database
+    .insertInto('archives')
+    .values({
       id,
-      today,
-      finalSlug,
+      date: today,
+      slug: finalSlug,
       prefix,
-      options.name || null,
-      triggerType,
-      options.triggeredBy || null,
-      plotFiles.length,
-    )
+      name: options.name || null,
+      trigger_type: triggerType,
+      triggered_by: options.triggeredBy || null,
+      image_count: plotFiles.length,
+      status: 'pending',
+    })
+    .execute()
 
   console.log(`Archiving ${allKeys.length} files to ${prefix}.`)
 
@@ -124,9 +118,15 @@ export async function createArchive(options: {
     console.log(`  Copied ${copied}/${allKeys.length} files.`)
   }
 
-  database.prepare("UPDATE archives SET status = 'complete' WHERE id = ?").run(id)
+  await database.updateTable('archives').set({ status: 'complete' }).where('id', '=', id).execute()
 
-  return database.prepare('SELECT * FROM archives WHERE id = ?').get(id) as ArchiveRow
+  const archive = await database
+    .selectFrom('archives')
+    .selectAll()
+    .where('id', '=', id)
+    .executeTakeFirstOrThrow()
+
+  return archive
 }
 
 async function deleteArchiveFromS3(prefix: string) {
@@ -156,7 +156,7 @@ async function deleteArchiveFromS3(prefix: string) {
 }
 
 export function findArchivesToDelete(
-  archives: Pick<ArchiveRow, 'id' | 'date' | 'slug' | 'trigger_type' | 'name'>[],
+  archives: Pick<Archive, 'id' | 'date' | 'slug' | 'trigger_type' | 'name'>[],
   now: Date,
 ): string[] {
   const toDelete: string[] = []
@@ -191,7 +191,7 @@ export function findArchivesToDelete(
 
 export async function runCleanup() {
   const database = getDatabase()
-  const archives = database.prepare('SELECT * FROM archives').all() as ArchiveRow[]
+  const archives = await database.selectFrom('archives').selectAll().execute()
 
   const stalePending = archives.filter((archive) => {
     if (archive.status !== 'pending') {
@@ -203,7 +203,7 @@ export async function runCleanup() {
 
   for (const archive of stalePending) {
     await deleteArchiveFromS3(archive.prefix)
-    database.prepare('DELETE FROM archives WHERE id = ?').run(archive.id)
+    await database.deleteFrom('archives').where('id', '=', archive.id).execute()
     console.log(`Cleaned up stale pending archive ${archive.prefix}.`)
   }
 
@@ -214,7 +214,7 @@ export async function runCleanup() {
     const archive = completeArchives.find((row) => row.id === id)
     if (archive) {
       await deleteArchiveFromS3(archive.prefix)
-      database.prepare('DELETE FROM archives WHERE id = ?').run(id)
+      await database.deleteFrom('archives').where('id', '=', id).execute()
       console.log(`Deleted archive ${archive.prefix} per retention policy.`)
     }
   }

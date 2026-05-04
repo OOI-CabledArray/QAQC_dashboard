@@ -1,8 +1,5 @@
 import { randomUUID } from 'node:crypto'
 
-import { requireAdmin, hashPassword } from '#server/utils/auth'
-import { getDatabase } from '#server/utils/db'
-
 export default defineEventHandler(async (event) => {
   requireAdmin(event)
 
@@ -16,13 +13,13 @@ export default defineEventHandler(async (event) => {
   const passwordHash = await hashPassword(password)
   const assignedRole = role === 'admin' ? 'admin' : 'viewer'
   const database = getDatabase()
-
   const id = randomUUID()
 
   try {
-    database
-      .prepare('INSERT INTO users (id, email, name, password, role) VALUES (?, ?, ?, ?, ?)')
-      .run(id, email, name, passwordHash, assignedRole)
+    await database
+      .insertInto('users')
+      .values({ id, email, name, password: passwordHash, role: assignedRole })
+      .execute()
 
     return { id, email, name, role: assignedRole }
   } catch (error: unknown) {
