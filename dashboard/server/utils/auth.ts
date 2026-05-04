@@ -12,8 +12,6 @@ const KEY_LENGTH = 64
 const SESSION_EXPIRY_DAYS = 7
 const SESSION_ID_BYTES = 32
 
-export type { User }
-
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(SALT_LENGTH).toString('hex')
   const derived = (await scryptAsync(password, salt, KEY_LENGTH)) as Buffer

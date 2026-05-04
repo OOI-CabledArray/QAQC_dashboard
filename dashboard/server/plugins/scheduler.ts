@@ -13,7 +13,7 @@ const cron = require('node-cron')
 
 export default defineNitroPlugin(() => {
   if (!ENABLE_SCHEDULED_JOBS) {
-    log.info('Scheduled jobs are disabled. Set ENABLE_SCHEDULED_JOBS=true to enable.')
+    log.info('Scheduled jobs are disabled. Set ENABLE_SCHEDULED_JOBS=true in `.env` to enable.')
     return
   }
 

@@ -130,7 +130,7 @@ onMounted(() => {
   }, 50)
 })
 
-const ctrlKey = isMac ? 'Command' : 'Ctrl'
+const ctrlKey = isMac() ? 'Command' : 'Ctrl'
 
 // Omit `zoom` and any other other unintuitive visual-related changes from undo/redo history.
 const historyOmit: ReadonlyArray<keyof typeof state> = ['zoom', 'seriesCollapsed']
