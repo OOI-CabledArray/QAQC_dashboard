@@ -5,8 +5,8 @@ const rootLogger = createWinstonLogger({
   format: format.combine(
     format.timestamp(),
     format.printf(({ timestamp, level, message, module }) => {
-      const prefix = module ? `[${module}] ` : ''
-      return `${timestamp} ${level}: ${prefix}${message}`
+      const prefix = module ? `[${module}]` : ''
+      return `${timestamp} [${level.toUpperCase()}] ${prefix}: ${message}`
     }),
   ),
   transports: [new transports.Console()],

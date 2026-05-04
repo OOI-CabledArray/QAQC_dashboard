@@ -34,6 +34,7 @@ async function logout() {
   authUser = null
 }
 
+const archiveDropdown = $ref<{ refresh: () => Promise<void> } | null>(null)
 let archiveName = $ref<string | null>(null)
 let archiving = $ref(false)
 let showArchiveDialog = $ref(false)
@@ -52,6 +53,7 @@ async function triggerArchive() {
     })
     archiveName = null
     showArchiveDialog = false
+    archiveDropdown?.refresh()
   } catch (error: any) {
     console.error('Archive failed:', error)
   } finally {
@@ -264,7 +266,7 @@ const accordionItems = $computed(() => {
         </u-button>
         <template #content>
           <div class="p-3 space-y-2 w-64">
-            <archive-dropdown />
+            <archive-dropdown ref="archiveDropdown" :open="isShowingArchivesPopover" />
             <div v-if="authUser">
               <div class="bg-gray-200 h-px my-2" />
               <div v-if="!showArchiveDialog" class="flex justify-center">

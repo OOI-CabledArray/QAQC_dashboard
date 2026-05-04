@@ -39,7 +39,6 @@ export async function createArchive(options: {
   name?: string
   triggeredBy?: string
 }): Promise<Archive> {
-  const s3 = getS3()
   const database = getDatabase()
   const today = new Date().toISOString().slice(0, 10)
   const slug = options.name ? slugify(options.name) : 'auto'
@@ -73,13 +72,11 @@ export async function createArchive(options: {
 
   const prefix = buildArchivePrefix(today, finalSlug)
 
-  const indexResponse = await s3.send(
+  const indexResponse = await getS3().send(
     new GetObjectCommand({ Bucket: QAQC_AWS_S3_BUCKET, Key: `${SOURCE_PREFIX}/index.json` }),
   )
   const indexBody = await indexResponse.Body!.transformToString()
   const plotFiles = JSON.parse(indexBody) as string[]
-
-  const allKeys = [`${SOURCE_PREFIX}/index.json`, ...plotFiles.map((f) => `${SOURCE_PREFIX}/${f}`)]
 
   const id = randomUUID()
   await database
@@ -97,10 +94,32 @@ export async function createArchive(options: {
     })
     .execute()
 
+  const archive = await database
+    .selectFrom('archives')
+    .selectAll()
+    .where('id', '=', id)
+    .executeTakeFirstOrThrow()
+
+  copyArchiveFiles(id, prefix, plotFiles).catch((error) => {
+    log.error(`Archive copy failed for ${prefix}.`, error)
+  })
+
+  return archive
+}
+
+async function copyArchiveFiles(
+  archiveId: string,
+  prefix: string,
+  plotFiles: string[],
+): Promise<void> {
+  const s3 = getS3()
+  const database = getDatabase()
+  const allKeys = [`${SOURCE_PREFIX}/index.json`, ...plotFiles.map((f) => `${SOURCE_PREFIX}/${f}`)]
+
   log.info(`Archiving ${allKeys.length} files to ${prefix}.`)
 
-  const concurrency = 200
-  let inFlight = 0
+  const concurrency = 2000
+  let active = 0
   let copied = 0
   const queue = [...allKeys]
 
@@ -110,10 +129,10 @@ export async function createArchive(options: {
         resolve()
         return
       }
-      while (inFlight < concurrency && queue.length > 0) {
+      while (active < concurrency && queue.length > 0) {
         const sourceKey = queue.shift()!
         const destinationKey = sourceKey.replace(SOURCE_PREFIX, prefix)
-        inFlight++
+        active++
         s3.send(
           new CopyObjectCommand({
             Bucket: QAQC_AWS_S3_BUCKET,
@@ -122,7 +141,7 @@ export async function createArchive(options: {
           }),
         )
           .then(() => {
-            inFlight--
+            active--
             copied++
             next()
           })
@@ -132,17 +151,13 @@ export async function createArchive(options: {
     next()
   })
 
-  log.info(`Copied ${copied} files.`)
+  log.info(`Copied ${copied} files to ${prefix}.`)
 
-  await database.updateTable('archives').set({ status: 'complete' }).where('id', '=', id).execute()
-
-  const archive = await database
-    .selectFrom('archives')
-    .selectAll()
-    .where('id', '=', id)
-    .executeTakeFirstOrThrow()
-
-  return archive
+  await database
+    .updateTable('archives')
+    .set({ status: 'complete' })
+    .where('id', '=', archiveId)
+    .execute()
 }
 
 async function deleteArchiveFromS3(prefix: string) {

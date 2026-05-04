@@ -3,7 +3,6 @@ export default defineEventHandler(async () => {
   const archives = await database
     .selectFrom('archives')
     .selectAll()
-    .where('status', '=', 'complete')
     .orderBy('created_at', 'desc')
     .execute()
   return archives

@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { useStore } from '~/store'
 
+const { open } = defineProps<{ open: boolean }>()
+
 const store = useStore()
 const route = useRoute()
 const router = useRouter()
@@ -12,18 +14,23 @@ type Archive = {
   prefix: string
   name: string | null
   trigger_type: string
+  status: string
   image_count: number
   created_at: string
 }
 
 let archives = $ref<Archive[]>([])
+let pollTimer = $ref<ReturnType<typeof setInterval> | null>(null)
 
-const eventArchives = $computed(() =>
-  archives.filter((archive) => archive.trigger_type === 'manual'),
+const completeEventArchives = $computed(() =>
+  archives.filter((archive) => archive.trigger_type === 'manual' && archive.status === 'complete'),
 )
-const dailyArchives = $computed(() =>
-  archives.filter((archive) => archive.trigger_type === 'scheduled'),
+const completeScheduledArchives = $computed(() =>
+  archives.filter(
+    (archive) => archive.trigger_type === 'scheduled' && archive.status === 'complete',
+  ),
 )
+const pendingArchives = $computed(() => archives.filter((archive) => archive.status === 'pending'))
 
 function formatLabel(archive: Archive): string {
   const date = new Date(archive.date + 'T00:00:00').toLocaleDateString('en-US', {
@@ -31,8 +38,8 @@ function formatLabel(archive: Archive): string {
     day: 'numeric',
     year: 'numeric',
   })
-  if (archive.trigger_type === 'manual') {
-    return archive.name ? `${date}, ${archive.name}` : date
+  if (archive.trigger_type === 'manual' && archive.name) {
+    return `${date}, ${archive.name}`
   }
   return date
 }
@@ -48,6 +55,31 @@ async function loadArchives() {
     archives = []
   }
 }
+
+function startPolling() {
+  if (!pollTimer) {
+    pollTimer = setInterval(loadArchives, 5000)
+  }
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
+watch(
+  () => open,
+  (isOpen) => {
+    if (isOpen) {
+      loadArchives()
+      startPolling()
+    } else {
+      stopPolling()
+    }
+  },
+)
 
 async function selectArchive(key: string | null) {
   if (key) {
@@ -68,6 +100,12 @@ if (import.meta.client) {
     store.enterArchiveMode(archiveParam)
   }
 }
+
+onUnmounted(() => {
+  stopPolling()
+})
+
+defineExpose({ refresh: loadArchives })
 </script>
 
 <template>
@@ -75,34 +113,48 @@ if (import.meta.client) {
     <span class="text-gray-400 text-xs">No archives available.</span>
   </div>
   <div v-else class="space-y-3">
-    <div v-if="eventArchives.length > 0">
+    <div v-if="pendingArchives.length > 0">
+      <div
+        v-for="archive in pendingArchives"
+        :key="archive.id"
+        class="flex gap-2 items-center py-1"
+      >
+        <u-tooltip text="This archive is being created and will be available shortly.">
+          <div class="flex gap-2 items-center text-gray-400 text-xs">
+            <i class="fa-spin fa-spinner fas" />
+            <span>{{ formatLabel(archive) }}</span>
+          </div>
+        </u-tooltip>
+      </div>
+    </div>
+    <div v-if="completeEventArchives.length > 0">
       <span class="block font-semibold mb-1 text-xs">Event Archives</span>
       <u-select-menu
         class="w-full"
         :items="
-          eventArchives.map((archive) => ({
+          completeEventArchives.map((archive) => ({
             label: formatLabel(archive),
             value: archiveKey(archive),
           }))
         "
         :model-value="store.archiveKey || undefined"
-        placeholder="Select event archive…"
+        placeholder="Select event archive..."
         value-key="value"
         @update:model-value="selectArchive($event)"
       />
     </div>
-    <div v-if="dailyArchives.length > 0">
-      <span class="block font-semibold mb-1 text-xs">Daily Archives</span>
+    <div v-if="completeScheduledArchives.length > 0">
+      <span class="block font-semibold mb-1 text-xs">Scheduled Archives</span>
       <u-select-menu
         class="w-full"
         :items="
-          dailyArchives.map((archive) => ({
+          completeScheduledArchives.map((archive) => ({
             label: formatLabel(archive),
             value: archiveKey(archive),
           }))
         "
         :model-value="store.archiveKey || undefined"
-        placeholder="Select daily archive…"
+        placeholder="Select scheduled archive..."
         value-key="value"
         @update:model-value="selectArchive($event)"
       />
