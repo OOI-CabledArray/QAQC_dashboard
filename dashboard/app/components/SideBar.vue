@@ -277,11 +277,17 @@ const accordionItems = $computed(() => {
                 <u-input
                   v-model="archiveName"
                   class="text-xs w-full"
-                  placeholder="Name (optional)"
+                  placeholder="Name"
                   size="xs"
                 />
                 <div class="flex gap-1">
-                  <u-button block :loading="archiving" size="xs" @click="triggerArchive">
+                  <u-button
+                    block
+                    :disabled="!archiveName"
+                    :loading="archiving"
+                    size="xs"
+                    @click="triggerArchive"
+                  >
                     Create
                   </u-button>
                   <u-button size="xs" variant="ghost" @click="cancelArchiveDialog">

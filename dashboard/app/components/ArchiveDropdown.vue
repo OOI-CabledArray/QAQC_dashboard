@@ -107,14 +107,10 @@ if (import.meta.client) {
         @update:model-value="selectArchive($event)"
       />
     </div>
-    <u-button
-      v-if="store.archiveKey"
-      class="text-xs w-full"
-      size="xs"
-      variant="ghost"
-      @click="selectArchive(null)"
-    >
-      Back To Live
-    </u-button>
+    <div v-if="store.archiveKey" class="flex justify-center">
+      <u-button class="text-xs" size="xs" variant="ghost" @click="selectArchive(null)">
+        Back To Live
+      </u-button>
+    </div>
   </div>
 </template>
