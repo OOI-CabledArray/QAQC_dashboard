@@ -1,10 +1,10 @@
-import Database from 'better-sqlite3'
 import { scrypt, randomBytes, randomUUID } from 'node:crypto'
-import { createInterface } from 'node:readline'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { parseArgs } from 'node:util'
-import { promisify } from 'node:util'
+import { parseArgs, promisify } from 'node:util'
+
+import Database from 'better-sqlite3'
+
 import { runMigrations } from '../server/database/migrations'
 
 const scryptAsync = promisify(scrypt)
@@ -16,35 +16,29 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 async function readPassword(): Promise<string> {
+  process.stdout.write('Password: ')
+  process.stdin.setRawMode(true)
+  process.stdin.resume()
+
   return new Promise((resolve) => {
-    const rl = createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    })
-
-    process.stdout.write('Password: ')
-    const originalWrite = process.stdout.write.bind(process.stdout)
-    process.stdin.setRawMode(true)
-
     let password = ''
     process.stdin.on('data', (chunk) => {
-      const character = chunk.toString()
-      if (character === '\n' || character === '\r' || character === '') {
+      const code = chunk[0]
+      if (code === 0x0a || code === 0x0d || code === 0x04) {
         process.stdin.setRawMode(false)
-        originalWrite('\n')
-        rl.close()
+        process.stdin.pause()
+        process.stdout.write('\n')
         resolve(password)
-      } else if (character === '') {
+      } else if (code === 0x03) {
         process.stdin.setRawMode(false)
-        originalWrite('\n')
-        rl.close()
+        process.stdout.write('\n')
         process.exit(1)
-      } else if (character === '' || character === '\b') {
+      } else if (code === 0x7f || code === 0x08) {
         if (password.length > 0) {
           password = password.slice(0, -1)
         }
       } else {
-        password += character
+        password += chunk.toString()
       }
     })
   })
@@ -85,7 +79,7 @@ async function main() {
     database
       .prepare('INSERT INTO users (id, email, name, password, role) VALUES (?, ?, ?, ?, ?)')
       .run(id, values.email, values.name, hashed, 'admin')
-    console.log(`Admin user created: ${values.email}`)
+    console.log(`Admin user created for ${values.email}.`)
   } catch (error: any) {
     if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
       console.error(`A user with email ${values.email} already exists.`)
