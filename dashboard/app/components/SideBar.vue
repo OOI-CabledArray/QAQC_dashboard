@@ -268,19 +268,20 @@ const accordionItems = $computed(() => {
           <div class="p-3 space-y-2 w-64">
             <ArchiveDropdown ref="archiveDropdown" :open="isShowingArchivesPopover" />
             <div v-if="authUser">
-              <div class="bg-gray-200 h-px my-2" />
+              <div class="-mx-3 bg-gray-200 h-px my-2" />
               <div v-if="!showArchiveDialog" class="flex justify-center">
                 <u-button size="xs" variant="ghost" @click="showArchiveDialog = true">
                   <i class="fa-plus fas mr-1 text-xs" />
                   Create Event Archive
                 </u-button>
               </div>
-              <div v-else class="space-y-1">
+              <div v-else class="space-y-2">
                 <u-input
                   v-model="archiveName"
                   class="text-xs w-full"
-                  placeholder="Name"
+                  placeholder="Event Name"
                   size="xs"
+                  @keydown.enter="archiveName && triggerArchive()"
                 />
                 <div class="flex gap-1">
                   <u-button
@@ -290,7 +291,7 @@ const accordionItems = $computed(() => {
                     size="xs"
                     @click="triggerArchive"
                   >
-                    Create
+                    Create Archive
                   </u-button>
                   <u-button size="xs" variant="ghost" @click="cancelArchiveDialog">
                     Cancel

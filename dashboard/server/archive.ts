@@ -34,6 +34,8 @@ function getS3(): S3Client {
 
 export type { Archive }
 
+const activeCopies = new Map<string, AbortController>()
+
 export function buildArchiveKey(date: string, slug: string): string {
   return `${date}-${slug}`
 }
@@ -107,16 +109,26 @@ export async function createArchive(options: {
     .where('id', '=', id)
     .executeTakeFirstOrThrow()
 
-  copyArchiveFiles(id, prefix, plotFiles).catch(async (error) => {
-    log.error(`Archive copy failed for ${prefix}.`, error)
-    try {
-      await deleteArchiveFromS3(prefix)
-      await database.deleteFrom('archives').where('id', '=', id).execute()
-      log.info(`Cleaned up failed archive ${prefix}.`)
-    } catch (cleanupError) {
-      log.error(`Failed to clean up archive ${prefix}.`, cleanupError)
-    }
-  })
+  const abortController = new AbortController()
+  activeCopies.set(id, abortController)
+
+  copyArchiveFiles(id, prefix, plotFiles, abortController.signal)
+    .catch(async (error) => {
+      if (abortController.signal.aborted) {
+        return
+      }
+      log.error(`Archive copy failed for ${prefix}.`, error)
+      try {
+        await deleteArchiveFromS3(prefix)
+        await database.deleteFrom('archives').where('id', '=', id).execute()
+        log.info(`Cleaned up failed archive ${prefix}.`)
+      } catch (cleanupError) {
+        log.error(`Failed to clean up archive ${prefix}.`, cleanupError)
+      }
+    })
+    .finally(() => {
+      activeCopies.delete(id)
+    })
 
   return archive
 }
@@ -125,6 +137,7 @@ async function copyArchiveFiles(
   archiveId: string,
   prefix: string,
   plotFiles: string[],
+  signal: AbortSignal,
 ): Promise<void> {
   const s3 = getS3()
   const database = getDatabase()
@@ -139,6 +152,12 @@ async function copyArchiveFiles(
 
   await new Promise<void>((resolve, reject) => {
     function next() {
+      if (signal.aborted) {
+        if (active === 0) {
+          reject(new Error('Aborted'))
+        }
+        return
+      }
       if (copied === allKeys.length) {
         resolve()
         return
@@ -235,6 +254,29 @@ export function findArchivesToDelete(
   }
 
   return toDelete
+}
+
+export async function cancelArchive(id: string): Promise<void> {
+  const database = getDatabase()
+  const archive = await database
+    .selectFrom('archives')
+    .selectAll()
+    .where('id', '=', id)
+    .executeTakeFirst()
+
+  if (!archive) {
+    return
+  }
+
+  const controller = activeCopies.get(id)
+  if (controller) {
+    controller.abort()
+    activeCopies.delete(id)
+  }
+
+  await deleteArchiveFromS3(archive.prefix)
+  await database.deleteFrom('archives').where('id', '=', id).execute()
+  log.info(`Cancelled and cleaned up archive ${archive.prefix}.`)
 }
 
 export async function cleanupArchives() {
