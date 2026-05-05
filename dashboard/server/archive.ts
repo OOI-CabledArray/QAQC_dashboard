@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { Agent } from 'node:https'
 
 import {
   S3Client,
@@ -7,6 +8,7 @@ import {
   DeleteObjectsCommand,
   GetObjectCommand,
 } from '@aws-sdk/client-s3'
+import { NodeHttpHandler } from '@smithy/node-http-handler'
 
 import type { Archive } from '#server/database/types'
 import { createLogger } from '#server/utils/logging'
@@ -20,7 +22,12 @@ let s3Client: S3Client | null = null
 
 function getS3(): S3Client {
   if (!s3Client) {
-    s3Client = new S3Client({ region: QAQC_AWS_REGION })
+    s3Client = new S3Client({
+      region: QAQC_AWS_REGION,
+      requestHandler: new NodeHttpHandler({
+        httpsAgent: new Agent({ maxSockets: 200 }),
+      }),
+    })
   }
   return s3Client
 }
@@ -100,8 +107,15 @@ export async function createArchive(options: {
     .where('id', '=', id)
     .executeTakeFirstOrThrow()
 
-  copyArchiveFiles(id, prefix, plotFiles).catch((error) => {
+  copyArchiveFiles(id, prefix, plotFiles).catch(async (error) => {
     log.error(`Archive copy failed for ${prefix}.`, error)
+    try {
+      await deleteArchiveFromS3(prefix)
+      await database.deleteFrom('archives').where('id', '=', id).execute()
+      log.info(`Cleaned up failed archive ${prefix}.`)
+    } catch (cleanupError) {
+      log.error(`Failed to clean up archive ${prefix}.`, cleanupError)
+    }
   })
 
   return archive
@@ -118,7 +132,7 @@ async function copyArchiveFiles(
 
   log.info(`Archiving ${allKeys.length} files to ${prefix}.`)
 
-  const concurrency = 2000
+  const concurrency = 200
   let active = 0
   let copied = 0
   const queue = [...allKeys]
@@ -143,6 +157,9 @@ async function copyArchiveFiles(
           .then(() => {
             active--
             copied++
+            if (copied % 1000 === 0) {
+              log.info(`Copied ${copied}/${allKeys.length} files to ${prefix}.`)
+            }
             next()
           })
           .catch(reject)

@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const database = getDatabase()
   const result = await database.deleteFrom('users').where('id', '=', id!).executeTakeFirst()
 
-  if (result.numDeletedRows === 0n) {
+  if (result.numDeletedRows === BigInt(0)) {
     throw createError({ statusCode: 404, statusMessage: 'User not found' })
   }
 

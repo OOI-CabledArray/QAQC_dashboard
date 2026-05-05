@@ -85,7 +85,9 @@ export const useDiscrete = defineStore('discrete', () => {
     }
   }
 
-  load()
+  if (import.meta.client) {
+    load()
+  }
 
   const assetsToStation = $computed<Record<string, string>>(() =>
     Object.fromEntries(samples.map((sample) => [sample.asset, sample.station])),

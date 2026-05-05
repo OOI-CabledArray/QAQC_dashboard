@@ -266,7 +266,7 @@ const accordionItems = $computed(() => {
         </u-button>
         <template #content>
           <div class="p-3 space-y-2 w-64">
-            <archive-dropdown ref="archiveDropdown" :open="isShowingArchivesPopover" />
+            <ArchiveDropdown ref="archiveDropdown" :open="isShowingArchivesPopover" />
             <div v-if="authUser">
               <div class="bg-gray-200 h-px my-2" />
               <div v-if="!showArchiveDialog" class="flex justify-center">

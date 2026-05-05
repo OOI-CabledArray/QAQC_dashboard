@@ -79,6 +79,7 @@ watch(
       stopPolling()
     }
   },
+  { immediate: true },
 )
 
 async function selectArchive(key: string | null) {
@@ -109,60 +110,62 @@ defineExpose({ refresh: loadArchives })
 </script>
 
 <template>
-  <div v-if="archives.length === 0">
-    <span class="text-gray-400 text-xs">No archives available.</span>
-  </div>
-  <div v-else class="space-y-3">
-    <div v-if="pendingArchives.length > 0">
-      <div
-        v-for="archive in pendingArchives"
-        :key="archive.id"
-        class="flex gap-2 items-center py-1"
-      >
-        <u-tooltip text="This archive is being created and will be available shortly.">
-          <div class="flex gap-2 items-center text-gray-400 text-xs">
-            <i class="fa-spin fa-spinner fas" />
-            <span>{{ formatLabel(archive) }}</span>
-          </div>
-        </u-tooltip>
+  <div>
+    <div v-if="archives.length === 0">
+      <span class="text-gray-400 text-xs">No archives available.</span>
+    </div>
+    <div v-else class="space-y-3">
+      <div v-if="pendingArchives.length > 0">
+        <div
+          v-for="archive in pendingArchives"
+          :key="archive.id"
+          class="flex gap-2 items-center py-1"
+        >
+          <u-tooltip text="This archive is being created and will be available shortly.">
+            <div class="flex gap-2 items-center text-gray-400 text-xs">
+              <i class="fa-spin fa-spinner fas" />
+              <span>{{ formatLabel(archive) }}</span>
+            </div>
+          </u-tooltip>
+        </div>
       </div>
-    </div>
-    <div v-if="completeEventArchives.length > 0">
-      <span class="block font-semibold mb-1 text-xs">Event Archives</span>
-      <u-select-menu
-        class="w-full"
-        :items="
-          completeEventArchives.map((archive) => ({
-            label: formatLabel(archive),
-            value: archiveKey(archive),
-          }))
-        "
-        :model-value="store.archiveKey || undefined"
-        placeholder="Select event archive..."
-        value-key="value"
-        @update:model-value="selectArchive($event)"
-      />
-    </div>
-    <div v-if="completeScheduledArchives.length > 0">
-      <span class="block font-semibold mb-1 text-xs">Scheduled Archives</span>
-      <u-select-menu
-        class="w-full"
-        :items="
-          completeScheduledArchives.map((archive) => ({
-            label: formatLabel(archive),
-            value: archiveKey(archive),
-          }))
-        "
-        :model-value="store.archiveKey || undefined"
-        placeholder="Select scheduled archive..."
-        value-key="value"
-        @update:model-value="selectArchive($event)"
-      />
-    </div>
-    <div v-if="store.archiveKey" class="flex justify-center">
-      <u-button class="text-xs" size="xs" variant="ghost" @click="selectArchive(null)">
-        Back To Live
-      </u-button>
+      <div v-if="completeEventArchives.length > 0">
+        <span class="block font-semibold mb-1 text-xs">Event Archives</span>
+        <u-select-menu
+          class="w-full"
+          :items="
+            completeEventArchives.map((archive) => ({
+              label: formatLabel(archive),
+              value: archiveKey(archive),
+            }))
+          "
+          :model-value="store.archiveKey || undefined"
+          placeholder="Select event archive..."
+          value-key="value"
+          @update:model-value="selectArchive($event)"
+        />
+      </div>
+      <div v-if="completeScheduledArchives.length > 0">
+        <span class="block font-semibold mb-1 text-xs">Scheduled Archives</span>
+        <u-select-menu
+          class="w-full"
+          :items="
+            completeScheduledArchives.map((archive) => ({
+              label: formatLabel(archive),
+              value: archiveKey(archive),
+            }))
+          "
+          :model-value="store.archiveKey || undefined"
+          placeholder="Select scheduled archive..."
+          value-key="value"
+          @update:model-value="selectArchive($event)"
+        />
+      </div>
+      <div v-if="store.archiveKey" class="flex justify-center">
+        <u-button class="text-xs" size="xs" variant="ghost" @click="selectArchive(null)">
+          Back To Live
+        </u-button>
+      </div>
     </div>
   </div>
 </template>
