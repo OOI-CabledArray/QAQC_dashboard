@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
 
   const sessionId = await createSession(row.id)
 
-  setCookie(event, 'qaqc_session', sessionId, {
+  setCookie(event, 'session', sessionId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

@@ -1,5 +1,5 @@
 export default defineEventHandler(async (event) => {
-  const sessionId = getCookie(event, 'qaqc_session')
+  const sessionId = getCookie(event, 'session')
   if (sessionId) {
     event.context.user = await getSessionUser(sessionId)
   }
