@@ -14,6 +14,7 @@ const isWide = $computed(() => (import.meta.client ? breakpoints.greaterOrEqual(
 
 const isShowingTopLinksPopover = $ref(false)
 const isShowingArchivesPopover = $ref(false)
+const isShowingUserPopover = $ref(false)
 
 type AuthUser = { id: string; email: string; name: string; role: string }
 let authUser = $ref<AuthUser | null>(null)
@@ -311,14 +312,32 @@ const accordionItems = $computed(() => {
     <div class="bg-white h-px mb-2 mt-2 opacity-20" />
     <div class="text-center">
       <template v-if="authUser">
-        <span class="block mb-1 text-gray-400 text-xs">{{ authUser.name }}</span>
-        <u-button
-          class="hover:text-white px-0 text-[13px] text-gray-300"
-          variant="link"
-          @click="logout"
+        <u-popover
+          v-model:open="isShowingUserPopover"
+          :content="{ side: 'right', sideOffset: 24 }"
+          mode="click"
         >
-          Log Out
-        </u-button>
+          <u-button class="hover:text-white px-0 text-[13px] text-gray-300" variant="link">
+            {{ authUser.name }}
+            <i
+              v-if="isWide"
+              :class="['fas ml-1', isShowingUserPopover ? 'fa-chevron-down' : 'fa-chevron-right']"
+            />
+          </u-button>
+          <template #content>
+            <div class="py-1">
+              <NuxtLink class="block hover:bg-gray-100 px-4 py-1.5 text-sm" to="/users">
+                Manage Users
+              </NuxtLink>
+              <button
+                class="block hover:bg-gray-100 px-4 py-1.5 text-left text-sm w-full"
+                @click="logout"
+              >
+                Log Out
+              </button>
+            </div>
+          </template>
+        </u-popover>
       </template>
       <u-button
         v-else
