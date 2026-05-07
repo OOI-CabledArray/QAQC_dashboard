@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { PutObjectCommand } from '@aws-sdk/client-s3'
 
 import { createArchive, cleanupArchives } from '#server/archive'
-import { ENABLE_SCHEDULED_JOBS, QAQC_AWS_REGION } from '#server/utils/environment'
+import { ENABLE_SCHEDULED_JOBS } from '#server/utils/environment'
 
 const log = createLogger('scheduler')
 
@@ -43,7 +43,6 @@ export default defineNitroPlugin(() => {
       const database = getRawDatabase()
       const backupData = readFileSync(database.name)
       const date = new Date().toISOString().slice(0, 10)
-      const s3 = new S3Client({ region: QAQC_AWS_REGION })
       await s3.send(
         new PutObjectCommand({
           Bucket: QAQC_AWS_S3_BUCKET,

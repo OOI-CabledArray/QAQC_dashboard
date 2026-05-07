@@ -7,7 +7,8 @@ function requireEnv(name: string): string {
     const dotenvExists = existsSync(join(process.cwd(), '.env'))
     if (!dotenvExists) {
       throw new Error(
-        `Environment variable \`${name}\` is required. Create a \`.env\` file based on \`.env.example\`.`,
+        `Environment variable \`${name}\` is required. ` +
+          'Create a `.env` file based on `.env.example`.',
       )
     }
     throw new Error(`Environment variable \`${name}\` is required. Set it in \`.env\`.`)

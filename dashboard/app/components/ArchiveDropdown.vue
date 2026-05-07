@@ -4,8 +4,6 @@ import { useStore } from '~/store'
 const { open } = defineProps<{ open: boolean }>()
 
 const store = useStore()
-const route = useRoute()
-const router = useRouter()
 
 type Archive = {
   id: string
@@ -105,21 +103,13 @@ async function cancelArchive(id: string) {
 async function selectArchive(key: string | null) {
   if (key) {
     await store.enterArchiveMode(key)
-    await router.replace({ query: { ...route.query, archive: key } })
   } else {
     await store.exitArchiveMode()
-    const { archive: _, ...rest } = route.query
-    await router.replace({ query: rest })
   }
 }
 
 if (import.meta.client) {
   loadArchives()
-
-  const archiveParam = route.query.archive as string | undefined
-  if (archiveParam) {
-    store.enterArchiveMode(archiveParam)
-  }
 }
 
 onUnmounted(() => {
@@ -175,7 +165,7 @@ defineExpose({ refresh: loadArchives })
             value: archiveKey(archive),
           }))
         "
-        :model-value="store.archiveKey || undefined"
+        :model-value="store.currentArchive || undefined"
         placeholder="Select"
         size="xs"
         value-key="value"
@@ -184,7 +174,7 @@ defineExpose({ refresh: loadArchives })
         <template #empty>No archives available.</template>
       </u-select-menu>
     </div>
-    <div v-if="store.archiveKey" class="flex justify-center">
+    <div v-if="store.currentArchive" class="flex justify-center">
       <u-button class="text-xs" size="xs" variant="ghost" @click="selectArchive(null)">
         Back To Live
       </u-button>

@@ -1,14 +1,12 @@
 import { randomUUID } from 'node:crypto'
-import { Agent } from 'node:https'
 
 import {
-  S3Client,
   ListObjectsV2Command,
   CopyObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
+  HeadObjectCommand,
 } from '@aws-sdk/client-s3'
-import { NodeHttpHandler } from '@smithy/node-http-handler'
 
 import type { Archive } from '#server/database/types'
 import { createLogger } from '#server/utils/logging'
@@ -17,20 +15,6 @@ import { slugify } from '#server/utils/slugify'
 const log = createLogger('archive')
 
 const SOURCE_PREFIX = 'QAQC_plots'
-
-let s3Client: S3Client | null = null
-
-function getS3(): S3Client {
-  if (!s3Client) {
-    s3Client = new S3Client({
-      region: QAQC_AWS_REGION,
-      requestHandler: new NodeHttpHandler({
-        httpsAgent: new Agent({ maxSockets: 200 }),
-      }),
-    })
-  }
-  return s3Client
-}
 
 export type { Archive }
 
@@ -81,7 +65,7 @@ export async function createArchive(options: {
 
   const prefix = buildArchivePrefix(today, finalSlug)
 
-  const indexResponse = await getS3().send(
+  const indexResponse = await s3.send(
     new GetObjectCommand({ Bucket: QAQC_AWS_S3_BUCKET, Key: `${SOURCE_PREFIX}/index.json` }),
   )
   const indexBody = await indexResponse.Body!.transformToString()
@@ -139,7 +123,6 @@ async function copyArchiveFiles(
   plotFiles: string[],
   signal: AbortSignal,
 ): Promise<void> {
-  const s3 = getS3()
   const database = getDatabase()
   const allKeys = [`${SOURCE_PREFIX}/index.json`, ...plotFiles.map((f) => `${SOURCE_PREFIX}/${f}`)]
 
@@ -194,10 +177,11 @@ async function copyArchiveFiles(
     .set({ status: 'complete' })
     .where('id', '=', archiveId)
     .execute()
+
+  log.info(`Archive ${prefix} complete.`)
 }
 
 async function deleteArchiveFromS3(prefix: string) {
-  const s3 = getS3()
   let continuationToken: string | undefined
 
   do {
@@ -298,6 +282,23 @@ export async function cleanupArchives() {
   }
 
   const completeArchives = archives.filter((archive) => archive.status === 'complete')
+
+  for (const archive of completeArchives) {
+    try {
+      await s3.send(
+        new HeadObjectCommand({
+          Bucket: QAQC_AWS_S3_BUCKET,
+          Key: `${archive.prefix}/index.json`,
+        }),
+      )
+    } catch (error: any) {
+      if (error.name === 'NotFound') {
+        await database.deleteFrom('archives').where('id', '=', archive.id).execute()
+        log.info(`Removed orphaned archive record ${archive.prefix}.`)
+      }
+    }
+  }
+
   const toDelete = findArchivesToDelete(completeArchives, new Date())
 
   for (const id of toDelete) {
@@ -311,7 +312,6 @@ export async function cleanupArchives() {
 }
 
 export async function getArchiveIndex(key: string): Promise<string[]> {
-  const s3 = getS3()
   const response = await s3.send(
     new GetObjectCommand({ Bucket: QAQC_AWS_S3_BUCKET, Key: `archives/${key}/index.json` }),
   )

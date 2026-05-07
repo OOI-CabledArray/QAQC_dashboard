@@ -2,20 +2,18 @@
 import { useStore } from '~/store'
 
 const store = useStore()
-const router = useRouter()
-const route = useRoute()
 
 let archiveName = $ref<string | null>(null)
 
 async function loadArchiveName() {
-  if (!store.archiveKey) {
+  if (!store.currentArchive) {
     archiveName = null
     return
   }
 
   try {
     const archives = await $fetch<any[]>('/api/archives')
-    const key = store.archiveKey
+    const key = store.currentArchive
     const match = archives.find((a) => `${a.date}-${a.slug}` === key)
     if (match?.name) {
       archiveName = match.name
@@ -29,17 +27,15 @@ async function loadArchiveName() {
 
 async function backToLive() {
   await store.exitArchiveMode()
-  const { archive: _, ...rest } = route.query
-  await router.replace({ query: rest })
 }
 
-watch(() => store.archiveKey, loadArchiveName, { immediate: true })
+watch(() => store.currentArchive, loadArchiveName, { immediate: true })
 
 const dateLabel = $computed(() => {
-  if (!store.archiveKey) {
+  if (!store.currentArchive) {
     return ''
   }
-  const datePart = store.archiveKey.slice(0, 10)
+  const datePart = store.currentArchive.slice(0, 10)
   return new Date(datePart + 'T00:00:00').toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -50,8 +46,11 @@ const dateLabel = $computed(() => {
 
 <template>
   <div
-    v-if="store.archiveKey"
-    class="bg-amber-100 border-amber-300 border-b flex items-center justify-between px-4 py-2 text-amber-900"
+    v-if="store.currentArchive"
+    :class="[
+      'bg-amber-100 border-amber-300 border-b flex items-center',
+      'justify-between px-4 py-2 text-amber-900',
+    ]"
   >
     <span class="font-medium text-sm">
       Viewing archive from {{ dateLabel

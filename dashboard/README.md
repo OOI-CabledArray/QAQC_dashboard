@@ -9,6 +9,8 @@ cp .env.example .env
 
 Edit `.env` to set `QAQC_AWS_S3_BUCKET` to your development bucket. The server will refuse to start without it and `QAQC_AWS_REGION` set.
 
+Archives require a configured S3 bucket. In production, CloudFront serves archive files directly from S3. In development, a server route proxies `/archives/*` requests to S3, so valid AWS credentials and a bucket with archive data are required to view archived plots locally.
+
 To create an admin user for local development:
 
 ```sh

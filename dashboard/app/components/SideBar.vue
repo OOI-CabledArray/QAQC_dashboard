@@ -9,6 +9,7 @@ import { useStore } from '~/store'
 const store = useStore()
 const route = useRoute()
 const breakpoints = useBreakpoints()
+const toast = useToast()
 const isWide = $computed(() => (import.meta.client ? breakpoints.greaterOrEqual('sm').value : true))
 
 const isShowingTopLinksPopover = $ref(false)
@@ -32,6 +33,7 @@ async function logout() {
     // Ignore errors
   }
   authUser = null
+  toast.add({ title: 'Logged out.', color: 'warning' })
 }
 
 const archiveDropdown = $ref<{ refresh: () => Promise<void> } | null>(null)
@@ -63,6 +65,7 @@ async function triggerArchive() {
 
 if (import.meta.client) {
   fetchAuthUser()
+  watch(() => route.path, fetchAuthUser)
 }
 
 type Item = (typeof store.mainNav)[number]
@@ -214,17 +217,17 @@ const accordionItems = $computed(() => {
       </div>
     </template>
 
-    <div class="bg-white h-px opacity-20" />
+    <div class="bg-white h-px my-2 opacity-20" />
     <u-button
-      class="hover:text-white mt-1 px-0 sm:text-[16px] text-[13px] text-gray-300"
+      class="hover:text-white px-0 sm:text-[16px] text-[13px] text-gray-300"
       to="/discrete"
       variant="link"
     >
       Discrete Data
     </u-button>
-    <div class="bg-white h-px mb-1 mt-2 opacity-20" />
+    <div class="bg-white h-px my-2 opacity-20" />
     <u-button
-      class="hover:text-white mt-1 px-0 sm:text-[16px] text-[13px] text-gray-300"
+      class="hover:text-white px-0 sm:text-[16px] text-[13px] text-gray-300"
       to="/event-report"
       variant="link"
     >

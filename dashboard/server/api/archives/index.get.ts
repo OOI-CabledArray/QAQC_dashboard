@@ -1,6 +1,6 @@
 export default defineEventHandler(async () => {
   const database = getDatabase()
-  const archives = await database
+  const archives: Archive[] = await database
     .selectFrom('archives')
     .selectAll()
     .orderBy('created_at', 'desc')

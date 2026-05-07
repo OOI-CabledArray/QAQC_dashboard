@@ -244,7 +244,7 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeS
             <img v-if="isPNG(url)" class="h-auto max-w-full" loading="lazy" :src="url" />
             <object
               v-if="isSVG(url)"
-              class="block h-auto max-w-[1500px] w-full"
+              class="block h-auto max-w-375 w-full"
               :data="url"
               type="image/svg+xml"
             />

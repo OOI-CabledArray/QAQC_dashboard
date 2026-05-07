@@ -9,16 +9,18 @@ let error = $ref('')
 let loading = $ref(false)
 
 const router = useRouter()
+const toast = useToast()
 
 async function login() {
   error = ''
   loading = true
 
   try {
-    await $fetch('/api/login', {
+    const user = await $fetch('/api/login', {
       method: 'POST',
       body: { email, password },
     })
+    toast.add({ title: `Logged in as ${user.name}.`, color: 'success' })
     await router.push('/')
   } catch (fetchError: any) {
     error = fetchError.data?.statusMessage || 'Login failed'
