@@ -1,0 +1,21 @@
+const S3_PREFIXES = [
+  'QAQC_plots/',
+  'discrete/',
+  'HITL_notes/',
+  'spectrograms/',
+  'echograms/',
+  'archives/',
+]
+
+export default defineEventHandler(async (event) => {
+  if (event.method !== 'GET') {
+    return
+  }
+
+  const path = event.path.slice(1)
+  if (!S3_PREFIXES.some((prefix) => path.startsWith(prefix))) {
+    return
+  }
+
+  return proxyS3Path(event, path)
+})
