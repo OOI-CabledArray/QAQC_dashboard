@@ -3,10 +3,11 @@ definePageMeta({
   layout: false,
 })
 
-const email = $ref('')
-const password = $ref('')
+let email = $ref('')
+let password = $ref('')
 let error = $ref('')
 let loading = $ref(false)
+let showPassword = $ref(false)
 
 const router = useRouter()
 const toast = useToast()
@@ -41,6 +42,7 @@ async function login() {
           <u-input
             id="email"
             v-model="email"
+            autofocus
             class="w-full"
             placeholder="Email"
             required
@@ -58,8 +60,14 @@ async function login() {
             class="w-full"
             placeholder="Password"
             required
-            type="password"
-          />
+            :type="showPassword ? 'text' : 'password'"
+          >
+            <template #trailing>
+              <button tabindex="-1" type="button" @click="showPassword = !showPassword">
+                <i :class="['fas text-gray-400', showPassword ? 'fa-eye-slash' : 'fa-eye']" />
+              </button>
+            </template>
+          </u-input>
         </div>
 
         <div v-if="error" class="bg-red-50 mb-4 p-3 rounded text-red-600 text-sm">

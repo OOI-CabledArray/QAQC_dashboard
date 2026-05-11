@@ -408,7 +408,7 @@ export const useStore = defineStore('store', () => {
 
   const currentArchive = $computed(() => persisted.archive)
   const plotsURL = $computed(() =>
-    persisted.archive ? `/archives/${persisted.archive}` : '/QAQC_plots',
+    persisted.archive ? `/api/archives/files/${persisted.archive}` : '/QAQC_plots',
   )
 
   async function enterArchiveMode(key: string) {

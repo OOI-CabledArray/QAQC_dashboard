@@ -20,23 +20,33 @@ type Archive = {
 let archives = $ref<Archive[]>([])
 let pollTimer = $ref<ReturnType<typeof setInterval> | null>(null)
 const cancellingIds = $ref(new Set<string>())
-const archiveTypeFilter = $ref<'all' | 'manual' | 'scheduled'>('all')
+const archiveTypeFilter = $ref<'manual' | 'scheduled'>('scheduled')
+const selectedByType = $ref<Record<string, string | undefined>>({})
 
 const archiveTypeOptions = [
-  { label: 'Any Type', value: 'all' },
-  { label: 'Event', value: 'manual' },
-  { label: 'Scheduled', value: 'scheduled' },
+  { label: 'By Date', value: 'scheduled', placeholder: 'Date' },
+  { label: 'Event', value: 'manual', placeholder: 'Event' },
 ]
 
+const activePlaceholder = $computed(
+  () => archiveTypeOptions.find((option) => option.value === archiveTypeFilter)!.placeholder,
+)
+
 const completeArchives = $computed(() => {
-  const complete = archives.filter((archive) => archive.status === 'complete')
-  if (archiveTypeFilter === 'all') {
-    return complete
-  }
-  return complete.filter((archive) => archive.trigger_type === archiveTypeFilter)
+  return archives
+    .filter((archive) => archive.status === 'complete')
+    .filter((archive) => archive.trigger_type === archiveTypeFilter)
 })
 
 const pendingArchives = $computed(() => archives.filter((archive) => archive.status === 'pending'))
+
+const selectedArchive = $computed(() => {
+  const current = store.currentArchive
+  if (current && completeArchives.some((archive) => archiveKey(archive) === current)) {
+    return current
+  }
+  return selectedByType[archiveTypeFilter]
+})
 
 function formatLabel(archive: Archive): string {
   const date = new Date(archive.date + 'T00:00:00').toLocaleDateString('en-US', {
@@ -102,8 +112,10 @@ async function cancelArchive(id: string) {
 
 async function selectArchive(key: string | null) {
   if (key) {
+    selectedByType[archiveTypeFilter] = key
     await store.enterArchiveMode(key)
   } else {
+    selectedByType[archiveTypeFilter] = undefined
     await store.exitArchiveMode()
   }
 }
@@ -146,34 +158,43 @@ defineExpose({ refresh: loadArchives })
         </div>
       </div>
     </div>
-    <div>
-      <span class="block font-semibold mb-1 text-xs">View Archive</span>
-      <u-select-menu
-        v-model="archiveTypeFilter"
-        class="w-full"
-        :items="archiveTypeOptions"
-        size="xs"
-        value-key="value"
-      />
+    <div class="flex items-center justify-between">
+      <span class="font-semibold text-xs">Archives</span>
+      <NuxtLink class="hover:underline text-primary-500 text-xs" to="/archives">
+        View All <i class="fa-arrow-right fas text-[10px]" />
+      </NuxtLink>
     </div>
-    <div>
-      <u-select-menu
-        class="w-full"
-        :items="
-          completeArchives.map((archive) => ({
-            label: formatLabel(archive),
-            value: archiveKey(archive),
-          }))
-        "
-        :model-value="store.currentArchive || undefined"
-        placeholder="Select"
-        size="xs"
-        value-key="value"
-        @update:model-value="selectArchive($event)"
+    <div class="flex overflow-hidden rounded text-[11px]">
+      <button
+        v-for="option in archiveTypeOptions"
+        :key="option.value"
+        :class="[
+          'flex-1 px-2 py-0.5 transition-colors',
+          archiveTypeFilter === option.value
+            ? 'bg-primary-500 font-medium text-white'
+            : 'bg-gray-100 hover:bg-gray-200 text-gray-600',
+        ]"
+        @click="archiveTypeFilter = option.value as typeof archiveTypeFilter"
       >
-        <template #empty>No archives available.</template>
-      </u-select-menu>
+        {{ option.label }}
+      </button>
     </div>
+    <u-select-menu
+      class="w-full"
+      :items="
+        completeArchives.map((archive) => ({
+          label: formatLabel(archive),
+          value: archiveKey(archive),
+        }))
+      "
+      :model-value="selectedArchive"
+      :placeholder="activePlaceholder"
+      size="xs"
+      value-key="value"
+      @update:model-value="selectArchive($event)"
+    >
+      <template #empty>No archives available.</template>
+    </u-select-menu>
     <div v-if="store.currentArchive" class="flex justify-center">
       <u-button class="text-xs" size="xs" variant="ghost" @click="selectArchive(null)">
         Back To Live

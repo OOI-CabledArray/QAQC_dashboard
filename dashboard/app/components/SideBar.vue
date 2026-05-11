@@ -9,7 +9,6 @@ import { useStore } from '~/store'
 const store = useStore()
 const route = useRoute()
 const breakpoints = useBreakpoints()
-const toast = useToast()
 const isWide = $computed(() => (import.meta.client ? breakpoints.greaterOrEqual('sm').value : true))
 
 const isShowingTopLinksPopover = $ref(false)
@@ -33,8 +32,7 @@ async function logout() {
   } catch {
     // Ignore errors
   }
-  authUser = null
-  toast.add({ title: 'Logged out.', color: 'warning' })
+  window.location.reload()
 }
 
 const archiveDropdown = $ref<{ refresh: () => Promise<void> } | null>(null)
@@ -126,7 +124,7 @@ const accordionItems = $computed(() => {
           <span class="not-sm:text-[8px] sm:ml-2 sm:pr-4 text-nowrap">APL + RCA Links</span>
           <i
             v-if="isWide"
-            :class="['fas', isShowingTopLinksPopover ? 'fa-chevron-down' : 'fa-chevron-right']"
+            :class="['fas', isShowingTopLinksPopover ? 'fa-chevron-left' : 'fa-chevron-right']"
           />
         </u-button>
         <template #content>
@@ -265,7 +263,7 @@ const accordionItems = $computed(() => {
           <span class="grow not-sm:text-[8px] sm:ml-2 text-left text-nowrap">Archives</span>
           <i
             v-if="isWide"
-            :class="['fas', isShowingArchivesPopover ? 'fa-chevron-down' : 'fa-chevron-right']"
+            :class="['fas', isShowingArchivesPopover ? 'fa-chevron-left' : 'fa-chevron-right']"
           />
         </u-button>
         <template #content>
@@ -310,18 +308,36 @@ const accordionItems = $computed(() => {
 
     <!-- Auth -->
     <div class="bg-white h-px mb-2 mt-2 opacity-20" />
-    <div class="text-center">
+    <div>
       <template v-if="authUser">
         <u-popover
           v-model:open="isShowingUserPopover"
-          :content="{ side: 'right', sideOffset: 24 }"
+          :content="{ side: 'right', sideOffset: 28 }"
           mode="click"
         >
-          <u-button class="hover:text-white px-0 text-[13px] text-gray-300" variant="link">
-            {{ authUser.name }}
+          <u-button
+            :class="[
+              'cursor-pointer',
+              'flex',
+              'flex-row',
+              'items-center',
+              'not-sm:flex-col',
+              'not-sm:justify-center',
+              'not-sm:pl-1',
+              'not-sm:space-y-1',
+              'text-gray-200',
+              'hover:text-white',
+              'w-full',
+            ]"
+            variant="link"
+          >
+            <i class="fa-user fas opacity-50" />
+            <span class="grow not-sm:text-[8px] sm:ml-2 text-left text-nowrap">
+              {{ authUser.name }}
+            </span>
             <i
               v-if="isWide"
-              :class="['fas ml-1', isShowingUserPopover ? 'fa-chevron-down' : 'fa-chevron-right']"
+              :class="['fas', isShowingUserPopover ? 'fa-chevron-left' : 'fa-chevron-right']"
             />
           </u-button>
           <template #content>
@@ -341,11 +357,24 @@ const accordionItems = $computed(() => {
       </template>
       <u-button
         v-else
-        class="hover:text-white px-0 text-[13px] text-gray-300"
+        :class="[
+          'cursor-pointer',
+          'flex',
+          'flex-row',
+          'items-center',
+          'not-sm:flex-col',
+          'not-sm:justify-center',
+          'not-sm:pl-1',
+          'not-sm:space-y-1',
+          'text-gray-200',
+          'hover:text-white',
+          'w-full',
+        ]"
         to="/login"
         variant="link"
       >
-        Log In
+        <i class="fa-user fas opacity-50" />
+        <span class="not-sm:text-[8px] sm:ml-2 text-nowrap">Log In</span>
       </u-button>
     </div>
   </div>
