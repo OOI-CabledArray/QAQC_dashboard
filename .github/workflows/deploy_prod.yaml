@@ -55,6 +55,7 @@ jobs:
           source: dashboard/.output
           target: ~/qaqc-dashboard
           overwrite: true
+          tar_dereference: true
 
       - name: Restart Service
         uses: appleboy/ssh-action@v1
