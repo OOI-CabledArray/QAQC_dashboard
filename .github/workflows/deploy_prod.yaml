@@ -46,18 +46,23 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy to EC2
+      - name: Transfer Build Output
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.CI_EC2_DEPLOY_HOST }}
+          username: ubuntu
+          key: ${{ secrets.CI_EC2_DEPLOY_KEY }}
+          source: dashboard/.output
+          target: ~/qaqc-dashboard
+          overwrite: true
+
+      - name: Restart Service
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.CI_EC2_DEPLOY_HOST }}
           username: ubuntu
           key: ${{ secrets.CI_EC2_DEPLOY_KEY }}
-          envs: GITHUB_SHA
           script: |
-            cd ~/qaqc-dashboard
-            git fetch origin
-            git reset --hard $GITHUB_SHA
-            cd dashboard
-            npm install
-            npm run build
+            cd ~/qaqc-dashboard/dashboard
+            npm install --omit=dev
             sudo systemctl restart qaqc-dashboard
