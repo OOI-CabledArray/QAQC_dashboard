@@ -1,12 +1,9 @@
-import type { H3Event } from 'h3'
-
 import { GetObjectCommand } from '@aws-sdk/client-s3'
+import type { H3Event } from 'h3'
 
 export async function proxyS3Path(event: H3Event, path: string) {
   try {
-    const response = await s3.send(
-      new GetObjectCommand({ Bucket: QAQC_AWS_S3_BUCKET, Key: path }),
-    )
+    const response = await s3.send(new GetObjectCommand({ Bucket: QAQC_AWS_S3_BUCKET, Key: path }))
 
     if (response.ContentType) {
       setHeader(event, 'Content-Type', response.ContentType)

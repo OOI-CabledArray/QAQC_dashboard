@@ -69,7 +69,6 @@ ssh-keygen -t ed25519 -f qaqc-ci-deploy -N ""
 - Add the private key as the `CI_EC2_DEPLOY_KEY` secret in this GitHub repo.
 - Add the Domain or Elastic IP as the `CI_EC2_DEPLOY_HOST` secret in this GitHub repo.
 
-
 2. Install Node.js 24.
 
 ```sh
@@ -102,7 +101,7 @@ Caddy automatically provisions a Let's Encrypt TLS certificate once DNS is point
 ```sh
 git clone git@github.com:OOI-CabledArray/QAQC_dashboard.git /home/ubuntu/qaqc-dashboard
 cd /home/ubuntu/qaqc-dashboard/dashboard
-npm install 
+npm install
 npm run build
 ```
 

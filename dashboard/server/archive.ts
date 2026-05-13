@@ -183,6 +183,7 @@ async function copyArchiveFiles(
 
 async function deleteArchiveFromS3(prefix: string) {
   let continuationToken: string | undefined
+  let deleted = 0
 
   do {
     const list = await s3.send(
@@ -200,6 +201,8 @@ async function deleteArchiveFromS3(prefix: string) {
           Delete: { Objects: list.Contents.map((object) => ({ Key: object.Key })) },
         }),
       )
+      deleted += list.Contents.length
+      log.info(`Deleted ${deleted} files from ${prefix}.`)
     }
 
     continuationToken = list.NextContinuationToken
@@ -258,9 +261,12 @@ export async function cancelArchive(id: string): Promise<void> {
     activeCopies.delete(id)
   }
 
-  await deleteArchiveFromS3(archive.prefix)
   await database.deleteFrom('archives').where('id', '=', id).execute()
-  log.info(`Cancelled and cleaned up archive ${archive.prefix}.`)
+  log.info(`Deleted archive record ${archive.prefix}.`)
+
+  deleteArchiveFromS3(archive.prefix)
+    .then(() => log.info(`Cleaned up S3 files for ${archive.prefix}.`))
+    .catch((error) => log.error(`Failed to clean up S3 files for ${archive.prefix}.`, error))
 }
 
 export async function cleanupArchives() {
