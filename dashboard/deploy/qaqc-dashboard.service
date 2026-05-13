@@ -6,6 +6,7 @@ After=network.target
 Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/qaqc-dashboard/dashboard
+EnvironmentFile=/home/ubuntu/qaqc-dashboard/dashboard/.env
 ExecStart=/usr/bin/node .output/server/index.mjs
 Restart=on-failure
 RestartSec=5
