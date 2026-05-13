@@ -105,7 +105,15 @@ npm install
 npm run build
 ```
 
-5. Set up the database and systemd service.
+5. Create the `.env` file.
+
+```sh
+cp .env.example .env
+```
+
+Edit `.env` to set `QAQC_AWS_S3_BUCKET=ooi-rca-qaqc-prod` and `QAQC_ENABLE_SCHEDULED_JOBS=true`.
+
+6. Set up the database and systemd service.
 
 ```sh
 mkdir -p data
@@ -137,4 +145,4 @@ Pushes to `main` trigger the `deploy_prod.yaml` GitHub Actions workflow, which S
 - **Nuxt** runs as a Node.js process managed by systemd (`qaqc-dashboard.service`)
 - **SQLite** stores users, sessions, and archive records at `data/database.sqlite`
 - **S3** (`ooi-rca-qaqc-prod`) stores plot images and archive snapshots, proxied to the browser by server middleware
-- **Scheduled Jobs** (enabled via `ENABLE_SCHEDULED_JOBS=true` in the service file) handle daily archive snapshots, retention cleanup, database backups, and session expiry
+- **Scheduled Jobs** (enabled via `QAQC_ENABLE_SCHEDULED_JOBS=true` in the service file) handle daily archive snapshots, retention cleanup, database backups, and session expiry

@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 
 import { createArchive, cleanupArchives } from '#server/archive'
-import { ENABLE_SCHEDULED_JOBS } from '#server/utils/environment'
+import { QAQC_ENABLE_SCHEDULED_JOBS } from '#server/utils/environment'
 
 const log = createLogger('scheduler')
 
@@ -12,8 +12,10 @@ const require = createRequire(import.meta.url)
 const cron = require('node-cron')
 
 export default defineNitroPlugin(() => {
-  if (!ENABLE_SCHEDULED_JOBS) {
-    log.info('Scheduled jobs are disabled. Set ENABLE_SCHEDULED_JOBS=true in `.env` to enable.')
+  if (!QAQC_ENABLE_SCHEDULED_JOBS) {
+    log.info(
+      'Scheduled jobs are disabled. Set QAQC_ENABLE_SCHEDULED_JOBS=true in `.env` to enable.',
+    )
     return
   }
 

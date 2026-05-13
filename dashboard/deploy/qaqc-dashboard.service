@@ -6,11 +6,6 @@ After=network.target
 Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/qaqc-dashboard/dashboard
-Environment=NODE_ENV=production
-Environment=QAQC_DATABASE=/home/ubuntu/qaqc-dashboard/dashboard/data/database.sqlite
-Environment=QAQC_AWS_S3_BUCKET=ooi-rca-qaqc-prod
-Environment=QAQC_AWS_REGION=us-west-2
-Environment=ENABLE_SCHEDULED_JOBS=true
 ExecStart=/usr/bin/node .output/server/index.mjs
 Restart=on-failure
 RestartSec=5
