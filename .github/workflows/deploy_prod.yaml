@@ -35,7 +35,7 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run Linter
         run: npm run lint
@@ -69,7 +69,7 @@ jobs:
             git fetch origin
             git reset --hard $GITHUB_SHA
             cd dashboard
-            npm ci --omit=dev
+            npm install --omit=dev
             if systemctl is-active --quiet qaqc-dashboard; then
               sudo systemctl restart qaqc-dashboard
             fi
