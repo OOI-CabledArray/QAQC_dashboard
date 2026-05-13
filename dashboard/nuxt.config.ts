@@ -19,6 +19,15 @@ export default defineNuxtConfig({
     externals: {
       external: ['better-sqlite3', 'kysely'],
     },
+    experimental: {
+      tasks: true,
+    },
+    scheduledTasks: {
+      '0 2 * * *': ['daily-archive'],
+      '0 3 * * 0': ['archive-cleanup'],
+      '0 4 * * *': ['database-backup'],
+      '0 * * * *': ['expire-sessions'],
+    },
   },
   // Load main, custom CSS module.
   css: ['@/assets/css/main.css'],
