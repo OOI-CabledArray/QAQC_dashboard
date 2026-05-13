@@ -1,15 +1,12 @@
 import { readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
 
 import { PutObjectCommand } from '@aws-sdk/client-s3'
+import cron from 'node-cron'
 
 import { createArchive, cleanupArchives } from '#server/archive'
 import { QAQC_ENABLE_SCHEDULED_JOBS } from '#server/utils/environment'
 
 const log = createLogger('scheduler')
-
-const require = createRequire(import.meta.url)
-const cron = require('node-cron')
 
 export default defineNitroPlugin(() => {
   if (!QAQC_ENABLE_SCHEDULED_JOBS) {
