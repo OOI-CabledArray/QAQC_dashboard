@@ -29,11 +29,8 @@ See the [documentation](https://github.com/OOI-CabledArray/rca-data-tools/blob/m
 
 ## Repositories
 
-The code for the infrastructure, backend, and frontend are hosted in 3 separate repositories: `rca-data-tools`, `QAQC_dashboard`, and `cloud-infrastructure` (_private_) within the `OOI-CabledArray` organization.
-
 - [`rca-data-tools`](https://github.com/OOI-CabledArray/rca-data-tools): contains the majority of the code to perform the creation of png plots and csv plots for the dashboard.
-- [`QAQC_dashboard`](https://github.com/OOI-CabledArray/QAQC_dashboard) contains the frontend code for the dashboard.
-- [`cloud-infrastructure`](https://github.com/OOI-CabledArray/cloud-infrastructure): contains terraform code for deploying the underlying infrastructure such as Virtual Private Cloud (VPC), CDN, Elastic Container Service (ECS) Tasks, Identity Access Management (IAM), and S3 Buckets.
+- [`QAQC_dashboard`](https://github.com/OOI-CabledArray/QAQC_dashboard): contains the dashboard application (Nuxt SSR with SQLite auth and S3 archive system).
 
 ## Setup
 
