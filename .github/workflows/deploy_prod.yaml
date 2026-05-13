@@ -65,4 +65,6 @@ jobs:
           script: |
             cd ~/qaqc-dashboard/dashboard
             npm install --omit=dev
-            sudo systemctl restart qaqc-dashboard
+            if systemctl is-active --quiet qaqc-dashboard; then
+              sudo systemctl restart qaqc-dashboard
+            fi
