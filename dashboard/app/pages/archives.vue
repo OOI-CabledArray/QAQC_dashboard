@@ -345,10 +345,9 @@ if (import.meta.client) {
       </template>
       <template #body>
         <form class="space-y-4" @submit.prevent="createEventArchive">
-          <div>
-            <label class="block font-medium mb-1 text-sm">Event Name</label>
+          <u-form-field label="Event Name">
             <u-input v-model="eventArchiveName" class="w-full" required />
-          </div>
+          </u-form-field>
           <div class="flex gap-2 justify-end">
             <u-button variant="ghost" @click="showCreateEventDialog = false">Cancel</u-button>
             <u-button :loading="creatingEvent" type="submit">Create</u-button>
@@ -364,10 +363,9 @@ if (import.meta.client) {
       </template>
       <template #body>
         <form class="space-y-4" @submit.prevent="createInternalArchive">
-          <div>
-            <label class="block font-medium mb-1 text-sm">Name</label>
-            <u-input v-model="internalArchiveName" class="w-full" placeholder="Staging" required />
-          </div>
+          <u-form-field label="Name">
+            <u-input v-model="internalArchiveName" class="w-full" required />
+          </u-form-field>
           <div class="flex gap-2 justify-end">
             <u-button variant="ghost" @click="showCreateInternalDialog = false">Cancel</u-button>
             <u-button :loading="creatingInternal" type="submit">Create</u-button>

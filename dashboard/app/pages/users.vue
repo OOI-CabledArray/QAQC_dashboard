@@ -257,12 +257,10 @@ if (import.meta.client) {
       <template #body>
         <form class="space-y-4" @submit.prevent="createUser">
           <div class="flex gap-4">
-            <div class="flex-1">
-              <label class="block font-medium mb-1 text-sm">Username</label>
+            <u-form-field class="flex-1" label="Username">
               <u-input v-model="createForm.username" class="w-full" required />
-            </div>
-            <div>
-              <label class="block font-medium mb-1 text-sm">Role</label>
+            </u-form-field>
+            <u-form-field label="Role">
               <u-select
                 v-model="createForm.role"
                 :items="[
@@ -271,20 +269,17 @@ if (import.meta.client) {
                 ]"
                 value-key="value"
               />
-            </div>
+            </u-form-field>
           </div>
-          <div>
-            <label class="block font-medium mb-1 text-sm">Password</label>
+          <u-form-field label="Password">
             <u-input v-model="createForm.password" class="w-full" required type="password" />
-          </div>
-          <div>
-            <label class="block font-medium mb-1 text-sm">Name</label>
+          </u-form-field>
+          <u-form-field label="Name">
             <u-input v-model="createForm.name" class="w-full" required />
-          </div>
-          <div>
-            <label class="block font-medium mb-1 text-sm">Email</label>
+          </u-form-field>
+          <u-form-field label="Email">
             <u-input v-model="createForm.email" class="w-full" type="email" />
-          </div>
+          </u-form-field>
           <div class="flex gap-2 justify-end">
             <u-button variant="ghost" @click="showCreateDialog = false">Cancel</u-button>
             <u-button :loading="submitting" type="submit">Create</u-button>
@@ -300,20 +295,16 @@ if (import.meta.client) {
       </template>
       <template #body>
         <form class="space-y-4" @submit.prevent="updateUser">
-          <div>
-            <label class="block font-medium mb-1 text-sm">Username</label>
+          <u-form-field label="Username">
             <u-input v-model="editForm.username" class="w-full" required />
-          </div>
-          <div>
-            <label class="block font-medium mb-1 text-sm">Name</label>
+          </u-form-field>
+          <u-form-field label="Name">
             <u-input v-model="editForm.name" class="w-full" required />
-          </div>
-          <div>
-            <label class="block font-medium mb-1 text-sm">Email</label>
+          </u-form-field>
+          <u-form-field label="Email">
             <u-input v-model="editForm.email" class="w-full" type="email" />
-          </div>
-          <div>
-            <label class="block font-medium mb-1 text-sm">Role</label>
+          </u-form-field>
+          <u-form-field label="Role">
             <u-select
               v-model="editForm.role"
               class="w-full"
@@ -323,7 +314,7 @@ if (import.meta.client) {
               ]"
               value-key="value"
             />
-          </div>
+          </u-form-field>
           <div class="flex gap-2 justify-end">
             <u-button variant="ghost" @click="editingUser = null">Cancel</u-button>
             <u-button :loading="submitting" type="submit">Save</u-button>
@@ -339,10 +330,9 @@ if (import.meta.client) {
       </template>
       <template #body>
         <form class="space-y-4" @submit.prevent="changePassword">
-          <div>
-            <label class="block font-medium mb-1 text-sm">New Password</label>
+          <u-form-field label="New Password">
             <u-input v-model="passwordForm.password" class="w-full" required type="password" />
-          </div>
+          </u-form-field>
           <div class="flex gap-2 justify-end">
             <u-button variant="ghost" @click="changingPasswordUser = null">Cancel</u-button>
             <u-button :loading="submitting" type="submit">Change Password</u-button>

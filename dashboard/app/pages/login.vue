@@ -39,26 +39,12 @@ async function login() {
       <h1 class="font-bold mb-6 text-2xl text-center">QAQC Dashboard</h1>
 
       <form @submit.prevent="login">
-        <div class="mb-4">
-          <label class="block font-medium mb-1 text-gray-700 text-sm" for="username">
-            Username
-          </label>
-          <u-input
-            id="username"
-            v-model="username"
-            autofocus
-            class="w-full"
-            placeholder="Username"
-            required
-          />
-        </div>
+        <u-form-field class="mb-4" label="Username">
+          <u-input v-model="username" autofocus class="w-full" placeholder="Username" required />
+        </u-form-field>
 
-        <div class="mb-6">
-          <label class="block font-medium mb-1 text-gray-700 text-sm" for="password">
-            Password
-          </label>
+        <u-form-field class="mb-6" label="Password">
           <u-input
-            id="password"
             v-model="password"
             class="w-full"
             placeholder="Password"
@@ -71,7 +57,7 @@ async function login() {
               </button>
             </template>
           </u-input>
-        </div>
+        </u-form-field>
 
         <div v-if="error" class="bg-red-50 mb-4 p-3 rounded text-red-600 text-sm">
           {{ error }}
