@@ -126,6 +126,17 @@ const migrations: Migration[] = [
       `)
     },
   },
+  {
+    version: '005',
+    description: 'add-archive-type',
+    up(database) {
+      database.exec(`
+        ALTER TABLE archives
+          ADD COLUMN type TEXT NOT NULL DEFAULT 'snapshot'
+            CHECK (type IN ('snapshot', 'internal'));
+      `)
+    },
+  },
 ]
 
 export function runMigrations(database: Database.Database): void {

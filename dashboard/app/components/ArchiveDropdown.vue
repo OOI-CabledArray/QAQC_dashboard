@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { useStore } from '~/store'
 
-const { open } = defineProps<{ open: boolean }>()
+const { open, loggedIn } = defineProps<{ open: boolean; loggedIn: boolean }>()
 
 const store = useStore()
 
@@ -12,6 +12,7 @@ type Archive = {
   prefix: string
   name: string | null
   trigger_type: string
+  type: string
   status: string
   image_count: number
   created_at: string
@@ -20,13 +21,19 @@ type Archive = {
 let archives = $ref<Archive[]>([])
 let pollTimer = $ref<ReturnType<typeof setInterval> | null>(null)
 const cancellingIds = $ref(new Set<string>())
-const archiveTypeFilter = $ref<'manual' | 'scheduled'>('scheduled')
+const archiveTypeFilter = $ref<'scheduled' | 'manual' | 'internal'>('scheduled')
 const selectedByType = $ref<Record<string, string | undefined>>({})
 
-const archiveTypeOptions = [
-  { label: 'By Date', value: 'scheduled', placeholder: 'Date' },
-  { label: 'Event', value: 'manual', placeholder: 'Event' },
-]
+const archiveTypeOptions = $computed(() => {
+  const options = [
+    { label: 'By Date', value: 'scheduled' as const, placeholder: 'Date' },
+    { label: 'Event', value: 'manual' as const, placeholder: 'Event' },
+  ]
+  if (loggedIn) {
+    options.push({ label: 'Internal', value: 'internal' as const, placeholder: 'Archive' })
+  }
+  return options
+})
 
 const activePlaceholder = $computed(
   () => archiveTypeOptions.find((option) => option.value === archiveTypeFilter)!.placeholder,
@@ -35,7 +42,12 @@ const activePlaceholder = $computed(
 const completeArchives = $computed(() => {
   return archives
     .filter((archive) => archive.status === 'complete')
-    .filter((archive) => archive.trigger_type === archiveTypeFilter)
+    .filter((archive) => {
+      if (archiveTypeFilter === 'internal') {
+        return archive.type === 'internal'
+      }
+      return archive.type !== 'internal' && archive.trigger_type === archiveTypeFilter
+    })
 })
 
 const pendingArchives = $computed(() => archives.filter((archive) => archive.status === 'pending'))
@@ -49,6 +61,9 @@ const selectedArchive = $computed(() => {
 })
 
 function formatLabel(archive: Archive): string {
+  if (archive.type === 'internal') {
+    return archive.name || archive.slug
+  }
   const date = new Date(archive.date + 'T00:00:00').toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -61,6 +76,9 @@ function formatLabel(archive: Archive): string {
 }
 
 function archiveKey(archive: Archive): string {
+  if (archive.type === 'internal') {
+    return archive.slug
+  }
   return `${archive.date}-${archive.slug}`
 }
 

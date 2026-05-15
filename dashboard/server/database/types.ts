@@ -28,6 +28,7 @@ export interface ArchivesTable {
   triggered_by: string | null
   image_count: number
   status: Generated<'pending' | 'complete'>
+  type: Generated<'snapshot' | 'internal'>
   created_at: Generated<string>
 }
 

@@ -20,11 +20,11 @@ export type { Archive }
 
 const activeCopies = new Map<string, AbortController>()
 
-export function buildArchiveKey(date: string, slug: string): string {
-  return `${date}-${slug}`
+export function buildArchiveKey(date: string | null, slug: string): string {
+  return date ? `${date}-${slug}` : slug
 }
 
-export function buildArchivePrefix(date: string, slug: string): string {
+export function buildArchivePrefix(date: string | null, slug: string): string {
   return `archives/${buildArchiveKey(date, slug)}`
 }
 
@@ -115,6 +115,54 @@ export async function createArchive(options: {
     })
 
   return archive
+}
+
+export async function registerInternalArchive(name: string): Promise<Archive> {
+  const database = getDatabase()
+  const slug = slugify(name)
+
+  if (!slug) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid archive name' })
+  }
+
+  const existing = await database
+    .selectFrom('archives')
+    .select('id')
+    .where('type', '=', 'internal')
+    .where('slug', '=', slug)
+    .executeTakeFirst()
+
+  if (existing) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'An internal archive with that name already exists',
+    })
+  }
+
+  const prefix = buildArchivePrefix(null, slug)
+  const id = randomUUID()
+
+  await database
+    .insertInto('archives')
+    .values({
+      id,
+      date: '',
+      slug,
+      prefix,
+      name,
+      trigger_type: 'manual',
+      triggered_by: null,
+      image_count: 0,
+      status: 'complete',
+      type: 'internal',
+    })
+    .execute()
+
+  return await database
+    .selectFrom('archives')
+    .selectAll()
+    .where('id', '=', id)
+    .executeTakeFirstOrThrow()
 }
 
 async function copyArchiveFiles(
@@ -210,12 +258,16 @@ async function deleteArchiveFromS3(prefix: string) {
 }
 
 export function findArchivesToDelete(
-  archives: Pick<Archive, 'id' | 'date' | 'slug' | 'trigger_type' | 'name'>[],
+  archives: Pick<Archive, 'id' | 'date' | 'slug' | 'trigger_type' | 'name' | 'type'>[],
   now: Date,
 ): string[] {
   const toDelete: string[] = []
 
   for (const archive of archives) {
+    if (archive.type === 'internal') {
+      continue
+    }
+
     if (archive.trigger_type === 'manual' && archive.name) {
       continue
     }
@@ -273,7 +325,9 @@ export async function cleanupArchives() {
   const database = getDatabase()
   const archives = await database.selectFrom('archives').selectAll().execute()
 
-  const stalePending = archives.filter((archive) => {
+  const snapshotArchives = archives.filter((archive) => archive.type !== 'internal')
+
+  const stalePending = snapshotArchives.filter((archive) => {
     if (archive.status !== 'pending') {
       return false
     }
@@ -287,7 +341,7 @@ export async function cleanupArchives() {
     log.info(`Cleaned up stale pending archive ${archive.prefix}.`)
   }
 
-  const completeArchives = archives.filter((archive) => archive.status === 'complete')
+  const completeArchives = snapshotArchives.filter((archive) => archive.status === 'complete')
 
   for (const archive of completeArchives) {
     try {
