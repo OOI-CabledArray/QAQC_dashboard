@@ -32,7 +32,8 @@ async function logout() {
   } catch {
     // Ignore errors
   }
-  window.location.reload()
+  authUser = null
+  await navigateTo('/login')
 }
 
 const archiveDropdown = $ref<{ refresh: () => Promise<void> } | null>(null)

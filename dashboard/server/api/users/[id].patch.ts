@@ -3,11 +3,14 @@ export default defineEventHandler(async (event) => {
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)
-  const { email, name, role } = body ?? {}
+  const { username, email, name, role } = body ?? {}
 
-  const updates: Record<string, string> = {}
-  if (email) {
-    updates.email = email
+  const updates: Record<string, string | null> = {}
+  if (username) {
+    updates.username = username
+  }
+  if (email !== undefined) {
+    updates.email = email ? validateAndNormalizeEmail(email) : null
   }
   if (name) {
     updates.name = name
@@ -39,14 +42,17 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
-      throw createError({ statusCode: 409, statusMessage: 'A user with that email already exists' })
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'A user with that username already exists',
+      })
     }
     throw error
   }
 
   const user = await database
     .selectFrom('users')
-    .select(['id', 'email', 'name', 'role', 'created_at', 'updated_at'])
+    .select(['id', 'username', 'email', 'name', 'role', 'created_at', 'updated_at'])
     .where('id', '=', id)
     .executeTakeFirstOrThrow()
 

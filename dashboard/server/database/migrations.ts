@@ -66,6 +66,66 @@ const migrations: Migration[] = [
       `)
     },
   },
+  {
+    version: '004',
+    description: 'add-username-make-email-optional',
+    up(database) {
+      database.exec(`
+        CREATE TABLE users_new (
+          id TEXT PRIMARY KEY,
+          username TEXT NOT NULL UNIQUE,
+          email TEXT,
+          name TEXT NOT NULL,
+          password TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('admin', 'viewer')),
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+      `)
+
+      const rows = database
+        .prepare('SELECT id, name, email, password, role, created_at, updated_at FROM users')
+        .all() as any[]
+
+      const usedUsernames = new Set<string>()
+      const insert = database.prepare(`
+        INSERT INTO users_new
+          (id, username, email, name, password, role, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+
+      for (const row of rows) {
+        let username = row.name.toLowerCase().replace(/\s+/g, '')
+        if (usedUsernames.has(username)) {
+          const emailPrefix = row.email.split('@')[0].toLowerCase()
+          username = emailPrefix
+        }
+        let suffix = 2
+        const base = username
+        while (usedUsernames.has(username)) {
+          username = `${base}${suffix}`
+          suffix++
+        }
+        usedUsernames.add(username)
+        const normalizedEmail = row.email?.trim().toLowerCase() || null
+        insert.run(
+          row.id,
+          username,
+          normalizedEmail,
+          row.name,
+          row.password,
+          row.role,
+          row.created_at,
+          row.updated_at,
+        )
+      }
+
+      database.exec(`
+        DROP TABLE users;
+        ALTER TABLE users_new RENAME TO users;
+      `)
+    },
+  },
 ]
 
 export function runMigrations(database: Database.Database): void {

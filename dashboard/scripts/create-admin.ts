@@ -46,14 +46,17 @@ async function readPassword(): Promise<string> {
 async function main() {
   const { values } = parseArgs({
     options: {
+      username: { type: 'string' },
       email: { type: 'string' },
       name: { type: 'string' },
     },
     strict: true,
   })
 
-  if (!values.email || !values.name) {
-    console.error('Usage: npx tsx scripts/create-admin.ts --email <email> --name <name>')
+  if (!values.username || !values.name) {
+    console.error(
+      'Usage: npx tsx scripts/create-admin.ts --username <username> --name <name> [--email <email>]',
+    )
     process.exit(1)
   }
 
@@ -74,12 +77,14 @@ async function main() {
 
   try {
     database
-      .prepare('INSERT INTO users (id, email, name, password, role) VALUES (?, ?, ?, ?, ?)')
-      .run(id, values.email, values.name, hashed, 'admin')
-    console.log(`Admin user created for ${values.email}.`)
+      .prepare(
+        'INSERT INTO users (id, username, email, name, password, role) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+      .run(id, values.username, values.email || null, values.name, hashed, 'admin')
+    console.log(`Admin user "${values.username}" created.`)
   } catch (error: any) {
     if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      console.error(`A user with email ${values.email} already exists.`)
+      console.error(`A user with that username or email already exists.`)
       process.exit(1)
     }
     throw error

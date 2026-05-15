@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
 
   const archive = await createArchive({
     name: body.name,
-    triggeredBy: user.email,
+    triggeredBy: user.username,
   })
   return archive
 })

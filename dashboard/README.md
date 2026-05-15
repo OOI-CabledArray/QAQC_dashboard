@@ -14,7 +14,7 @@ Archives require a configured S3 bucket. In production, CloudFront serves archiv
 To create an admin user for local development:
 
 ```sh
-npx tsx scripts/create-admin.ts --email you@example.com --name "Your Name"
+npx tsx scripts/create-admin.ts --username admin --name "Your Name"
 ```
 
 ### Development
@@ -124,7 +124,7 @@ sudo systemctl enable qaqc-dashboard
 sudo systemctl start qaqc-dashboard
 
 # Create the first admin user.
-npx tsx scripts/create-admin.ts --email you@example.com --name "Your Name"
+npx tsx scripts/create-admin.ts --username admin --name "Your Name"
 ```
 
 ### Verifying the Deployment

@@ -3,12 +3,13 @@ definePageMeta({
   layout: false,
 })
 
-let email = $ref('')
+let username = $ref('')
 let password = $ref('')
 let error = $ref('')
 let loading = $ref(false)
 let showPassword = $ref(false)
 
+const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 
@@ -19,10 +20,11 @@ async function login() {
   try {
     const user = await $fetch('/api/login', {
       method: 'POST',
-      body: { email, password },
+      body: { username, password },
     })
     toast.add({ title: `Logged in as ${user.name}.`, color: 'success' })
-    await router.push('/')
+    const redirect = (route.query.redirect as string) || '/'
+    await router.push(redirect)
   } catch (fetchError: any) {
     error = fetchError.data?.statusMessage || 'Login failed'
   } finally {
@@ -38,15 +40,16 @@ async function login() {
 
       <form @submit.prevent="login">
         <div class="mb-4">
-          <label class="block font-medium mb-1 text-gray-700 text-sm" for="email">Email</label>
+          <label class="block font-medium mb-1 text-gray-700 text-sm" for="username">
+            Username
+          </label>
           <u-input
-            id="email"
-            v-model="email"
+            id="username"
+            v-model="username"
             autofocus
             class="w-full"
-            placeholder="Email"
+            placeholder="Username"
             required
-            type="email"
           />
         </div>
 

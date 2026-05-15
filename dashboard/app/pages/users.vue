@@ -1,9 +1,14 @@
 <script lang="ts" setup>
 import { upperFirst } from 'lodash-es'
 
+definePageMeta({
+  middleware: 'auth',
+})
+
 type User = {
   id: string
-  email: string
+  username: string
+  email: string | null
   name: string
   role: 'admin' | 'viewer'
   created_at: string
@@ -19,8 +24,8 @@ let editingUser = $ref<User | null>(null)
 let changingPasswordUser = $ref<User | null>(null)
 let deletingUser = $ref<User | null>(null)
 
-let createForm = $ref({ email: '', name: '', password: '', role: 'viewer' as string })
-let editForm = $ref({ email: '', name: '', role: 'viewer' as string })
+let createForm = $ref({ username: '', email: '', name: '', password: '', role: 'viewer' as string })
+let editForm = $ref({ username: '', email: '', name: '', role: 'viewer' as string })
 let passwordForm = $ref({ password: '' })
 let submitting = $ref(false)
 
@@ -36,12 +41,12 @@ async function loadUsers() {
 }
 
 function openCreate() {
-  createForm = { email: '', name: '', password: '', role: 'viewer' }
+  createForm = { username: '', email: '', name: '', password: '', role: 'viewer' }
   showCreateDialog = true
 }
 
 function openEdit(user: User) {
-  editForm = { email: user.email, name: user.name, role: user.role }
+  editForm = { username: user.username, email: user.email || '', name: user.name, role: user.role }
   editingUser = user
 }
 
@@ -171,7 +176,7 @@ if (import.meta.client) {
             {{ upperFirst(user.role) }}
           </u-badge>
         </div>
-        <div class="mb-2 text-gray-500 text-xs">{{ user.email }}</div>
+        <div class="mb-2 text-gray-500 text-xs">{{ user.username }}</div>
         <div class="flex gap-1">
           <u-tooltip text="Edit">
             <u-button size="xs" variant="ghost" @click="openEdit(user)">
@@ -201,6 +206,7 @@ if (import.meta.client) {
       <u-table
         :columns="[
           { accessorKey: 'name', header: 'Name' },
+          { accessorKey: 'username', header: 'Username' },
           { accessorKey: 'email', header: 'Email' },
           { accessorKey: 'role', header: 'Role' },
           { accessorKey: 'created_at', header: 'Created' },
@@ -251,12 +257,16 @@ if (import.meta.client) {
       <template #body>
         <form class="space-y-4" @submit.prevent="createUser">
           <div>
+            <label class="block font-medium mb-1 text-sm">Username</label>
+            <u-input v-model="createForm.username" class="w-full" required />
+          </div>
+          <div>
             <label class="block font-medium mb-1 text-sm">Name</label>
             <u-input v-model="createForm.name" class="w-full" required />
           </div>
           <div>
             <label class="block font-medium mb-1 text-sm">Email</label>
-            <u-input v-model="createForm.email" class="w-full" required type="email" />
+            <u-input v-model="createForm.email" class="w-full" type="email" />
           </div>
           <div>
             <label class="block font-medium mb-1 text-sm">Password</label>
@@ -290,12 +300,16 @@ if (import.meta.client) {
       <template #body>
         <form class="space-y-4" @submit.prevent="updateUser">
           <div>
+            <label class="block font-medium mb-1 text-sm">Username</label>
+            <u-input v-model="editForm.username" class="w-full" required />
+          </div>
+          <div>
             <label class="block font-medium mb-1 text-sm">Name</label>
             <u-input v-model="editForm.name" class="w-full" required />
           </div>
           <div>
             <label class="block font-medium mb-1 text-sm">Email</label>
-            <u-input v-model="editForm.email" class="w-full" required type="email" />
+            <u-input v-model="editForm.email" class="w-full" type="email" />
           </div>
           <div>
             <label class="block font-medium mb-1 text-sm">Role</label>

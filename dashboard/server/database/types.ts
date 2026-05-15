@@ -2,7 +2,8 @@ import type { Generated, Insertable, Selectable } from 'kysely'
 
 export interface UsersTable {
   id: string
-  email: string
+  username: string
+  email: string | null
   name: string
   password: string
   role: 'admin' | 'viewer'
@@ -38,7 +39,7 @@ export interface Database {
 
 export type User = Pick<
   Selectable<UsersTable>,
-  'id' | 'email' | 'name' | 'role' | 'created_at' | 'updated_at'
+  'id' | 'username' | 'email' | 'name' | 'role' | 'created_at' | 'updated_at'
 >
 
 export type Archive = Selectable<ArchivesTable>

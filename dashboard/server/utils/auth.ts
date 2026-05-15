@@ -48,6 +48,7 @@ export async function getSessionUser(sessionId: string): Promise<User | null> {
     .innerJoin('users', 'users.id', 'sessions.user_id')
     .select([
       'users.id',
+      'users.username',
       'users.email',
       'users.name',
       'users.role',

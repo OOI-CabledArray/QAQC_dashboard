@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
   const database = getDatabase()
   const users = await database
     .selectFrom('users')
-    .select(['id', 'email', 'name', 'role', 'created_at', 'updated_at'])
+    .select(['id', 'username', 'email', 'name', 'role', 'created_at', 'updated_at'])
     .orderBy('created_at', 'asc')
     .execute()
 
