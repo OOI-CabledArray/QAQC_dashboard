@@ -25,8 +25,6 @@ export interface ArchivesTable {
   prefix: string
   name: string | null
   type: Generated<'scheduled' | 'event' | 'internal'>
-  triggered_by: string | null
-  image_count: number
   status: Generated<'pending' | 'complete'>
   created_at: Generated<string>
 }

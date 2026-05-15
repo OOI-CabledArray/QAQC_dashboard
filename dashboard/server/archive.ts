@@ -20,50 +20,64 @@ export type { Archive }
 
 const activeCopies = new Map<string, AbortController>()
 
-export function buildArchiveKey(date: string | null, slug: string): string {
-  return date ? `${date}-${slug}` : slug
+export function buildArchiveKey(
+  type: 'scheduled' | 'event' | 'internal',
+  date: string,
+  slug: string,
+): string {
+  if (type === 'scheduled') {
+    return `${type}/${date}`
+  }
+  if (type === 'internal') {
+    return `${type}/${slug}`
+  }
+  return `${type}/${date}-${slug}`
 }
 
-export function buildArchivePrefix(date: string | null, slug: string): string {
-  return `archives/${buildArchiveKey(date, slug)}`
+export function buildArchivePrefix(
+  type: 'scheduled' | 'event' | 'internal',
+  date: string,
+  slug: string,
+): string {
+  return `archives/${buildArchiveKey(type, date, slug)}`
 }
 
-export async function createArchive(options: {
-  name?: string
-  triggeredBy?: string
-}): Promise<Archive> {
+export async function createArchive(options: { name?: string }): Promise<Archive> {
   const database = getDatabase()
   const today = new Date().toISOString().slice(0, 10)
-  const slug = options.name ? slugify(options.name) : 'auto'
   const type = options.name ? 'event' : 'scheduled'
 
-  let finalSlug = slug
-  const existing = await database
-    .selectFrom('archives')
-    .select('id')
-    .where('date', '=', today)
-    .where('slug', '=', finalSlug)
-    .executeTakeFirst()
+  let slug = options.name ? slugify(options.name) : ''
 
-  if (existing && finalSlug === 'auto') {
-    await deleteArchiveFromS3(buildArchivePrefix(today, finalSlug))
-    await database.deleteFrom('archives').where('id', '=', existing.id).execute()
-  } else if (existing) {
+  if (type === 'scheduled') {
+    const existing = await database
+      .selectFrom('archives')
+      .select('id')
+      .where('type', '=', 'scheduled')
+      .where('date', '=', today)
+      .executeTakeFirst()
+
+    if (existing) {
+      await deleteArchiveFromS3(buildArchivePrefix('scheduled', today, ''))
+      await database.deleteFrom('archives').where('id', '=', existing.id).execute()
+    }
+  } else {
+    const baseSlug = slug
     let counter = 2
     while (
       await database
         .selectFrom('archives')
         .select('id')
         .where('date', '=', today)
-        .where('slug', '=', `${slug}-${counter}`)
+        .where('slug', '=', slug)
         .executeTakeFirst()
     ) {
+      slug = `${baseSlug}-${counter}`
       counter++
     }
-    finalSlug = `${slug}-${counter}`
   }
 
-  const prefix = buildArchivePrefix(today, finalSlug)
+  const prefix = buildArchivePrefix(type, today, slug)
 
   const indexResponse = await s3.send(
     new GetObjectCommand({ Bucket: QAQC_AWS_S3_BUCKET, Key: `${SOURCE_PREFIX}/index.json` }),
@@ -77,12 +91,11 @@ export async function createArchive(options: {
     .values({
       id,
       date: today,
-      slug: finalSlug,
+      slug,
       prefix,
       name: options.name || null,
       type,
-      triggered_by: options.triggeredBy || null,
-      image_count: plotFiles.length,
+
       status: 'pending',
     })
     .execute()
@@ -139,9 +152,15 @@ export async function registerInternalArchive(name: string): Promise<Archive> {
     })
   }
 
-  const prefix = buildArchivePrefix(null, slug)
-  const id = randomUUID()
+  const prefix = buildArchivePrefix('internal', '', slug)
 
+  const indexResponse = await s3.send(
+    new GetObjectCommand({ Bucket: QAQC_AWS_S3_BUCKET, Key: `${SOURCE_PREFIX}/index.json` }),
+  )
+  const indexBody = await indexResponse.Body!.transformToString()
+  const plotFiles = JSON.parse(indexBody) as string[]
+
+  const id = randomUUID()
   await database
     .insertInto('archives')
     .values({
@@ -151,17 +170,39 @@ export async function registerInternalArchive(name: string): Promise<Archive> {
       prefix,
       name,
       type: 'internal',
-      triggered_by: null,
-      image_count: 0,
-      status: 'complete',
+
+      status: 'pending',
     })
     .execute()
 
-  return await database
+  const archive = await database
     .selectFrom('archives')
     .selectAll()
     .where('id', '=', id)
     .executeTakeFirstOrThrow()
+
+  const abortController = new AbortController()
+  activeCopies.set(id, abortController)
+
+  copyArchiveFiles(id, prefix, plotFiles, abortController.signal)
+    .catch(async (error) => {
+      if (abortController.signal.aborted) {
+        return
+      }
+      log.error(`Archive copy failed for ${prefix}.`, error)
+      try {
+        await deleteArchiveFromS3(prefix)
+        await database.deleteFrom('archives').where('id', '=', id).execute()
+        log.info(`Cleaned up failed archive ${prefix}.`)
+      } catch (cleanupError) {
+        log.error(`Failed to clean up archive ${prefix}.`, cleanupError)
+      }
+    })
+    .finally(() => {
+      activeCopies.delete(id)
+    })
+
+  return archive
 }
 
 async function copyArchiveFiles(
@@ -194,7 +235,7 @@ async function copyArchiveFiles(
       }
       while (active < concurrency && queue.length > 0) {
         const sourceKey = queue.shift()!
-        const destinationKey = sourceKey.replace(SOURCE_PREFIX, prefix)
+        const destinationKey = `${prefix}/${sourceKey}`
         active++
         s3.send(
           new CopyObjectCommand({
@@ -347,7 +388,7 @@ export async function cleanupArchives() {
       await s3.send(
         new HeadObjectCommand({
           Bucket: QAQC_AWS_S3_BUCKET,
-          Key: `${archive.prefix}/index.json`,
+          Key: `${archive.prefix}/${SOURCE_PREFIX}/index.json`,
         }),
       )
     } catch (error: any) {
@@ -372,7 +413,10 @@ export async function cleanupArchives() {
 
 export async function getArchiveIndex(key: string): Promise<string[]> {
   const response = await s3.send(
-    new GetObjectCommand({ Bucket: QAQC_AWS_S3_BUCKET, Key: `archives/${key}/index.json` }),
+    new GetObjectCommand({
+      Bucket: QAQC_AWS_S3_BUCKET,
+      Key: `archives/${key}/${SOURCE_PREFIX}/index.json`,
+    }),
   )
   const body = await response.Body!.transformToString()
   return JSON.parse(body)

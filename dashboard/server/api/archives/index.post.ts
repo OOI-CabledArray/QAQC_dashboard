@@ -8,9 +8,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Name is required for event archives' })
   }
 
-  const archive = await createArchive({
-    name: body.name,
-    triggeredBy: user.username,
-  })
+  const archive = await createArchive({ name: body.name })
   return archive
 })

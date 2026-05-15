@@ -17,7 +17,7 @@ export default defineNitroPlugin(() => {
     log.info('Running scheduled archive job.')
     try {
       const archive = await createArchive({})
-      log.info(`Archive created at ${archive.prefix} with ${archive.image_count} images.`)
+      log.info(`Archive created at ${archive.prefix}.`)
     } catch (error) {
       log.error('Scheduled archive job failed.', error)
     }

@@ -13,7 +13,6 @@ type Archive = {
   name: string | null
   type: string
   status: string
-  image_count: number
   created_at: string
 }
 
@@ -75,10 +74,13 @@ function formatLabel(archive: Archive): string {
 }
 
 function archiveKey(archive: Archive): string {
-  if (archive.type === 'internal') {
-    return archive.slug
+  if (archive.type === 'scheduled') {
+    return `scheduled/${archive.date}`
   }
-  return `${archive.date}-${archive.slug}`
+  if (archive.type === 'internal') {
+    return `internal/${archive.slug}`
+  }
+  return `event/${archive.date}-${archive.slug}`
 }
 
 async function loadArchives() {

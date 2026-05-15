@@ -11,8 +11,6 @@ type Archive = {
   prefix: string
   name: string | null
   type: 'scheduled' | 'event' | 'internal'
-  triggered_by: string | null
-  image_count: number
   status: 'pending' | 'complete'
   created_at: string
 }
@@ -111,7 +109,14 @@ async function deleteArchive() {
 }
 
 function viewArchive(archive: Archive) {
-  const key = archive.type === 'internal' ? archive.slug : `${archive.date}-${archive.slug}`
+  let key: string
+  if (archive.type === 'scheduled') {
+    key = `scheduled/${archive.date}`
+  } else if (archive.type === 'internal') {
+    key = `internal/${archive.slug}`
+  } else {
+    key = `event/${archive.date}-${archive.slug}`
+  }
   store.enterArchiveMode(key)
 }
 

@@ -172,6 +172,41 @@ const migrations: Migration[] = [
       `)
     },
   },
+  {
+    version: '007',
+    description: 'drop-triggered-by',
+    up(database) {
+      database.exec(`
+        CREATE TABLE archives_new (
+          id TEXT PRIMARY KEY,
+          date TEXT NOT NULL,
+          slug TEXT NOT NULL,
+          prefix TEXT NOT NULL UNIQUE,
+          name TEXT,
+          type TEXT NOT NULL DEFAULT 'scheduled' CHECK (type IN ('scheduled', 'event', 'internal')),
+          image_count INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'complete' CHECK (status IN ('pending', 'complete')),
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        INSERT INTO archives_new
+          (id, date, slug, prefix, name, type, image_count, status, created_at)
+          SELECT id, date, slug, prefix, name, type, image_count, status, created_at
+          FROM archives;
+
+        DROP TABLE archives;
+        ALTER TABLE archives_new RENAME TO archives;
+        CREATE UNIQUE INDEX idx_archives_date_slug ON archives(date, slug);
+      `)
+    },
+  },
+  {
+    version: '008',
+    description: 'drop-image-count',
+    up(database) {
+      database.exec(`ALTER TABLE archives DROP COLUMN image_count;`)
+    },
+  },
 ]
 
 export function runMigrations(database: Database.Database): void {

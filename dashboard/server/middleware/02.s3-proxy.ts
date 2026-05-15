@@ -17,21 +17,8 @@ export default defineEventHandler(async (event) => {
     return
   }
 
-  if (path.startsWith('archives/')) {
-    const archiveKey = path.slice('archives/'.length).split('/')[0]
-    if (archiveKey) {
-      const database = getDatabase()
-      const archive = await database
-        .selectFrom('archives')
-        .select(['type'])
-        .where('slug', '=', archiveKey)
-        .where('type', '=', 'internal')
-        .executeTakeFirst()
-
-      if (archive) {
-        requireAuth(event)
-      }
-    }
+  if (path.startsWith('archives/internal/')) {
+    requireAuth(event)
   }
 
   return proxyS3Path(event, path)
