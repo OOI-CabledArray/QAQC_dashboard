@@ -29,6 +29,9 @@ const archiveTypeFilter = $ref<'scheduled' | 'manual' | 'internal'>('scheduled')
 let showCreateInternalDialog = $ref(false)
 let internalArchiveName = $ref('')
 let creatingInternal = $ref(false)
+let showCreateEventDialog = $ref(false)
+let eventArchiveName = $ref('')
+let creatingEvent = $ref(false)
 
 const isAdmin = $computed(() => user?.role === 'admin')
 
@@ -98,6 +101,27 @@ function viewArchive(archive: Archive) {
   store.enterArchiveMode(key)
 }
 
+async function createEventArchive() {
+  creatingEvent = true
+  try {
+    await $fetch('/api/archives', {
+      method: 'POST',
+      body: { name: eventArchiveName },
+    })
+    toast.add({ title: `Created event archive "${eventArchiveName}".`, color: 'success' })
+    showCreateEventDialog = false
+    eventArchiveName = ''
+    await loadArchives()
+  } catch (error: any) {
+    toast.add({
+      title: error.data?.statusMessage || 'Failed to create event archive.',
+      color: 'error',
+    })
+  } finally {
+    creatingEvent = false
+  }
+}
+
 async function createInternalArchive() {
   creatingInternal = true
   try {
@@ -145,6 +169,14 @@ if (import.meta.client) {
     <div class="flex items-center justify-between mb-6">
       <h1 class="font-bold text-2xl">Archives</h1>
       <div class="flex gap-3 items-center">
+        <u-button
+          v-if="user && archiveTypeFilter === 'manual'"
+          size="sm"
+          @click="showCreateEventDialog = true"
+        >
+          <i class="fa-plus fas mr-1" />
+          Create Event Archive
+        </u-button>
         <u-button
           v-if="isAdmin && archiveTypeFilter === 'internal'"
           size="sm"
@@ -271,6 +303,25 @@ if (import.meta.client) {
         </template>
       </u-table>
     </div>
+
+    <!-- Create Event Archive Dialog -->
+    <u-modal v-model:open="showCreateEventDialog">
+      <template #header>
+        <span class="font-semibold">Create Event Archive</span>
+      </template>
+      <template #body>
+        <form class="space-y-4" @submit.prevent="createEventArchive">
+          <div>
+            <label class="block font-medium mb-1 text-sm">Event Name</label>
+            <u-input v-model="eventArchiveName" class="w-full" required />
+          </div>
+          <div class="flex gap-2 justify-end">
+            <u-button variant="ghost" @click="showCreateEventDialog = false">Cancel</u-button>
+            <u-button :loading="creatingEvent" type="submit">Create</u-button>
+          </div>
+        </form>
+      </template>
+    </u-modal>
 
     <!-- Create Internal Archive Dialog -->
     <u-modal v-model:open="showCreateInternalDialog">
