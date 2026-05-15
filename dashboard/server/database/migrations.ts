@@ -137,6 +137,38 @@ const migrations: Migration[] = [
       `)
     },
   },
+  {
+    version: '006',
+    description: 'rename-manual-trigger-type-to-event',
+    up(database) {
+      database.exec(`
+        CREATE TABLE archives_new (
+          id TEXT PRIMARY KEY,
+          date TEXT NOT NULL,
+          slug TEXT NOT NULL,
+          prefix TEXT NOT NULL UNIQUE,
+          name TEXT,
+          trigger_type TEXT NOT NULL CHECK (trigger_type IN ('scheduled', 'event')),
+          triggered_by TEXT,
+          image_count INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'complete' CHECK (status IN ('pending', 'complete')),
+          type TEXT NOT NULL DEFAULT 'snapshot' CHECK (type IN ('snapshot', 'internal')),
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        INSERT INTO archives_new
+          (id, date, slug, prefix, name, trigger_type, triggered_by, image_count, status, type, created_at)
+          SELECT id, date, slug, prefix, name,
+            CASE trigger_type WHEN 'manual' THEN 'event' ELSE trigger_type END,
+            triggered_by, image_count, status, type, created_at
+          FROM archives;
+
+        DROP TABLE archives;
+        ALTER TABLE archives_new RENAME TO archives;
+        CREATE UNIQUE INDEX idx_archives_date_slug ON archives(date, slug);
+      `)
+    },
+  },
 ]
 
 export function runMigrations(database: Database.Database): void {

@@ -21,13 +21,13 @@ type Archive = {
 let archives = $ref<Archive[]>([])
 let pollTimer = $ref<ReturnType<typeof setInterval> | null>(null)
 const cancellingIds = $ref(new Set<string>())
-const archiveTypeFilter = $ref<'scheduled' | 'manual' | 'internal'>('scheduled')
+const archiveTypeFilter = $ref<'scheduled' | 'event' | 'internal'>('scheduled')
 const selectedByType = $ref<Record<string, string | undefined>>({})
 
 const archiveTypeOptions = $computed(() => {
   const options = [
     { label: 'By Date', value: 'scheduled' as const, placeholder: 'Date' },
-    { label: 'Event', value: 'manual' as const, placeholder: 'Event' },
+    { label: 'Event', value: 'event' as const, placeholder: 'Event' },
   ]
   if (loggedIn) {
     options.push({ label: 'Internal', value: 'internal' as const, placeholder: 'Archive' })
@@ -69,7 +69,7 @@ function formatLabel(archive: Archive): string {
     day: 'numeric',
     year: 'numeric',
   })
-  if (archive.trigger_type === 'manual' && archive.name) {
+  if (archive.trigger_type === 'event' && archive.name) {
     return `${date}, ${archive.name}`
   }
   return date
@@ -146,7 +146,14 @@ onUnmounted(() => {
   stopPolling()
 })
 
-defineExpose({ refresh: loadArchives })
+const emit = defineEmits<{ close: [] }>()
+
+defineExpose({
+  refresh: loadArchives,
+  get filter() {
+    return archiveTypeFilter
+  },
+})
 </script>
 
 <template>
@@ -178,7 +185,13 @@ defineExpose({ refresh: loadArchives })
     </div>
     <div class="flex items-center justify-between">
       <span class="font-semibold text-xs">Archives</span>
-      <NuxtLink class="hover:underline text-primary-500 text-xs" to="/archives">
+      <NuxtLink
+        class="hover:underline text-primary-500 text-xs"
+        :to="
+          archiveTypeFilter === 'scheduled' ? '/archives' : `/archives?type=${archiveTypeFilter}`
+        "
+        @click="emit('close')"
+      >
         View All <i class="fa-arrow-right fas text-[10px]" />
       </NuxtLink>
     </div>

@@ -24,7 +24,7 @@ export interface ArchivesTable {
   slug: string
   prefix: string
   name: string | null
-  trigger_type: 'scheduled' | 'manual'
+  trigger_type: 'scheduled' | 'event'
   triggered_by: string | null
   image_count: number
   status: Generated<'pending' | 'complete'>

@@ -35,7 +35,7 @@ export async function createArchive(options: {
   const database = getDatabase()
   const today = new Date().toISOString().slice(0, 10)
   const slug = options.name ? slugify(options.name) : 'auto'
-  const triggerType = options.name ? 'manual' : 'scheduled'
+  const triggerType = options.name ? 'event' : 'scheduled'
 
   let finalSlug = slug
   const existing = await database
@@ -150,7 +150,7 @@ export async function registerInternalArchive(name: string): Promise<Archive> {
       slug,
       prefix,
       name,
-      trigger_type: 'manual',
+      trigger_type: 'event',
       triggered_by: null,
       image_count: 0,
       status: 'complete',
@@ -268,7 +268,7 @@ export function findArchivesToDelete(
       continue
     }
 
-    if (archive.trigger_type === 'manual' && archive.name) {
+    if (archive.trigger_type === 'event' && archive.name) {
       continue
     }
 

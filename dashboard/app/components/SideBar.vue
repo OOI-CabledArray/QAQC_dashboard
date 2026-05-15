@@ -36,10 +36,12 @@ async function logout() {
   await navigateTo('/login')
 }
 
-const archiveDropdown = $ref<{ refresh: () => Promise<void> } | null>(null)
+const archiveDropdown = $ref<{ refresh: () => Promise<void>; filter: string } | null>(null)
 let archiveName = $ref<string | null>(null)
 let archiving = $ref(false)
 let showArchiveDialog = $ref(false)
+
+const archiveFilter = $computed(() => archiveDropdown?.filter ?? 'scheduled')
 
 function cancelArchiveDialog() {
   showArchiveDialog = false
@@ -273,8 +275,9 @@ const accordionItems = $computed(() => {
               ref="archiveDropdown"
               :logged-in="!!authUser"
               :open="isShowingArchivesPopover"
+              @close="isShowingArchivesPopover = false"
             />
-            <div v-if="authUser">
+            <div v-if="authUser && archiveFilter === 'event'">
               <div class="-mx-3 bg-gray-200 h-px my-2" />
               <div v-if="!showArchiveDialog" class="flex justify-center">
                 <u-button size="xs" variant="ghost" @click="showArchiveDialog = true">

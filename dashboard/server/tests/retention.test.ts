@@ -6,7 +6,7 @@ type ArchiveRow = {
   id: string
   date: string
   slug: string
-  trigger_type: 'scheduled' | 'manual'
+  trigger_type: 'scheduled' | 'event'
   name: string | null
   type: 'snapshot' | 'internal'
 }
@@ -61,7 +61,7 @@ describe('retention policy', () => {
         id: 'ccc',
         date: '2026-04-20',
         slug: 'event',
-        trigger_type: 'manual',
+        trigger_type: 'event',
         name: 'Event',
         type: 'snapshot',
       },
@@ -95,7 +95,7 @@ describe('retention policy', () => {
         id: 'ccc',
         date: '2026-05-15',
         slug: 'event',
-        trigger_type: 'manual',
+        trigger_type: 'event',
         name: 'Event',
         type: 'snapshot',
       },
@@ -110,7 +110,7 @@ describe('retention policy', () => {
         id: 'aaa',
         date: '',
         slug: 'staging',
-        trigger_type: 'manual',
+        trigger_type: 'event',
         name: 'Staging',
         type: 'internal',
       },

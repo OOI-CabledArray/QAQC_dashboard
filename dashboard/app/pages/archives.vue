@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { upperFirst } from 'lodash-es'
 
+import { usePersisted } from '~/persisted'
 import { useStore } from '~/store'
 
 type Archive = {
@@ -9,7 +10,7 @@ type Archive = {
   slug: string
   prefix: string
   name: string | null
-  trigger_type: 'scheduled' | 'manual'
+  trigger_type: 'scheduled' | 'event'
   triggered_by: string | null
   type: 'snapshot' | 'internal'
   image_count: number
@@ -25,7 +26,21 @@ let loading = $ref(true)
 let deletingArchive = $ref<Archive | null>(null)
 let submitting = $ref(false)
 let user = $ref<{ id: string; role: string } | null>(null)
-const archiveTypeFilter = $ref<'scheduled' | 'manual' | 'internal'>('scheduled')
+
+const persisted = usePersisted({
+  schema: ({ object, enum: choice }) =>
+    object({
+      type: choice(['scheduled', 'event', 'internal']).default('scheduled'),
+    }),
+  methods: [{ type: 'url' }],
+})
+
+const archiveTypeFilter = $computed({
+  get: () => persisted.type,
+  set: (value) => {
+    persisted.type = value
+  },
+})
 let showCreateInternalDialog = $ref(false)
 let internalArchiveName = $ref('')
 let creatingInternal = $ref(false)
@@ -38,7 +53,7 @@ const isAdmin = $computed(() => user?.role === 'admin')
 const archiveTypeOptions = $computed(() => {
   const options = [
     { label: 'By Date', value: 'scheduled' as const },
-    { label: 'Event', value: 'manual' as const },
+    { label: 'Event', value: 'event' as const },
   ]
   if (user) {
     options.push({ label: 'Internal', value: 'internal' as const })
@@ -151,6 +166,16 @@ function formatDate(dateString: string): string {
   })
 }
 
+function formatTimestamp(isoString: string): string {
+  return new Date(isoString + 'Z').toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
 function formatLabel(archive: Archive): string {
   if (archive.name) {
     return archive.name
@@ -170,7 +195,7 @@ if (import.meta.client) {
       <h1 class="font-bold text-2xl">Archives</h1>
       <div class="flex gap-3 items-center">
         <u-button
-          v-if="user && archiveTypeFilter === 'manual'"
+          v-if="user && archiveTypeFilter === 'event'"
           size="sm"
           @click="showCreateEventDialog = true"
         >
@@ -206,7 +231,9 @@ if (import.meta.client) {
     <div v-if="loading" class="py-12 text-center text-gray-500">Loading...</div>
 
     <div v-else-if="filteredArchives.length === 0" class="py-12 text-center text-gray-500">
-      No archives yet.
+      No
+      {{ { scheduled: 'date', event: 'event', internal: 'internal' }[archiveTypeFilter] }}
+      archives yet.
     </div>
 
     <!-- Mobile -->
@@ -232,7 +259,11 @@ if (import.meta.client) {
         </div>
         <div class="flex items-center justify-between">
           <div v-if="archive.type !== 'internal'" class="text-gray-500 text-xs">
-            {{ formatDate(archive.date) }}
+            {{
+              archive.trigger_type === 'event'
+                ? formatTimestamp(archive.created_at)
+                : formatDate(archive.date)
+            }}
           </div>
           <div v-else />
           <div v-if="user" class="flex gap-1">
@@ -277,7 +308,11 @@ if (import.meta.client) {
           {{ formatLabel(row.original) }}
         </template>
         <template #date-cell="{ row }">
-          {{ formatDate(row.original.date) }}
+          {{
+            row.original.trigger_type === 'manual'
+              ? formatTimestamp(row.original.created_at)
+              : formatDate(row.original.date)
+          }}
         </template>
         <template #status-cell="{ row }">
           <u-badge
@@ -332,12 +367,7 @@ if (import.meta.client) {
         <form class="space-y-4" @submit.prevent="createInternalArchive">
           <div>
             <label class="block font-medium mb-1 text-sm">Name</label>
-            <u-input
-              v-model="internalArchiveName"
-              class="w-full"
-              placeholder="e.g. Staging"
-              required
-            />
+            <u-input v-model="internalArchiveName" class="w-full" placeholder="Staging" required />
           </div>
           <div class="flex gap-2 justify-end">
             <u-button variant="ghost" @click="showCreateInternalDialog = false">Cancel</u-button>
