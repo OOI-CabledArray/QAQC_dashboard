@@ -11,6 +11,7 @@ type Archive = {
   name: string | null
   trigger_type: 'scheduled' | 'manual'
   triggered_by: string | null
+  type: 'snapshot' | 'internal'
   image_count: number
   status: 'pending' | 'complete'
   created_at: string
@@ -24,11 +25,32 @@ let loading = $ref(true)
 let deletingArchive = $ref<Archive | null>(null)
 let submitting = $ref(false)
 let user = $ref<{ id: string; role: string } | null>(null)
-const archiveTypeFilter = $ref<'manual' | 'scheduled'>('scheduled')
+const archiveTypeFilter = $ref<'scheduled' | 'manual' | 'internal'>('scheduled')
+let showCreateInternalDialog = $ref(false)
+let internalArchiveName = $ref('')
+let creatingInternal = $ref(false)
+
+const isAdmin = $computed(() => user?.role === 'admin')
+
+const archiveTypeOptions = $computed(() => {
+  const options = [
+    { label: 'By Date', value: 'scheduled' as const },
+    { label: 'Event', value: 'manual' as const },
+  ]
+  if (user) {
+    options.push({ label: 'Internal', value: 'internal' as const })
+  }
+  return options
+})
 
 const filteredArchives = $computed(() =>
   archives
-    .filter((archive) => archive.trigger_type === archiveTypeFilter)
+    .filter((archive) => {
+      if (archiveTypeFilter === 'internal') {
+        return archive.type === 'internal'
+      }
+      return archive.type !== 'internal' && archive.trigger_type === archiveTypeFilter
+    })
     .filter((archive) => user || archive.status === 'complete'),
 )
 
@@ -72,8 +94,29 @@ async function deleteArchive() {
 }
 
 function viewArchive(archive: Archive) {
-  const key = `${archive.date}-${archive.slug}`
+  const key = archive.type === 'internal' ? archive.slug : `${archive.date}-${archive.slug}`
   store.enterArchiveMode(key)
+}
+
+async function createInternalArchive() {
+  creatingInternal = true
+  try {
+    await $fetch('/api/archives/internal', {
+      method: 'POST',
+      body: { name: internalArchiveName },
+    })
+    toast.add({ title: `Created internal archive "${internalArchiveName}".`, color: 'success' })
+    showCreateInternalDialog = false
+    internalArchiveName = ''
+    await loadArchives()
+  } catch (error: any) {
+    toast.add({
+      title: error.data?.statusMessage || 'Failed to create internal archive.',
+      color: 'error',
+    })
+  } finally {
+    creatingInternal = false
+  }
 }
 
 function formatDate(dateString: string): string {
@@ -101,23 +144,30 @@ if (import.meta.client) {
   <div class="max-w-4xl mx-auto p-3 sm:p-6">
     <div class="flex items-center justify-between mb-6">
       <h1 class="font-bold text-2xl">Archives</h1>
-      <div class="flex overflow-hidden rounded text-sm">
-        <button
-          v-for="option in [
-            { label: 'By Date', value: 'scheduled' },
-            { label: 'Event', value: 'manual' },
-          ]"
-          :key="option.value"
-          :class="[
-            'px-3 py-1 transition-colors',
-            archiveTypeFilter === option.value
-              ? 'bg-primary-500 font-medium text-white'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-600',
-          ]"
-          @click="archiveTypeFilter = option.value as typeof archiveTypeFilter"
+      <div class="flex gap-3 items-center">
+        <u-button
+          v-if="isAdmin && archiveTypeFilter === 'internal'"
+          size="sm"
+          @click="showCreateInternalDialog = true"
         >
-          {{ option.label }}
-        </button>
+          <i class="fa-plus fas mr-1" />
+          Create Internal Archive
+        </u-button>
+        <div class="flex overflow-hidden rounded text-sm">
+          <button
+            v-for="option in archiveTypeOptions"
+            :key="option.value"
+            :class="[
+              'px-3 py-1 transition-colors',
+              archiveTypeFilter === option.value
+                ? 'bg-primary-500 font-medium text-white'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-600',
+            ]"
+            @click="archiveTypeFilter = option.value as typeof archiveTypeFilter"
+          >
+            {{ option.label }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -149,7 +199,10 @@ if (import.meta.client) {
           </u-badge>
         </div>
         <div class="flex items-center justify-between">
-          <div class="text-gray-500 text-xs">{{ formatDate(archive.date) }}</div>
+          <div v-if="archive.type !== 'internal'" class="text-gray-500 text-xs">
+            {{ formatDate(archive.date) }}
+          </div>
+          <div v-else />
           <div v-if="user" class="flex gap-1">
             <u-tooltip text="Delete">
               <u-button
@@ -174,7 +227,7 @@ if (import.meta.client) {
       <u-table
         :columns="[
           { accessorKey: 'name', header: 'Name' },
-          { accessorKey: 'date', header: 'Date' },
+          ...(archiveTypeFilter !== 'internal' ? [{ accessorKey: 'date', header: 'Date' }] : []),
           ...(user
             ? [
                 { accessorKey: 'status', header: 'Status' },
@@ -218,6 +271,30 @@ if (import.meta.client) {
         </template>
       </u-table>
     </div>
+
+    <!-- Create Internal Archive Dialog -->
+    <u-modal v-model:open="showCreateInternalDialog">
+      <template #header>
+        <span class="font-semibold">Create Internal Archive</span>
+      </template>
+      <template #body>
+        <form class="space-y-4" @submit.prevent="createInternalArchive">
+          <div>
+            <label class="block font-medium mb-1 text-sm">Name</label>
+            <u-input
+              v-model="internalArchiveName"
+              class="w-full"
+              placeholder="e.g. Staging"
+              required
+            />
+          </div>
+          <div class="flex gap-2 justify-end">
+            <u-button variant="ghost" @click="showCreateInternalDialog = false">Cancel</u-button>
+            <u-button :loading="creatingInternal" type="submit">Create</u-button>
+          </div>
+        </form>
+      </template>
+    </u-modal>
 
     <!-- Delete Confirmation Dialog -->
     <u-modal :open="!!deletingArchive" @update:open="deletingArchive = null">
