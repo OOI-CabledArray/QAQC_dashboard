@@ -111,7 +111,7 @@ npm run build
 cp .env.example .env
 ```
 
-Edit `.env` to set `QAQC_AWS_S3_BUCKET=ooi-rca-qaqc-prod` and `QAQC_ENABLE_SCHEDULED_JOBS=true`.
+Edit `.env` to set `QAQC_AWS_S3_BUCKET=ooi-rca-qaqc-prod`. To enable automatic archiving, set `QAQC_ARCHIVE_SCHEDULE` to a cron expression (e.g. `0 2 * * *` for daily at 2 AM).
 
 6. Set up the database and systemd service.
 
@@ -145,4 +145,4 @@ Pushes to `main` trigger the `deploy_prod.yaml` GitHub Actions workflow, which S
 - **Nuxt** runs as a Node.js process managed by systemd (`qaqc-dashboard.service`)
 - **SQLite** stores users, sessions, and archive records at `data/database.sqlite`
 - **S3** (`ooi-rca-qaqc-prod`) stores plot images and archive snapshots, proxied to the browser by server middleware
-- **Scheduled Jobs** (enabled via `QAQC_ENABLE_SCHEDULED_JOBS=true` in the service file) handle daily archive snapshots, retention cleanup, database backups, and session expiry
+- **Scheduled Jobs** handle archive cleanup, database backups, and session expiry. Automatic archiving is configured via `QAQC_ARCHIVE_SCHEDULE` in `.env`

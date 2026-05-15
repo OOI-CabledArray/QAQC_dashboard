@@ -20,4 +20,4 @@ export const QAQC_AWS_S3_BUCKET = requireEnv('QAQC_AWS_S3_BUCKET')
 export const QAQC_AWS_REGION = requireEnv('QAQC_AWS_REGION')
 export const QAQC_DATABASE =
   process.env.QAQC_DATABASE || join(process.cwd(), 'data', 'database.sqlite')
-export const QAQC_ENABLE_SCHEDULED_JOBS = process.env.QAQC_ENABLE_SCHEDULED_JOBS === 'true'
+export const QAQC_ARCHIVE_SCHEDULE = process.env.QAQC_ARCHIVE_SCHEDULE || ''

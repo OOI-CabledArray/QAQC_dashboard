@@ -23,7 +23,6 @@ export default defineNuxtConfig({
       tasks: true,
     },
     scheduledTasks: {
-      '0 2 * * *': ['daily-archive'],
       '0 3 * * 0': ['archive-cleanup'],
       '0 4 * * *': ['database-backup'],
       '0 * * * *': ['expire-sessions'],
