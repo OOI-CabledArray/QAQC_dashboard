@@ -256,9 +256,26 @@ if (import.meta.client) {
       </template>
       <template #body>
         <form class="space-y-4" @submit.prevent="createUser">
+          <div class="flex gap-4">
+            <div class="flex-1">
+              <label class="block font-medium mb-1 text-sm">Username</label>
+              <u-input v-model="createForm.username" class="w-full" required />
+            </div>
+            <div>
+              <label class="block font-medium mb-1 text-sm">Role</label>
+              <u-select
+                v-model="createForm.role"
+                :items="[
+                  { label: 'Viewer', value: 'viewer' },
+                  { label: 'Admin', value: 'admin' },
+                ]"
+                value-key="value"
+              />
+            </div>
+          </div>
           <div>
-            <label class="block font-medium mb-1 text-sm">Username</label>
-            <u-input v-model="createForm.username" class="w-full" required />
+            <label class="block font-medium mb-1 text-sm">Password</label>
+            <u-input v-model="createForm.password" class="w-full" required type="password" />
           </div>
           <div>
             <label class="block font-medium mb-1 text-sm">Name</label>
@@ -267,22 +284,6 @@ if (import.meta.client) {
           <div>
             <label class="block font-medium mb-1 text-sm">Email</label>
             <u-input v-model="createForm.email" class="w-full" type="email" />
-          </div>
-          <div>
-            <label class="block font-medium mb-1 text-sm">Password</label>
-            <u-input v-model="createForm.password" class="w-full" required type="password" />
-          </div>
-          <div>
-            <label class="block font-medium mb-1 text-sm">Role</label>
-            <u-select-menu
-              v-model="createForm.role"
-              class="w-full"
-              :items="[
-                { label: 'Viewer', value: 'viewer' },
-                { label: 'Admin', value: 'admin' },
-              ]"
-              value-key="value"
-            />
           </div>
           <div class="flex gap-2 justify-end">
             <u-button variant="ghost" @click="showCreateDialog = false">Cancel</u-button>
@@ -313,7 +314,7 @@ if (import.meta.client) {
           </div>
           <div>
             <label class="block font-medium mb-1 text-sm">Role</label>
-            <u-select-menu
+            <u-select
               v-model="editForm.role"
               class="w-full"
               :items="[
