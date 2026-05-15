@@ -10,9 +10,8 @@ type Archive = {
   slug: string
   prefix: string
   name: string | null
-  trigger_type: 'scheduled' | 'event'
+  type: 'scheduled' | 'event' | 'internal'
   triggered_by: string | null
-  type: 'snapshot' | 'internal'
   image_count: number
   status: 'pending' | 'complete'
   created_at: string
@@ -67,7 +66,7 @@ const filteredArchives = $computed(() =>
       if (archiveTypeFilter === 'internal') {
         return archive.type === 'internal'
       }
-      return archive.type !== 'internal' && archive.trigger_type === archiveTypeFilter
+      return archive.type === archiveTypeFilter
     })
     .filter((archive) => user || archive.status === 'complete'),
 )
@@ -260,7 +259,7 @@ if (import.meta.client) {
         <div class="flex items-center justify-between">
           <div v-if="archive.type !== 'internal'" class="text-gray-500 text-xs">
             {{
-              archive.trigger_type === 'event'
+              archive.type === 'event'
                 ? formatTimestamp(archive.created_at)
                 : formatDate(archive.date)
             }}
@@ -309,7 +308,7 @@ if (import.meta.client) {
         </template>
         <template #date-cell="{ row }">
           {{
-            row.original.trigger_type === 'manual'
+            row.original.type === 'event'
               ? formatTimestamp(row.original.created_at)
               : formatDate(row.original.date)
           }}

@@ -24,11 +24,10 @@ export interface ArchivesTable {
   slug: string
   prefix: string
   name: string | null
-  trigger_type: 'scheduled' | 'event'
+  type: Generated<'scheduled' | 'event' | 'internal'>
   triggered_by: string | null
   image_count: number
   status: Generated<'pending' | 'complete'>
-  type: Generated<'snapshot' | 'internal'>
   created_at: Generated<string>
 }
 

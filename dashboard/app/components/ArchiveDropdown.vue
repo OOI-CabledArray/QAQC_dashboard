@@ -11,7 +11,6 @@ type Archive = {
   slug: string
   prefix: string
   name: string | null
-  trigger_type: string
   type: string
   status: string
   image_count: number
@@ -46,7 +45,7 @@ const completeArchives = $computed(() => {
       if (archiveTypeFilter === 'internal') {
         return archive.type === 'internal'
       }
-      return archive.type !== 'internal' && archive.trigger_type === archiveTypeFilter
+      return archive.type === archiveTypeFilter
     })
 })
 
@@ -69,7 +68,7 @@ function formatLabel(archive: Archive): string {
     day: 'numeric',
     year: 'numeric',
   })
-  if (archive.trigger_type === 'event' && archive.name) {
+  if (archive.type === 'event' && archive.name) {
     return `${date}, ${archive.name}`
   }
   return date

@@ -35,7 +35,7 @@ export async function createArchive(options: {
   const database = getDatabase()
   const today = new Date().toISOString().slice(0, 10)
   const slug = options.name ? slugify(options.name) : 'auto'
-  const triggerType = options.name ? 'event' : 'scheduled'
+  const type = options.name ? 'event' : 'scheduled'
 
   let finalSlug = slug
   const existing = await database
@@ -80,7 +80,7 @@ export async function createArchive(options: {
       slug: finalSlug,
       prefix,
       name: options.name || null,
-      trigger_type: triggerType,
+      type,
       triggered_by: options.triggeredBy || null,
       image_count: plotFiles.length,
       status: 'pending',
@@ -150,11 +150,10 @@ export async function registerInternalArchive(name: string): Promise<Archive> {
       slug,
       prefix,
       name,
-      trigger_type: 'event',
+      type: 'internal',
       triggered_by: null,
       image_count: 0,
       status: 'complete',
-      type: 'internal',
     })
     .execute()
 
@@ -258,7 +257,7 @@ async function deleteArchiveFromS3(prefix: string) {
 }
 
 export function findArchivesToDelete(
-  archives: Pick<Archive, 'id' | 'date' | 'slug' | 'trigger_type' | 'name' | 'type'>[],
+  archives: Pick<Archive, 'id' | 'date' | 'slug' | 'name' | 'type'>[],
   now: Date,
 ): string[] {
   const toDelete: string[] = []
@@ -268,7 +267,7 @@ export function findArchivesToDelete(
       continue
     }
 
-    if (archive.trigger_type === 'event' && archive.name) {
+    if (archive.type === 'event' && archive.name) {
       continue
     }
 

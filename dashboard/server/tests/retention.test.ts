@@ -6,31 +6,16 @@ type ArchiveRow = {
   id: string
   date: string
   slug: string
-  trigger_type: 'scheduled' | 'event'
   name: string | null
-  type: 'snapshot' | 'internal'
+  type: 'scheduled' | 'event' | 'internal'
 }
 
 describe('retention policy', () => {
   it('should keep all archives under 30 days old', () => {
     const now = new Date('2026-04-23')
     const archives: ArchiveRow[] = [
-      {
-        id: 'aaa',
-        date: '2026-04-22',
-        slug: 'auto',
-        trigger_type: 'scheduled',
-        name: null,
-        type: 'snapshot',
-      },
-      {
-        id: 'bbb',
-        date: '2026-04-01',
-        slug: 'auto',
-        trigger_type: 'scheduled',
-        name: null,
-        type: 'snapshot',
-      },
+      { id: 'aaa', date: '2026-04-22', slug: 'auto', name: null, type: 'scheduled' },
+      { id: 'bbb', date: '2026-04-01', slug: 'auto', name: null, type: 'scheduled' },
     ]
     expect(findArchivesToDelete(archives, now)).toEqual([])
   })
@@ -39,32 +24,11 @@ describe('retention policy', () => {
     const now = new Date('2026-06-01')
     const archives: ArchiveRow[] = [
       // 2026-04-19 is a Sunday, keep
-      {
-        id: 'aaa',
-        date: '2026-04-19',
-        slug: 'auto',
-        trigger_type: 'scheduled',
-        name: null,
-        type: 'snapshot',
-      },
+      { id: 'aaa', date: '2026-04-19', slug: 'auto', name: null, type: 'scheduled' },
       // 2026-04-20 is a Monday, delete
-      {
-        id: 'bbb',
-        date: '2026-04-20',
-        slug: 'auto',
-        trigger_type: 'scheduled',
-        name: null,
-        type: 'snapshot',
-      },
-      // Manual archive, always keep
-      {
-        id: 'ccc',
-        date: '2026-04-20',
-        slug: 'event',
-        trigger_type: 'event',
-        name: 'Event',
-        type: 'snapshot',
-      },
+      { id: 'bbb', date: '2026-04-20', slug: 'auto', name: null, type: 'scheduled' },
+      // Event archive, always keep
+      { id: 'ccc', date: '2026-04-20', slug: 'event', name: 'Event', type: 'event' },
     ]
     expect(findArchivesToDelete(archives, now)).toEqual(['bbb'])
   })
@@ -73,32 +37,11 @@ describe('retention policy', () => {
     const now = new Date('2026-12-01')
     const archives: ArchiveRow[] = [
       // 2026-05-01, keep (1st of month)
-      {
-        id: 'aaa',
-        date: '2026-05-01',
-        slug: 'auto',
-        trigger_type: 'scheduled',
-        name: null,
-        type: 'snapshot',
-      },
+      { id: 'aaa', date: '2026-05-01', slug: 'auto', name: null, type: 'scheduled' },
       // 2026-05-04 is a Sunday but >180 days, only 1st of month kept
-      {
-        id: 'bbb',
-        date: '2026-05-04',
-        slug: 'auto',
-        trigger_type: 'scheduled',
-        name: null,
-        type: 'snapshot',
-      },
-      // Manual, always keep
-      {
-        id: 'ccc',
-        date: '2026-05-15',
-        slug: 'event',
-        trigger_type: 'event',
-        name: 'Event',
-        type: 'snapshot',
-      },
+      { id: 'bbb', date: '2026-05-04', slug: 'auto', name: null, type: 'scheduled' },
+      // Event, always keep
+      { id: 'ccc', date: '2026-05-15', slug: 'event', name: 'Event', type: 'event' },
     ]
     expect(findArchivesToDelete(archives, now)).toEqual(['bbb'])
   })
@@ -106,23 +49,9 @@ describe('retention policy', () => {
   it('should never delete internal archives', () => {
     const now = new Date('2026-12-01')
     const archives: ArchiveRow[] = [
-      {
-        id: 'aaa',
-        date: '',
-        slug: 'staging',
-        trigger_type: 'event',
-        name: 'Staging',
-        type: 'internal',
-      },
-      // Old snapshot, would normally be deleted
-      {
-        id: 'bbb',
-        date: '2026-05-04',
-        slug: 'auto',
-        trigger_type: 'scheduled',
-        name: null,
-        type: 'snapshot',
-      },
+      { id: 'aaa', date: '', slug: 'staging', name: 'Staging', type: 'internal' },
+      // Old scheduled, would normally be deleted
+      { id: 'bbb', date: '2026-05-04', slug: 'auto', name: null, type: 'scheduled' },
     ]
     expect(findArchivesToDelete(archives, now)).toEqual(['bbb'])
   })
