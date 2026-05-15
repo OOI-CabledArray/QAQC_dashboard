@@ -13,7 +13,7 @@ export default defineNitroPlugin(() => {
 
   log.info(`Scheduling archive job with cron expression: ${QAQC_ARCHIVE_SCHEDULE}`)
 
-  Cron(QAQC_ARCHIVE_SCHEDULE, async () => {
+  new Cron(QAQC_ARCHIVE_SCHEDULE, async () => {
     log.info('Running scheduled archive job.')
     try {
       const archive = await createArchive({})
