@@ -48,6 +48,7 @@ function resolveKey(key: KeyInput): string {
 export function usePersisted<TData extends BaseData<TSchema>, TSchema extends BaseSchema>(
   options: UsePersistedOptions<TData, TSchema>,
 ): TData {
+  const route = useRoute()
   const router = useRouter()
   const schema = typeof options.schema == 'function' ? options.schema(Zod) : options.schema
   const methods = computed(() => toValue(options.methods))
@@ -63,7 +64,7 @@ export function usePersisted<TData extends BaseData<TSchema>, TSchema extends Ba
       if (method.type === 'local-storage') {
         loaded = readFromStorage(resolveKey(method.key), schema)
       } else if (method.type === 'url') {
-        loaded = readFromUrl(schema)
+        loaded = readFromUrl(schema, route.query)
       } else {
         continue
       }
@@ -84,8 +85,8 @@ export function usePersisted<TData extends BaseData<TSchema>, TSchema extends Ba
     }
   }
 
+  read()
   if (import.meta.client) {
-    read()
     write()
 
     watch(
@@ -194,14 +195,19 @@ function writeToUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema>
 
 function readFromUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema>(
   schema: TSchema,
+  query: Record<string, string | (string | null)[] | undefined>,
 ): Partial<TData> | null {
   const data: Record<string, unknown> = {}
-  const search = new URL(window.location.href).searchParams
 
-  search.forEach((value, key) => {
+  for (const [key, rawValue] of Object.entries(query)) {
+    const value = Array.isArray(rawValue) ? rawValue[0] : rawValue
+    if (value == null) {
+      continue
+    }
+
     const field = camelCase(key)
     if (field in data) {
-      return
+      continue
     }
 
     if (value === 'null') {
@@ -225,7 +231,7 @@ function readFromUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema
         data[field] = value
       }
     }
-  })
+  }
 
   try {
     return schema.partial().parse(data) as Partial<TData>

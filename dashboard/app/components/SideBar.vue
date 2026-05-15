@@ -2,10 +2,12 @@
 import type { AccordionItem } from '@nuxt/ui'
 import { createReusableTemplate } from '@vueuse/core'
 
+import { useAuth } from '~/auth'
 import { useBreakpoints } from '~/breakpoints'
 import None from '~/components/None.vue'
 import { useStore } from '~/store'
 
+const auth = useAuth()
 const store = useStore()
 const route = useRoute()
 const breakpoints = useBreakpoints()
@@ -14,27 +16,6 @@ const isWide = $computed(() => (import.meta.client ? breakpoints.greaterOrEqual(
 const isShowingTopLinksPopover = $ref(false)
 const isShowingArchivesPopover = $ref(false)
 const isShowingUserPopover = $ref(false)
-
-type AuthUser = { id: string; email: string; name: string; role: string }
-let authUser = $ref<AuthUser | null>(null)
-
-async function fetchAuthUser() {
-  try {
-    authUser = await $fetch('/api/me')
-  } catch {
-    authUser = null
-  }
-}
-
-async function logout() {
-  try {
-    await $fetch('/api/logout', { method: 'POST' })
-  } catch {
-    // Ignore errors
-  }
-  authUser = null
-  await navigateTo('/login')
-}
 
 const archiveDropdown = $ref<{ refresh: () => Promise<void>; filter: string } | null>(null)
 let archiveName = $ref<string | null>(null)
@@ -65,9 +46,12 @@ async function triggerArchive() {
   }
 }
 
+await callOnce(auth.fetch)
 if (import.meta.client) {
-  fetchAuthUser()
-  watch(() => route.path, fetchAuthUser)
+  watch(
+    () => route.path,
+    () => auth.fetch(),
+  )
 }
 
 type Item = (typeof store.mainNav)[number]
@@ -273,11 +257,11 @@ const accordionItems = $computed(() => {
           <div class="p-3 space-y-2 w-64">
             <ArchiveDropdown
               ref="archiveDropdown"
-              :logged-in="!!authUser"
+              :logged-in="auth.loggedIn"
               :open="isShowingArchivesPopover"
               @close="isShowingArchivesPopover = false"
             />
-            <div v-if="authUser && archiveFilter === 'event'">
+            <div v-if="auth.loggedIn && archiveFilter === 'event'">
               <div class="-mx-3 bg-gray-200 h-px my-2" />
               <div v-if="!showArchiveDialog" class="flex justify-center">
                 <u-button size="xs" variant="ghost" @click="showArchiveDialog = true">
@@ -317,7 +301,7 @@ const accordionItems = $computed(() => {
     <!-- Auth -->
     <div class="bg-white h-px mb-2 mt-2 opacity-20" />
     <div>
-      <template v-if="authUser">
+      <template v-if="auth.loggedIn">
         <u-popover
           v-model:open="isShowingUserPopover"
           :content="{ side: 'right', sideOffset: 28 }"
@@ -341,7 +325,7 @@ const accordionItems = $computed(() => {
           >
             <i class="fa-user fas opacity-50" />
             <span class="grow not-sm:text-[8px] sm:ml-2 text-left text-nowrap">
-              {{ authUser.name }}
+              {{ auth.user?.name }}
             </span>
             <i
               v-if="isWide"
@@ -355,7 +339,7 @@ const accordionItems = $computed(() => {
               </NuxtLink>
               <button
                 class="block hover:bg-gray-100 px-4 py-1.5 text-left text-sm w-full"
-                @click="logout"
+                @click="auth.logout"
               >
                 Log Out
               </button>

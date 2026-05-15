@@ -62,18 +62,19 @@ export async function createArchive(options: { name?: string }): Promise<Archive
       await database.deleteFrom('archives').where('id', '=', existing.id).execute()
     }
   } else {
-    const baseSlug = slug
-    let counter = 2
-    while (
-      await database
-        .selectFrom('archives')
-        .select('id')
-        .where('date', '=', today)
-        .where('slug', '=', slug)
-        .executeTakeFirst()
-    ) {
-      slug = `${baseSlug}-${counter}`
-      counter++
+    const existing = await database
+      .selectFrom('archives')
+      .select('id')
+      .where('type', '=', 'event')
+      .where('date', '=', today)
+      .where('slug', '=', slug)
+      .executeTakeFirst()
+
+    if (existing) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'An event archive with that name already exists for today',
+      })
     }
   }
 
@@ -170,7 +171,6 @@ export async function registerInternalArchive(name: string): Promise<Archive> {
       prefix,
       name,
       type: 'internal',
-
       status: 'pending',
     })
     .execute()

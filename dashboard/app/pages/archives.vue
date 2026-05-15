@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { upperFirst } from 'lodash-es'
 
+import { useAuth } from '~/auth'
 import { usePersisted } from '~/persisted'
 import { useStore } from '~/store'
 
@@ -15,6 +16,7 @@ type Archive = {
   created_at: string
 }
 
+const auth = useAuth()
 const store = useStore()
 const toast = useToast()
 
@@ -22,7 +24,6 @@ let archives = $ref<Archive[]>([])
 let loading = $ref(true)
 let deletingArchive = $ref<Archive | null>(null)
 let submitting = $ref(false)
-let user = $ref<{ id: string; role: string } | null>(null)
 
 const persisted = usePersisted({
   schema: ({ object, enum: choice }) =>
@@ -45,14 +46,12 @@ let showCreateEventDialog = $ref(false)
 let eventArchiveName = $ref('')
 let creatingEvent = $ref(false)
 
-const isAdmin = $computed(() => user?.role === 'admin')
-
 const archiveTypeOptions = $computed(() => {
   const options = [
     { label: 'By Date', value: 'scheduled' as const },
     { label: 'Event', value: 'event' as const },
   ]
-  if (user) {
+  if (auth.loggedIn) {
     options.push({ label: 'Internal', value: 'internal' as const })
   }
   return options
@@ -66,25 +65,20 @@ const filteredArchives = $computed(() =>
       }
       return archive.type === archiveTypeFilter
     })
-    .filter((archive) => user || archive.status === 'complete'),
+    .filter((archive) => auth.loggedIn || archive.status === 'complete'),
 )
 
 async function loadArchives() {
   try {
-    archives = await $fetch('/api/archives')
+    const headers = import.meta.server ? useRequestHeaders(['cookie']) : undefined
+    archives = await $fetch('/api/archives', { headers })
   } catch {
     archives = []
-    toast.add({ title: 'Failed to load archives.', color: 'error' })
+    if (import.meta.client) {
+      toast.add({ title: 'Failed to load archives.', color: 'error' })
+    }
   } finally {
     loading = false
-  }
-}
-
-async function fetchUser() {
-  try {
-    user = await $fetch('/api/me')
-  } catch {
-    user = null
   }
 }
 
@@ -187,10 +181,7 @@ function formatLabel(archive: Archive): string {
   return formatDate(archive.date)
 }
 
-if (import.meta.client) {
-  loadArchives()
-  fetchUser()
-}
+await Promise.all([loadArchives(), callOnce(auth.fetch)])
 </script>
 
 <template>
@@ -199,7 +190,7 @@ if (import.meta.client) {
       <h1 class="font-bold text-2xl">Archives</h1>
       <div class="flex gap-3 items-center">
         <u-button
-          v-if="user && archiveTypeFilter === 'event'"
+          v-if="auth.loggedIn && archiveTypeFilter === 'event'"
           size="sm"
           @click="showCreateEventDialog = true"
         >
@@ -207,7 +198,7 @@ if (import.meta.client) {
           Create Event Archive
         </u-button>
         <u-button
-          v-if="isAdmin && archiveTypeFilter === 'internal'"
+          v-if="auth.isAdmin && archiveTypeFilter === 'internal'"
           size="sm"
           @click="showCreateInternalDialog = true"
         >
@@ -254,7 +245,7 @@ if (import.meta.client) {
         <div class="flex items-center justify-between mb-1">
           <span class="font-medium text-sm">{{ formatLabel(archive) }}</span>
           <u-badge
-            v-if="user"
+            v-if="auth.loggedIn"
             :color="archive.status === 'complete' ? 'success' : 'warning'"
             variant="subtle"
           >
@@ -270,7 +261,7 @@ if (import.meta.client) {
             }}
           </div>
           <div v-else />
-          <div v-if="user" class="flex gap-1">
+          <div v-if="auth.loggedIn" class="flex gap-1">
             <u-tooltip text="Delete">
               <u-button
                 class="hover:text-[var(--ui-error)] text-gray-500"
@@ -295,7 +286,7 @@ if (import.meta.client) {
         :columns="[
           { accessorKey: 'name', header: 'Name' },
           ...(archiveTypeFilter !== 'internal' ? [{ accessorKey: 'date', header: 'Date' }] : []),
-          ...(user
+          ...(auth.loggedIn
             ? [
                 { accessorKey: 'status', header: 'Status' },
                 { accessorKey: 'actions', header: '' },
