@@ -9,7 +9,7 @@ cp .env.example .env
 
 Edit `.env` to set `QAQC_AWS_S3_BUCKET` to your development bucket. The server will refuse to start without it and `QAQC_AWS_REGION` set.
 
-Archives require a configured S3 bucket. In production, CloudFront serves archive files directly from S3. In development, a server route proxies `/archives/*` requests to S3, so valid AWS credentials and a bucket with archive data are required to view archived plots locally.
+The server proxies plot images, discrete data CSVs, and archive files from S3. Valid AWS credentials and a configured bucket are required for the dashboard to display any data.
 
 To create an admin user for local development:
 
@@ -111,7 +111,7 @@ npm run build
 cp .env.example .env
 ```
 
-Edit `.env` to set `QAQC_AWS_S3_BUCKET=ooi-rca-qaqc-prod`. To enable automatic archiving, set `QAQC_ARCHIVE_SCHEDULE` to a cron expression (e.g. `0 2 * * *` for daily at 2 AM).
+Edit `.env` to set `QAQC_AWS_S3_BUCKET=ooi-rca-qaqc-prod`. See the [Environment Variables](#environment-variables) section for all available options.
 
 6. Set up the database and systemd service.
 
@@ -177,9 +177,75 @@ The following tasks run on a schedule configured in `nuxt.config.ts`:
 
 Automatic archive creation is configured separately via the `QAQC_ARCHIVE_SCHEDULE` environment variable (see above).
 
+### Environment Variables
+
+All environment variables are set in the `.env` file. See `.env.example` for a template.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `QAQC_AWS_S3_BUCKET` | Yes | | S3 bucket containing plot images and archive data |
+| `QAQC_AWS_REGION` | Yes | | AWS region for the S3 bucket |
+| `QAQC_DATABASE` | No | `data/database.sqlite` | Path to the SQLite database file |
+| `QAQC_ARCHIVE_SCHEDULE` | No | Disabled | Cron expression for automatic archive creation (see [Archives](#archives)) |
+
+AWS credentials are resolved by the AWS SDK default credential chain (environment variables, instance profile, etc.).
+
 ### Architecture
 
-- **Caddy** listens on ports 80/443, handles TLS via Let's Encrypt, and proxies to Nuxt on port 3000
-- **Nuxt** runs as a Node.js process managed by systemd (`qaqc-dashboard.service`)
-- **SQLite** stores users, sessions, and archive records at `data/database.sqlite`
-- **S3** (`ooi-rca-qaqc-prod`) stores plot images and archive snapshots, proxied to the browser by server middleware
+- **Caddy** listens on ports 80/443, handles TLS via Let's Encrypt, and proxies to Nuxt on port 3000.
+- **Nuxt** runs as a Node.js process managed by systemd (`qaqc-dashboard.service`).
+- **SQLite** stores users, sessions, and archive records at `data/database.sqlite`. Migrations run automatically on startup.
+- **S3** stores plot images, discrete sample CSVs, and archive snapshots. Server middleware proxies requests matching `QAQC_plots/`, `discrete/`, `HITL_notes/`, `spectrograms/`, `echograms/`, and `archives/` to S3. Internal archives (`archives/internal/`) require authentication.
+- **Database backups** are written daily to `s3://<bucket>/backups/database/<date>.sqlite`.
+
+### Authentication
+
+Authentication uses username/password with scrypt-hashed passwords stored in SQLite. Sessions are cookie-based (`session` cookie), expire after 7 days of inactivity, and are extended on each authenticated request.
+
+There are two roles:
+
+- **admin**: can create/delete all archive types and manage users.
+- **viewer**: can create event archives and view internal archives.
+
+Unauthenticated users can view the dashboard and all non-internal archives.
+
+To manage users in production, use the admin UI at `/users` or create an admin directly:
+
+```sh
+cd /home/ubuntu/qaqc-dashboard/dashboard
+npx tsx scripts/create-admin.ts --username <username> --name "<Full Name>" [--email <email>]
+```
+
+### S3 Bucket Structure
+
+The S3 bucket is organized as follows:
+
+```
+<bucket>/
+  QAQC_plots/              # Current plot images and index.json
+  discrete/                 # Discrete sample CSV files
+  HITL_notes/               # Human-in-the-loop notes
+  spectrograms/             # Spectrogram images
+  echograms/                # Echogram images
+  archives/
+    scheduled/<date>/       # Scheduled archive snapshots
+    event/<date>-<slug>/    # Event archive snapshots
+    internal/<slug>/        # Internal archive snapshots
+  backups/
+    database/<date>.sqlite  # Daily database backups
+```
+
+### Troubleshooting
+
+Check the application logs:
+
+```sh
+sudo journalctl -u qaqc-dashboard -f
+```
+
+Common issues:
+
+- **Server won't start**: check that `.env` has `QAQC_AWS_S3_BUCKET` and `QAQC_AWS_REGION` set. The server logs the specific missing variable.
+- **No plots visible**: verify AWS credentials are available to the process and the S3 bucket contains data under `QAQC_plots/`.
+- **Archive stuck in "pending"**: the cleanup task removes stale pending archives (older than 1 hour) on its weekly run. To clean up immediately, restart the service.
+- **Login not working**: check that the `data/` directory exists and is writable. The database is created automatically on first startup.

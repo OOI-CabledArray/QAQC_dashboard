@@ -23,7 +23,7 @@
 
 Wendi's awesome QAQC Dashboard that will display all the information you need for RCA QAQC Data!
 
-**The Vue based frontend code can be found in `dashboard` directory.**
+**The dashboard application lives in the [`dashboard/`](./dashboard) directory.** See [`dashboard/README.md`](./dashboard/README.md) for setup, deployment, configuration, and architecture documentation.
 
 See the [documentation](https://github.com/OOI-CabledArray/rca-data-tools/blob/main/docs/src/qaqc-dashboard.md) for all the components/repository to deploy the QAQC Dashboard.
 
