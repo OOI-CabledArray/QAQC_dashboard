@@ -25,10 +25,6 @@ async function loadArchiveName() {
   }
 
   const parsed = parseArchiveKey(store.currentArchive)
-  if (parsed.type === 'internal') {
-    archiveName = parsed.slug
-    return
-  }
 
   try {
     const archives = await $fetch<any[]>('/api/archives')
@@ -38,11 +34,7 @@ async function loadArchiveName() {
         archive.date === parsed.date &&
         archive.slug === parsed.slug,
     )
-    if (match?.name) {
-      archiveName = match.name
-    } else {
-      archiveName = null
-    }
+    archiveName = match?.name || null
   } catch {
     archiveName = null
   }

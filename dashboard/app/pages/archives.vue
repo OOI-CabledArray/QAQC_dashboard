@@ -121,7 +121,7 @@ async function createEventArchive() {
       method: 'POST',
       body: { name: eventArchiveName },
     })
-    toast.add({ title: `Created event archive "${eventArchiveName}".`, color: 'success' })
+    toast.add({ title: `Creating event archive "${eventArchiveName}".`, color: 'success' })
     showCreateEventDialog = false
     eventArchiveName = ''
     await loadArchives()
@@ -142,7 +142,7 @@ async function createInternalArchive() {
       method: 'POST',
       body: { name: internalArchiveName },
     })
-    toast.add({ title: `Created internal archive "${internalArchiveName}".`, color: 'success' })
+    toast.add({ title: `Creating internal archive "${internalArchiveName}".`, color: 'success' })
     showCreateInternalDialog = false
     internalArchiveName = ''
     await loadArchives()
