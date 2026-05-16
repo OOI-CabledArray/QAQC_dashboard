@@ -169,11 +169,11 @@ Archive files are stored in S3 under `archives/<type>/<key>/QAQC_plots/`. The re
 
 The following tasks run on a schedule configured in `nuxt.config.ts`:
 
-| Task | Schedule | Description |
-|------|----------|-------------|
+| Task              | Schedule        | Description                                                                     |
+| ----------------- | --------------- | ------------------------------------------------------------------------------- |
 | `archive-cleanup` | Sundays at 3 AM | Remove stale pending archives, orphaned records, and apply the retention policy |
-| `database-backup` | Daily at 4 AM | Back up the SQLite database to S3 |
-| `expire-sessions` | Every hour | Delete expired login sessions |
+| `database-backup` | Daily at 4 AM   | Back up the SQLite database to S3                                               |
+| `expire-sessions` | Every hour      | Delete expired login sessions                                                   |
 
 Automatic archive creation is configured separately via the `QAQC_ARCHIVE_SCHEDULE` environment variable (see above).
 
@@ -181,12 +181,12 @@ Automatic archive creation is configured separately via the `QAQC_ARCHIVE_SCHEDU
 
 All environment variables are set in the `.env` file. See `.env.example` for a template.
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `QAQC_AWS_S3_BUCKET` | Yes | | S3 bucket containing plot images and archive data |
-| `QAQC_AWS_REGION` | Yes | | AWS region for the S3 bucket |
-| `QAQC_DATABASE` | No | `data/database.sqlite` | Path to the SQLite database file |
-| `QAQC_ARCHIVE_SCHEDULE` | No | Disabled | Cron expression for automatic archive creation (see [Archives](#archives)) |
+| Variable                | Required | Default                | Description                                                                |
+| ----------------------- | -------- | ---------------------- | -------------------------------------------------------------------------- |
+| `QAQC_AWS_S3_BUCKET`    | Yes      |                        | S3 bucket containing plot images and archive data                          |
+| `QAQC_AWS_REGION`       | Yes      |                        | AWS region for the S3 bucket                                               |
+| `QAQC_DATABASE`         | No       | `data/database.sqlite` | Path to the SQLite database file                                           |
+| `QAQC_ARCHIVE_SCHEDULE` | No       | Disabled               | Cron expression for automatic archive creation (see [Archives](#archives)) |
 
 AWS credentials are resolved by the AWS SDK default credential chain (environment variables, instance profile, etc.).
 

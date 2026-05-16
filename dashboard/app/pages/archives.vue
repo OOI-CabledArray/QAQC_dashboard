@@ -47,12 +47,12 @@ let eventArchiveName = $ref('')
 let creatingEvent = $ref(false)
 
 const archiveTypeOptions = $computed(() => {
-  const options = [
-    { label: 'By Date', value: 'scheduled' as const },
-    { label: 'Event', value: 'event' as const },
+  const options: { label: string; value: 'scheduled' | 'event' | 'internal' }[] = [
+    { label: 'By Date', value: 'scheduled' },
+    { label: 'Event', value: 'event' },
   ]
   if (auth.loggedIn) {
-    options.push({ label: 'Internal', value: 'internal' as const })
+    options.push({ label: 'Internal', value: 'internal' })
   }
   return options
 })
@@ -227,7 +227,7 @@ await Promise.all([loadArchives(), callOnce(auth.fetch)])
 
     <div v-else-if="filteredArchives.length === 0" class="py-12 text-center text-gray-500">
       No
-      {{ { scheduled: 'date', event: 'event', internal: 'internal' }[archiveTypeFilter] }}
+      {{ { scheduled: 'date', event: 'event', internal: 'internal' }[archiveTypeFilter as string] }}
       archives yet.
     </div>
 

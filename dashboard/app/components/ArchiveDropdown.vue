@@ -22,13 +22,19 @@ const cancellingIds = $ref(new Set<string>())
 const archiveTypeFilter = $ref<'scheduled' | 'event' | 'internal'>('scheduled')
 const selectedByType = $ref<Record<string, string | undefined>>({})
 
+type ArchiveTypeOption = {
+  label: string
+  value: 'scheduled' | 'event' | 'internal'
+  placeholder: string
+}
+
 const archiveTypeOptions = $computed(() => {
-  const options = [
-    { label: 'By Date', value: 'scheduled' as const, placeholder: 'Date' },
-    { label: 'Event', value: 'event' as const, placeholder: 'Event' },
+  const options: ArchiveTypeOption[] = [
+    { label: 'By Date', value: 'scheduled', placeholder: 'Date' },
+    { label: 'Event', value: 'event', placeholder: 'Event' },
   ]
   if (loggedIn) {
-    options.push({ label: 'Internal', value: 'internal' as const, placeholder: 'Archive' })
+    options.push({ label: 'Internal', value: 'internal', placeholder: 'Archive' })
   }
   return options
 })

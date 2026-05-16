@@ -1,7 +1,7 @@
 import { kebabCase, isEqual, camelCase, pick, difference, debounce, isArray } from 'lodash-es'
 import type { MaybeRefOrGetter } from 'vue'
 import { computed, isReactive, reactive, watch, toValue } from 'vue'
-import type { Router } from 'vue-router'
+import type { LocationQuery, Router } from 'vue-router'
 import type { ZodObject } from 'zod'
 import Zod, { ZodArray, ZodBoolean, ZodEnum, ZodNumber, ZodString } from 'zod'
 
@@ -195,7 +195,7 @@ function writeToUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema>
 
 function readFromUrl<TData extends BaseData<TSchema>, TSchema extends BaseSchema>(
   schema: TSchema,
-  query: Record<string, string | (string | null)[] | undefined>,
+  query: LocationQuery,
 ): Partial<TData> | null {
   const data: Record<string, unknown> = {}
 
