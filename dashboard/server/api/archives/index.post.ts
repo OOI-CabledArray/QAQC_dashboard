@@ -1,7 +1,7 @@
 import { createArchive } from '#server/archive'
 
 export default defineEventHandler(async (event) => {
-  const user = requireAuth(event)
+  requireAuth(event)
   const body = await readBody(event)
 
   if (!body?.name) {
