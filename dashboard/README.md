@@ -130,9 +130,9 @@ npx tsx scripts/create-admin.ts --username admin --name "Your Name"
 ### Verifying the Deployment
 
 ```sh
-sudo systemctl status qaqc-dashboard   # Check the app is running.
-sudo systemctl status caddy            # Check the reverse proxy.
-sudo journalctl -u qaqc-dashboard -f   # Follow app logs.
+sudo systemctl status qaqc-dashboard               # Check the app is running.
+sudo systemctl status caddy                        # Check the reverse proxy.
+journalctl --unit qaqc-dashboard --follow          # Follow app logs.
 ```
 
 ### Continuous Deployment
@@ -235,13 +235,27 @@ The S3 bucket is organized as follows:
     database/<date>.sqlite  # Daily database backups
 ```
 
-### Troubleshooting
+### Viewing Server Logs
 
-Check the application logs:
+The application logs to systemd's journal. To follow logs in real time:
 
 ```sh
-sudo journalctl -u qaqc-dashboard -f
+journalctl --unit qaqc-dashboard --follow
 ```
+
+To view recent logs (e.g. the last hour):
+
+```sh
+journalctl --unit qaqc-dashboard --since "1 hour ago"
+```
+
+To view logs from the most recent service start:
+
+```sh
+journalctl --unit qaqc-dashboard --boot
+```
+
+### Troubleshooting
 
 Common issues:
 
