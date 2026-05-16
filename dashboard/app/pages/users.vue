@@ -31,10 +31,13 @@ let submitting = $ref(false)
 
 async function loadUsers() {
   try {
-    users = await $fetch('/api/users')
+    const headers = import.meta.server ? useRequestHeaders(['cookie']) : undefined
+    users = await $fetch('/api/users', { headers })
   } catch {
     users = []
-    toast.add({ title: 'Failed to load users.', color: 'error' })
+    if (import.meta.client) {
+      toast.add({ title: 'Failed to load users.', color: 'error' })
+    }
   } finally {
     loading = false
   }
@@ -151,9 +154,7 @@ function formatDate(dateString: string): string {
   })
 }
 
-if (import.meta.client) {
-  loadUsers()
-}
+await loadUsers()
 </script>
 
 <template>

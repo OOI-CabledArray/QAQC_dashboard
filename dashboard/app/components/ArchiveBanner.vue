@@ -5,19 +5,42 @@ const store = useStore()
 
 let archiveName = $ref<string | null>(null)
 
+function parseArchiveKey(key: string): { type: string; date: string; slug: string } {
+  const slash = key.indexOf('/')
+  const type = key.slice(0, slash)
+  const rest = key.slice(slash + 1)
+  if (type === 'scheduled') {
+    return { type, date: rest, slug: '' }
+  }
+  if (type === 'internal') {
+    return { type, date: '', slug: rest }
+  }
+  return { type, date: rest.slice(0, 10), slug: rest.slice(11) }
+}
+
 async function loadArchiveName() {
   if (!store.currentArchive) {
     archiveName = null
     return
   }
 
+  const parsed = parseArchiveKey(store.currentArchive)
+  if (parsed.type === 'internal') {
+    archiveName = parsed.slug
+    return
+  }
+
   try {
     const archives = await $fetch<any[]>('/api/archives')
-    const key = store.currentArchive
-    const match = archives.find((a) => `${a.date}-${a.slug}` === key)
+    const match = archives.find(
+      (archive) =>
+        archive.type === parsed.type &&
+        archive.date === parsed.date &&
+        archive.slug === parsed.slug,
+    )
     if (match?.name) {
       archiveName = match.name
-    } else if (match) {
+    } else {
       archiveName = null
     }
   } catch {
@@ -35,8 +58,11 @@ const dateLabel = $computed(() => {
   if (!store.currentArchive) {
     return ''
   }
-  const datePart = store.currentArchive.slice(0, 10)
-  return new Date(datePart + 'T00:00:00').toLocaleDateString('en-US', {
+  const parsed = parseArchiveKey(store.currentArchive)
+  if (parsed.type === 'internal') {
+    return ''
+  }
+  return new Date(parsed.date + 'T00:00:00').toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
@@ -53,8 +79,8 @@ const dateLabel = $computed(() => {
     ]"
   >
     <span class="font-medium text-sm">
-      Viewing archive from {{ dateLabel
-      }}<template v-if="archiveName"> - "{{ archiveName }}"</template>
+      Viewing archive<template v-if="dateLabel"> from {{ dateLabel }}</template
+      ><template v-if="archiveName"> - "{{ archiveName }}"</template>
     </span>
     <u-button color="amber" size="xs" variant="soft" @click="backToLive">Back To Live</u-button>
   </div>

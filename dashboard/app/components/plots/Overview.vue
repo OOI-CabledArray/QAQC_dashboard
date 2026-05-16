@@ -51,7 +51,6 @@ const {
   overlays?: string
 }>()
 
-console.log(keyword, subkey)
 const store = useStore()
 const breakpoints = useBreakpoints()
 
@@ -91,7 +90,6 @@ const tabs = $computed(() => {
 })
 
 onMounted(async () => {
-  // Load plots even when user doesn't navigate to the home page first.
   await store.getPlots()
   filterPlotList()
 })
@@ -143,7 +141,7 @@ const profilePlots = $computed(() => {
       !plot.includes(depthUnit) &&
       !plot.includes(profUnit),
   )
-  console.log('profile plots:', createPlotURL(profilePlots).sort())
+
   return createPlotURL(profilePlots).sort()
 })
 
