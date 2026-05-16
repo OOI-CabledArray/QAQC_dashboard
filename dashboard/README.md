@@ -139,10 +139,47 @@ sudo journalctl -u qaqc-dashboard -f   # Follow app logs.
 
 Pushes to `main` trigger the `deploy_prod.yaml` GitHub Actions workflow, which SSHs into the instance, pulls the latest code, rebuilds, and restarts the service. No manual steps are needed after the initial setup.
 
+### Configuring and Restarting the Server
+
+The `.env` file is read by systemd when the service starts. Changes to `.env` do not take effect until the service is restarted:
+
+```sh
+sudo systemctl restart qaqc-dashboard
+```
+
+### Archives
+
+The dashboard supports three types of archives, each storing a snapshot of the current plot images from S3:
+
+- **Scheduled** archives are created automatically by a cron job. One per day, keyed by date. If a scheduled archive already exists for the current date, it is replaced.
+- **Event** archives are created manually by logged-in users through the UI. Each has a name and is keyed by date and slug. Duplicates for the same name and date are rejected.
+- **Internal** archives are created by admin users. Each has a name and is keyed by slug. These are only visible to logged-in users.
+
+To enable automatic daily archiving, set `QAQC_ARCHIVE_SCHEDULE` in `.env` to a cron expression (see [crontab.guru](https://crontab.guru/) for syntax help):
+
+```sh
+QAQC_ARCHIVE_SCHEDULE=0 19 * * 1   # Mondays at 12 PM Pacific (7 PM UTC)
+```
+
+Restart the service after changing `.env` for the new schedule to take effect.
+
+Archive files are stored in S3 under `archives/<type>/<key>/QAQC_plots/`. The retention policy for scheduled archives thins them over time: all are kept for 30 days, then only Sundays are kept up to 180 days, then only the 1st of each month is kept beyond that. Event and internal archives are never automatically deleted.
+
+### Scheduled Tasks
+
+The following tasks run on a schedule configured in `nuxt.config.ts`:
+
+| Task | Schedule | Description |
+|------|----------|-------------|
+| `archive-cleanup` | Sundays at 3 AM | Remove stale pending archives, orphaned records, and apply the retention policy |
+| `database-backup` | Daily at 4 AM | Back up the SQLite database to S3 |
+| `expire-sessions` | Every hour | Delete expired login sessions |
+
+Automatic archive creation is configured separately via the `QAQC_ARCHIVE_SCHEDULE` environment variable (see above).
+
 ### Architecture
 
 - **Caddy** listens on ports 80/443, handles TLS via Let's Encrypt, and proxies to Nuxt on port 3000
 - **Nuxt** runs as a Node.js process managed by systemd (`qaqc-dashboard.service`)
 - **SQLite** stores users, sessions, and archive records at `data/database.sqlite`
 - **S3** (`ooi-rca-qaqc-prod`) stores plot images and archive snapshots, proxied to the browser by server middleware
-- **Scheduled Jobs** handle archive cleanup, database backups, and session expiry. Automatic archiving is configured via `QAQC_ARCHIVE_SCHEDULE` in `.env`
