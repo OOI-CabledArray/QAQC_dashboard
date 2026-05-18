@@ -611,9 +611,7 @@ function cancelDownload() {
                   <p class="font-semibold text-base">Download Images</p>
                 </template>
                 <p class="text-sm text-gray-700">
-                  Download {{ totalPlotCount }} plot{{
-                    totalPlotCount === 1 ? '' : 's'
-                  }}
+                  Download {{ totalPlotCount }} plot{{ totalPlotCount === 1 ? '' : 's' }}
                   as a ZIP file? This may take a moment.
                 </p>
                 <template #footer>
