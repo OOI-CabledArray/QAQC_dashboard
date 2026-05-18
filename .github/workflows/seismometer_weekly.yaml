@@ -64,5 +64,5 @@ jobs:
                 --hyd-refdes ${{ matrix.refdes }} \
                 --flag obs \
                 --s3-sync true \
-                --parallel-in-cloud true \
-                --obs-run-type weekly
+                --obs-run-type weekly \
+                --runner prefect

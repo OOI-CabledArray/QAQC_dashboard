@@ -45,4 +45,4 @@ jobs:
           # Authenticate with prefect2 cloud 
           prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
           # Run full acoustic pipeline with LF flag ooipy -> spectrograms
-          acoustic-pipeline --hyd-refdes ${{matrix.refdes}} --flag low_freq --s3-sync true --parallel-in-cloud true
+          acoustic-pipeline --hyd-refdes ${{matrix.refdes}} --flag low_freq --s3-sync true --runner prefect
