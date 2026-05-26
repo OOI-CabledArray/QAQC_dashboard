@@ -30,7 +30,7 @@ jobs:
     container:
       image: public.ecr.aws/p0l4c7i2/ooi-hyd-tools:latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.GH_PAT }}
       - name: Run acoustic pipeline mseed -> spectrograms
