@@ -149,13 +149,17 @@ sudo systemctl restart qaqc-dashboard
 
 ### Archives
 
-The dashboard supports three types of archives, each storing a snapshot of the current plot images from S3:
+Archives store a snapshot of the current plot images from S3. Anyone can browse scheduled and event archives from the sidebar dropdown or the `/archives` page. The dashboard supports three types:
 
-- **Scheduled** archives are created automatically by a cron job. One per day, keyed by date. If a scheduled archive already exists for the current date, it is replaced.
-- **Event** archives are created manually by logged-in users through the UI. Each has a name and is keyed by date and slug. Duplicates for the same name and date are rejected.
-- **Internal** archives are created by admin users. Each has a name and is keyed by slug. These are only visible to logged-in users.
+**Scheduled archives** are created automatically by a cron job. Each is keyed by date, so only one scheduled archive exists per day. If one already exists for the current date, it is replaced. A retention policy thins them over time: all are kept for 30 days, then only Sundays up to 180 days, then only the 1st of each month beyond that.
 
-To enable automatic daily archiving, set `QAQC_ARCHIVE_SCHEDULE` in `.env` to a cron expression (see [crontab.guru](https://crontab.guru/) for syntax help):
+**Event archives** are created manually by any logged-in user through the archives page. Each has a user-provided name and is keyed by the current date and a slug derived from the name. Duplicates for the same name and date are rejected. Event archives are never automatically deleted.
+
+**Internal archives** are created by admin users through the archives page. Each has a name and is keyed by slug. Unlike the other types, internal archives are only visible to logged-in users. They do not appear in the sidebar or on the archives page for unauthenticated visitors. Internal archives are never automatically deleted.
+
+Internal archives are useful for creating a staging environment to test changes to plot generation. For example, creating an internal archive named "Staging" places a snapshot at `archives/internal/staging/` in the S3 bucket. You can then upload modified plot images directly into that directory to preview how they look in the dashboard. To view the staging version, log in and select "Staging" from the Internal tab in the sidebar's archive dropdown, or navigate to `/archives?type=internal`.
+
+To enable automatic scheduled archiving, set `QAQC_ARCHIVE_SCHEDULE` in `.env` to a cron expression (see [crontab.guru](https://crontab.guru/) for syntax help):
 
 ```sh
 QAQC_ARCHIVE_SCHEDULE=0 19 * * 1   # Mondays at 12 PM Pacific (7 PM UTC)
@@ -163,7 +167,7 @@ QAQC_ARCHIVE_SCHEDULE=0 19 * * 1   # Mondays at 12 PM Pacific (7 PM UTC)
 
 Restart the service after changing `.env` for the new schedule to take effect.
 
-Archive files are stored in S3 under `archives/<type>/<key>/QAQC_plots/`. The retention policy for scheduled archives thins them over time: all are kept for 30 days, then only Sundays are kept up to 180 days, then only the 1st of each month is kept beyond that. Event and internal archives are never automatically deleted.
+Archive files are stored in S3 under `archives/<type>/<key>`.
 
 ### Scheduled Tasks
 
