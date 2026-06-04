@@ -80,11 +80,7 @@ export async function createArchive(options: { name?: string }): Promise<Archive
 
   const prefix = buildArchivePrefix(type, today, slug)
 
-  const indexResponse = await s3.send(
-    new GetObjectCommand({ Bucket: QAQC_AWS_S3_BUCKET, Key: `${SOURCE_PREFIX}/index.json` }),
-  )
-  const indexBody = await indexResponse.Body!.transformToString()
-  const plotFiles = JSON.parse(indexBody) as string[]
+  const sourceKeys = await listAllKeys(SOURCE_PREFIX)
 
   const id = randomUUID()
   await database
@@ -110,7 +106,7 @@ export async function createArchive(options: { name?: string }): Promise<Archive
   const abortController = new AbortController()
   activeCopies.set(id, abortController)
 
-  copyArchiveFiles(id, prefix, plotFiles, abortController.signal)
+  copyArchiveFiles(id, prefix, sourceKeys, abortController.signal)
     .catch(async (error) => {
       if (abortController.signal.aborted) {
         return
@@ -155,11 +151,7 @@ export async function registerInternalArchive(name: string): Promise<Archive> {
 
   const prefix = buildArchivePrefix('internal', '', slug)
 
-  const indexResponse = await s3.send(
-    new GetObjectCommand({ Bucket: QAQC_AWS_S3_BUCKET, Key: `${SOURCE_PREFIX}/index.json` }),
-  )
-  const indexBody = await indexResponse.Body!.transformToString()
-  const plotFiles = JSON.parse(indexBody) as string[]
+  const sourceKeys = await listAllKeys(SOURCE_PREFIX)
 
   const id = randomUUID()
   await database
@@ -184,7 +176,7 @@ export async function registerInternalArchive(name: string): Promise<Archive> {
   const abortController = new AbortController()
   activeCopies.set(id, abortController)
 
-  copyArchiveFiles(id, prefix, plotFiles, abortController.signal)
+  copyArchiveFiles(id, prefix, sourceKeys, abortController.signal)
     .catch(async (error) => {
       if (abortController.signal.aborted) {
         return
@@ -205,21 +197,48 @@ export async function registerInternalArchive(name: string): Promise<Archive> {
   return archive
 }
 
+async function listAllKeys(prefix: string): Promise<string[]> {
+  const keys: string[] = []
+  let continuationToken: string | undefined
+
+  do {
+    const list = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: QAQC_AWS_S3_BUCKET,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      }),
+    )
+
+    if (list.Contents) {
+      for (const object of list.Contents) {
+        if (object.Key) {
+          keys.push(object.Key)
+        }
+      }
+    }
+
+    continuationToken = list.NextContinuationToken
+  } while (continuationToken)
+
+  return keys
+}
+
 async function copyArchiveFiles(
   archiveId: string,
   prefix: string,
-  plotFiles: string[],
+  sourceKeys: string[],
   signal: AbortSignal,
 ): Promise<void> {
   const database = getDatabase()
-  const allKeys = [`${SOURCE_PREFIX}/index.json`, ...plotFiles.map((f) => `${SOURCE_PREFIX}/${f}`)]
 
-  log.info(`Archiving ${allKeys.length} files to ${prefix}.`)
+  log.info(`Archiving ${sourceKeys.length} files to ${prefix}.`)
 
   const concurrency = 200
   let active = 0
-  let copied = 0
-  const queue = [...allKeys]
+  let completed = 0
+  let failed = 0
+  const queue = [...sourceKeys]
 
   await new Promise<void>((resolve, reject) => {
     function next() {
@@ -229,7 +248,7 @@ async function copyArchiveFiles(
         }
         return
       }
-      if (copied === allKeys.length) {
+      if (completed + failed === sourceKeys.length) {
         resolve()
         return
       }
@@ -246,19 +265,24 @@ async function copyArchiveFiles(
         )
           .then(() => {
             active--
-            copied++
-            if (copied % 1000 === 0) {
-              log.info(`Copied ${copied}/${allKeys.length} files to ${prefix}.`)
+            completed++
+            if (completed % 1000 === 0) {
+              log.info(`Copied ${completed}/${sourceKeys.length} files to ${prefix}.`)
             }
             next()
           })
-          .catch(reject)
+          .catch((error) => {
+            active--
+            failed++
+            log.warn(`Failed to copy ${sourceKey}: ${error.message}`)
+            next()
+          })
       }
     }
     next()
   })
 
-  log.info(`Copied ${copied} files to ${prefix}.`)
+  log.info(`Copied ${completed} files to ${prefix}.${failed > 0 ? ` ${failed} files failed.` : ''}`)
 
   await database
     .updateTable('archives')
