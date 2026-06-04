@@ -248,7 +248,7 @@ async function copyArchiveFiles(
         }
         return
       }
-      if (completed + failed === sourceKeys.length) {
+      if (completed + failed >= sourceKeys.length) {
         resolve()
         return
       }
