@@ -26,7 +26,7 @@ async function login() {
     const redirect = (route.query.redirect as string) || '/'
     await router.push(redirect)
   } catch (fetchError: any) {
-    error = fetchError.data?.statusMessage || 'Login failed'
+    error = fetchError.data?.statusMessage || 'Login failed.'
   } finally {
     loading = false
   }

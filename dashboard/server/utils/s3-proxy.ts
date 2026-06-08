@@ -16,7 +16,7 @@ export async function proxyS3Path(event: H3Event, path: string) {
     return response.Body!.transformToWebStream()
   } catch (error: any) {
     if (error.name === 'NoSuchKey') {
-      throw createError({ statusCode: 404, statusMessage: 'Not found' })
+      throw createError({ statusCode: 404, statusMessage: 'Not found.' })
     }
     throw error
   }

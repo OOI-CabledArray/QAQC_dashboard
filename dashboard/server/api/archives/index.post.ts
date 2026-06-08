@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
 
   if (!body?.name) {
-    throw createError({ statusCode: 400, statusMessage: 'Name is required for event archives' })
+    throw createError({ statusCode: 400, statusMessage: 'Name is required for event archives.' })
   }
 
   const archive = await createArchive({ name: body.name })

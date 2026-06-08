@@ -73,7 +73,7 @@ export async function createArchive(options: { name?: string }): Promise<Archive
     if (existing) {
       throw createError({
         statusCode: 409,
-        statusMessage: 'An event archive with that name already exists for today',
+        statusMessage: 'An event archive with that name already exists for today.',
       })
     }
   }
@@ -132,7 +132,7 @@ export async function registerInternalArchive(name: string): Promise<Archive> {
   const slug = slugify(name)
 
   if (!slug) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid archive name' })
+    throw createError({ statusCode: 400, statusMessage: 'Invalid archive name.' })
   }
 
   const existing = await database
@@ -145,7 +145,7 @@ export async function registerInternalArchive(name: string): Promise<Archive> {
   if (existing) {
     throw createError({
       statusCode: 409,
-      statusMessage: 'An internal archive with that name already exists',
+      statusMessage: 'An internal archive with that name already exists.',
     })
   }
 

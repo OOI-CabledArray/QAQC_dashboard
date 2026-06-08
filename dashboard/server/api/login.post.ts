@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   const { username, password } = body ?? {}
 
   if (!username || !password) {
-    throw createError({ statusCode: 400, statusMessage: 'Username and password are required' })
+    throw createError({ statusCode: 400, statusMessage: 'Username and password are required.' })
   }
 
   const database = getDatabase()
@@ -16,12 +16,12 @@ export default defineEventHandler(async (event) => {
     .executeTakeFirst()
 
   if (!row) {
-    throw createError({ statusCode: 401, statusMessage: 'Invalid username or password' })
+    throw createError({ statusCode: 401, statusMessage: 'Invalid username or password.' })
   }
 
   const valid = await verifyPassword(password, row.password)
   if (!valid) {
-    throw createError({ statusCode: 401, statusMessage: 'Invalid username or password' })
+    throw createError({ statusCode: 401, statusMessage: 'Invalid username or password.' })
   }
 
   const sessionId = await createSession(row.id)

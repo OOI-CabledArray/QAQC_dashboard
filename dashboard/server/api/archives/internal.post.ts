@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
 
   if (!body?.name) {
-    throw createError({ statusCode: 400, statusMessage: 'Name is required' })
+    throw createError({ statusCode: 400, statusMessage: 'Name is required.' })
   }
 
   return await registerInternalArchive(body.name)

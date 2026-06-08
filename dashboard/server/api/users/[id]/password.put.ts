@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   const { password } = body ?? {}
 
   if (!password) {
-    throw createError({ statusCode: 400, statusMessage: 'Password is required' })
+    throw createError({ statusCode: 400, statusMessage: 'Password is required.' })
   }
 
   const passwordHash = await hashPassword(password)
@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     .executeTakeFirst()
 
   if (result.numUpdatedRows === BigInt(0)) {
-    throw createError({ statusCode: 404, statusMessage: 'User not found' })
+    throw createError({ statusCode: 404, statusMessage: 'User not found.' })
   }
 
   return { ok: true }

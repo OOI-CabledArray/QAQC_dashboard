@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   if (!username || !name || !password) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Username, name, and password are required',
+      statusMessage: 'Username, name, and password are required.',
     })
   }
 
@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
     if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
       throw createError({
         statusCode: 409,
-        statusMessage: 'A user with that username already exists',
+        statusMessage: 'A user with that username already exists.',
       })
     }
     throw error

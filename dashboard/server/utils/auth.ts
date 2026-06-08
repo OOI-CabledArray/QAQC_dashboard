@@ -87,7 +87,7 @@ export async function deleteExpiredSessions(): Promise<void> {
 export function requireAuth(event: H3Event): User {
   const user = event.context.user as User | undefined
   if (!user) {
-    throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
+    throw createError({ statusCode: 401, statusMessage: 'Authentication required.' })
   }
   return user
 }
@@ -95,7 +95,7 @@ export function requireAuth(event: H3Event): User {
 export function requireAdmin(event: H3Event): User {
   const user = requireAuth(event)
   if (user.role !== 'admin') {
-    throw createError({ statusCode: 403, statusMessage: 'Admin access required' })
+    throw createError({ statusCode: 403, statusMessage: 'Admin access required.' })
   }
   return user
 }
