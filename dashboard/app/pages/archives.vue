@@ -284,7 +284,7 @@ await Promise.all([loadArchives(), callOnce(auth.fetch)])
     >
       <u-table
         :columns="[
-          { accessorKey: 'name', header: 'Name' },
+          ...(archiveTypeFilter !== 'scheduled' ? [{ accessorKey: 'name', header: 'Name' }] : []),
           ...(archiveTypeFilter !== 'internal' ? [{ accessorKey: 'date', header: 'Date' }] : []),
           ...(auth.loggedIn
             ? [
