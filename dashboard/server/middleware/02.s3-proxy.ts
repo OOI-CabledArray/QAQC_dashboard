@@ -8,7 +8,7 @@ const S3_PREFIXES = [
 ]
 
 export default defineEventHandler(async (event) => {
-  if (event.method !== 'GET') {
+  if (event.method !== 'GET' && event.method !== 'HEAD') {
     return
   }
 

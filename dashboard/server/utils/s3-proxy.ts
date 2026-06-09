@@ -1,10 +1,38 @@
-import { GetObjectCommand } from '@aws-sdk/client-s3'
+import { GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 import type { H3Event } from 'h3'
 
 export async function proxyS3Path(event: H3Event, path: string) {
   try {
     const ifNoneMatch = getHeader(event, 'if-none-match')
     const ifModifiedSince = getHeader(event, 'if-modified-since')
+
+    if (event.method === 'HEAD') {
+      const response = await s3.send(
+        new HeadObjectCommand({
+          Bucket: QAQC_AWS_S3_BUCKET,
+          Key: path,
+          IfNoneMatch: ifNoneMatch || undefined,
+          IfModifiedSince: ifModifiedSince ? new Date(ifModifiedSince) : undefined,
+        }),
+      )
+
+      if (response.ContentType) {
+        setHeader(event, 'Content-Type', response.ContentType)
+      }
+      if (response.ContentLength) {
+        setHeader(event, 'Content-Length', response.ContentLength)
+      }
+      if (response.ETag) {
+        setHeader(event, 'ETag', response.ETag)
+      }
+      if (response.LastModified) {
+        setHeader(event, 'Last-Modified', response.LastModified.toUTCString())
+      }
+
+      setHeader(event, 'Cache-Control', `public, max-age=${QAQC_AWS_S3_CACHE_MAX_AGE}`)
+      event.node.res.end()
+      return
+    }
 
     const response = await s3.send(
       new GetObjectCommand({
@@ -28,11 +56,11 @@ export async function proxyS3Path(event: H3Event, path: string) {
       setHeader(event, 'Last-Modified', response.LastModified.toUTCString())
     }
 
-    setHeader(event, 'Cache-Control', `public, max-age=${QAQC_CACHE_MAX_AGE}`)
+    setHeader(event, 'Cache-Control', `public, max-age=${QAQC_AWS_S3_CACHE_MAX_AGE}`)
 
     return response.Body!.transformToWebStream()
   } catch (error: any) {
-    if (error.name === 'NoSuchKey') {
+    if (error.name === 'NoSuchKey' || error.name === 'NotFound') {
       throw createError({ statusCode: 404, statusMessage: 'Not found.' })
     }
 

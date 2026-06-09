@@ -185,13 +185,13 @@ Automatic archive creation is configured separately via the `QAQC_ARCHIVE_SCHEDU
 
 All environment variables are set in the `.env` file. See `.env.example` for a template.
 
-| Variable                | Required | Default                | Description                                                                |
-| ----------------------- | -------- | ---------------------- | -------------------------------------------------------------------------- |
-| `QAQC_AWS_S3_BUCKET`    | Yes      |                        | S3 bucket containing plot images and archive data                          |
-| `QAQC_AWS_REGION`       | Yes      |                        | AWS region for the S3 bucket                                               |
-| `QAQC_DATABASE`         | No       | `data/database.sqlite` | Path to the SQLite database file                                           |
-| `QAQC_ARCHIVE_SCHEDULE` | No       | Disabled               | Cron expression for automatic archive creation (see [Archives](#archives)) |
-| `QAQC_CACHE_MAX_AGE`    | No       | `15`                   | Cache duration in seconds for S3-proxied files                             |
+| Variable                    | Required | Default                | Description                                                                |
+| --------------------------- | -------- | ---------------------- | -------------------------------------------------------------------------- |
+| `QAQC_AWS_S3_BUCKET`        | Yes      |                        | S3 bucket containing plot images and archive data                          |
+| `QAQC_AWS_REGION`           | Yes      |                        | AWS region for the S3 bucket                                               |
+| `QAQC_DATABASE`             | No       | `data/database.sqlite` | Path to the SQLite database file                                           |
+| `QAQC_ARCHIVE_SCHEDULE`     | No       | Disabled               | Cron expression for automatic archive creation (see [Archives](#archives)) |
+| `QAQC_AWS_S3_CACHE_MAX_AGE` | No       | `15`                   | Cache duration in seconds for S3-proxied files                             |
 
 AWS credentials are resolved by the AWS SDK default credential chain (environment variables, instance profile, etc.).
 
