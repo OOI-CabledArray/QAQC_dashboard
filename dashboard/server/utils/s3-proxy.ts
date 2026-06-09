@@ -3,6 +3,10 @@ import { GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 import type { H3Event } from 'h3'
 
 export async function proxyS3Path(event: H3Event, path: string) {
+  if (event.method !== 'GET' && event.method !== 'HEAD') {
+    return undefined
+  }
+
   try {
     const ifNoneMatch = getHeader(event, 'if-none-match')
     const ifModifiedSince = getHeader(event, 'if-modified-since')
