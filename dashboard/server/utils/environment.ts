@@ -21,3 +21,5 @@ export const QAQC_AWS_REGION = requireEnv('QAQC_AWS_REGION')
 export const QAQC_DATABASE =
   process.env.QAQC_DATABASE || join(process.cwd(), 'data', 'database.sqlite')
 export const QAQC_ARCHIVE_SCHEDULE = process.env.QAQC_ARCHIVE_SCHEDULE || ''
+export const QAQC_CACHE_MAX_AGE =
+  process.env.QAQC_CACHE_MAX_AGE !== undefined ? Number(process.env.QAQC_CACHE_MAX_AGE) : 15
