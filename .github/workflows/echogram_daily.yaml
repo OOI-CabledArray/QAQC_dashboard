@@ -1,7 +1,7 @@
 name: Echogram Plotting
 on:
   schedule:
-  - cron: "0 11 * * *" #every day at 11:00 UTC (4:00 AM PST)
+  - cron: "7 11 * * *" #every day at 11:07 UTC (4:07 AM PST)
   workflow_dispatch:
 
 jobs:
