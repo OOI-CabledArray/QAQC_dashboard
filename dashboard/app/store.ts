@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { reactive, toRefs } from 'vue'
 
+import { usePersisted } from '~/persisted'
+
 export type CSVFile = {
   name: string
   data: string[][]
@@ -10,7 +12,6 @@ export const useStore = defineStore('store', () => {
   const base = ''
   const state = reactive({
     // TODO: Move these out of the store. They don't change.
-    plotsURL: `${base}/QAQC_plots`,
     hitlURL: `${base}/HITL_notes`,
     spectrogramsURL: `${base}/spectrograms`,
     echogramsURL: `${base}/echograms`,
@@ -344,7 +345,7 @@ export const useStore = defineStore('store', () => {
   }
 
   async function getPlots() {
-    const plotsIndex = `${state.plotsURL}/index.json`
+    const plotsIndex = `${plotsURL}/index.json`
     try {
       const response = await fetch(plotsIndex)
       const plots = await response.json()
@@ -400,8 +401,30 @@ export const useStore = defineStore('store', () => {
     }
   }
 
+  const persisted = usePersisted({
+    schema: ({ object, string }) => object({ archive: string().optional() }),
+    methods: [{ type: 'url' }],
+  })
+
+  const currentArchive = $computed(() => persisted.archive)
+  const plotsURL = $computed(() =>
+    persisted.archive ? `/archives/${persisted.archive}/QAQC_plots` : '/QAQC_plots',
+  )
+
+  async function enterArchiveMode(key: string) {
+    persisted.archive = key
+    await getPlots()
+  }
+
+  async function exitArchiveMode() {
+    persisted.archive = undefined
+    await getPlots()
+  }
+
   return {
     ...toRefs(state),
+    currentArchive: computed(() => currentArchive),
+    plotsURL: computed(() => plotsURL),
     storePlots,
     storeHITLNotes,
     storeHITLStatus,
@@ -411,5 +434,7 @@ export const useStore = defineStore('store', () => {
     getIndexes,
     loadCSVs,
     readCSV,
+    enterArchiveMode,
+    exitArchiveMode,
   }
 })

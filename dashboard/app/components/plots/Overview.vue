@@ -51,7 +51,6 @@ const {
   overlays?: string
 }>()
 
-console.log(keyword, subkey)
 const store = useStore()
 const breakpoints = useBreakpoints()
 
@@ -91,7 +90,6 @@ const tabs = $computed(() => {
 })
 
 onMounted(async () => {
-  // Load plots even when user doesn't navigate to the home page first.
   await store.getPlots()
   filterPlotList()
 })
@@ -143,7 +141,7 @@ const profilePlots = $computed(() => {
       !plot.includes(depthUnit) &&
       !plot.includes(profUnit),
   )
-  console.log('profile plots:', createPlotURL(profilePlots).sort())
+
   return createPlotURL(profilePlots).sort()
 })
 
@@ -244,7 +242,7 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeS
             <img v-if="isPNG(url)" class="h-auto max-w-full" loading="lazy" :src="url" />
             <object
               v-if="isSVG(url)"
-              class="block h-auto max-w-[1500px] w-full"
+              class="block h-auto max-w-375 w-full"
               :data="url"
               type="image/svg+xml"
             />

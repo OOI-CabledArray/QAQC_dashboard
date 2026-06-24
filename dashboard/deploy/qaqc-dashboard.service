@@ -1,0 +1,15 @@
+[Unit]
+Description=QAQC Dashboard (Nuxt SSR)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/qaqc-dashboard/dashboard
+EnvironmentFile=/home/ubuntu/qaqc-dashboard/dashboard/.env
+ExecStart=/usr/bin/node .output/server/index.mjs
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

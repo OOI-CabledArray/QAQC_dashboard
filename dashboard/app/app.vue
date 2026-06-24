@@ -11,7 +11,7 @@ useHead({
         <!-- Fixed Position Sidebar -->
         <div
           :class="[
-            '-side-bar-container fixed h-lvh left-0 overflow-x-hidden overflow-y-auto',
+            '-side-bar-container fixed h-lvh left-0 overflow-x-hidden overflow-y-auto z-10',
             'overscroll-contain sm:w-56 top-0 w-26',
           ]"
         >
@@ -20,7 +20,10 @@ useHead({
         <!-- Sidebar Spacer -->
         <div class="flex-none h-lvh sm:w-56 w-26" />
         <!-- Page Container -->
-        <div class="flex-auto">
+        <div class="flex-auto overflow-hidden">
+          <client-only>
+            <archive-banner />
+          </client-only>
           <suspense>
             <nuxt-layout>
               <nuxt-page />

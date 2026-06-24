@@ -23,17 +23,14 @@
 
 Wendi's awesome QAQC Dashboard that will display all the information you need for RCA QAQC Data!
 
-**The Vue based frontend code can be found in `dashboard` directory.**
+**The dashboard application lives in the [`dashboard/`](./dashboard) directory.** See [`dashboard/README.md`](./dashboard/README.md) for setup, deployment, configuration, and architecture documentation.
 
 See the [documentation](https://github.com/OOI-CabledArray/rca-data-tools/blob/main/docs/src/qaqc-dashboard.md) for all the components/repository to deploy the QAQC Dashboard.
 
 ## Repositories
 
-The code for the infrastructure, backend, and frontend are hosted in 3 separate repositories: `rca-data-tools`, `QAQC_dashboard`, and `cloud-infrastructure` (_private_) within the `OOI-CabledArray` organization.
-
 - [`rca-data-tools`](https://github.com/OOI-CabledArray/rca-data-tools): contains the majority of the code to perform the creation of png plots and csv plots for the dashboard.
-- [`QAQC_dashboard`](https://github.com/OOI-CabledArray/QAQC_dashboard) contains the frontend code for the dashboard.
-- [`cloud-infrastructure`](https://github.com/OOI-CabledArray/cloud-infrastructure): contains terraform code for deploying the underlying infrastructure such as Virtual Private Cloud (VPC), CDN, Elastic Container Service (ECS) Tasks, Identity Access Management (IAM), and S3 Buckets.
+- [`QAQC_dashboard`](https://github.com/OOI-CabledArray/QAQC_dashboard): contains the dashboard application (Nuxt SSR with SQLite auth and S3 archive system).
 
 ## Setup
 

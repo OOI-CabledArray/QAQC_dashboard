@@ -14,8 +14,9 @@ export default withNuxt([
       'unused-imports': unusedImports,
     },
     rules: {
-      'no-undef': 'off', // Handled by TypeScript.
       'max-len': ['warn', 100, 2, { ignoreStrings: true }],
+      'no-undef': 'off', // Handled by TypeScript.
+      'prefer-const': 'off', // For `$ref` macros to use `let` properly.
       '@typescript-eslint/ban-ts-comment': 'off',
       '@typescript-eslint/no-dynamic-delete': 'off',
       '@typescript-eslint/no-explicit-any': 'off',

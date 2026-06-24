@@ -2,16 +2,57 @@
 import type { AccordionItem } from '@nuxt/ui'
 import { createReusableTemplate } from '@vueuse/core'
 
+import { useAuth } from '~/auth'
 import { useBreakpoints } from '~/breakpoints'
 import None from '~/components/None.vue'
 import { useStore } from '~/store'
 
+const auth = useAuth()
 const store = useStore()
 const route = useRoute()
 const breakpoints = useBreakpoints()
 const isWide = $computed(() => (import.meta.client ? breakpoints.greaterOrEqual('sm').value : true))
 
 const isShowingTopLinksPopover = $ref(false)
+const isShowingArchivesPopover = $ref(false)
+const isShowingUserPopover = $ref(false)
+
+const archiveDropdown = $ref<{ refresh: () => Promise<void>; filter: string } | null>(null)
+let archiveName = $ref<string | null>(null)
+let archiving = $ref(false)
+let showArchiveDialog = $ref(false)
+
+const archiveFilter = $computed(() => archiveDropdown?.filter ?? 'scheduled')
+
+function cancelArchiveDialog() {
+  showArchiveDialog = false
+  archiveName = null
+}
+
+async function triggerArchive() {
+  archiving = true
+  try {
+    await $fetch('/api/archives', {
+      method: 'POST',
+      body: archiveName ? { name: archiveName } : {},
+    })
+    archiveName = null
+    showArchiveDialog = false
+    archiveDropdown?.refresh()
+  } catch (error: any) {
+    console.error('Archive failed:', error)
+  } finally {
+    archiving = false
+  }
+}
+
+await callOnce(auth.fetch)
+if (import.meta.client) {
+  watch(
+    () => route.path,
+    () => auth.fetch(),
+  )
+}
 
 type Item = (typeof store.mainNav)[number]
 
@@ -46,7 +87,11 @@ const accordionItems = $computed(() => {
 
     <!-- Top Links -->
     <div>
-      <u-popover v-model:open="isShowingTopLinksPopover" mode="click">
+      <u-popover
+        v-model:open="isShowingTopLinksPopover"
+        :content="{ side: 'right', sideOffset: 24 }"
+        mode="click"
+      >
         <u-button
           :class="[
             'cursor-pointer',
@@ -65,10 +110,8 @@ const accordionItems = $computed(() => {
           <i class="fa-chalkboard fas opacity-50" />
           <span class="not-sm:text-[8px] sm:ml-2 sm:pr-4 text-nowrap">APL + RCA Links</span>
           <i
-            :class="[
-              'fas not-sm:text-xs',
-              isShowingTopLinksPopover ? 'fa-chevron-down' : 'fa-chevron-right',
-            ]"
+            v-if="isWide"
+            :class="['fas', isShowingTopLinksPopover ? 'fa-chevron-left' : 'fa-chevron-right']"
           />
         </u-button>
         <template #content>
@@ -160,22 +203,172 @@ const accordionItems = $computed(() => {
       </div>
     </template>
 
-    <div class="bg-white h-px opacity-20" />
+    <div class="bg-white h-px my-2 opacity-20" />
     <u-button
-      class="hover:text-white mt-1 px-0 sm:text-[16px] text-[13px] text-gray-300"
+      class="hover:text-white px-0 sm:text-[16px] text-[13px] text-gray-300"
       to="/discrete"
       variant="link"
     >
       Discrete Data
     </u-button>
-    <div class="bg-white h-px mb-1 mt-2 opacity-20" />
+    <div class="bg-white h-px my-2 opacity-20" />
     <u-button
-      class="hover:text-white mt-1 px-0 sm:text-[16px] text-[13px] text-gray-300"
+      class="hover:text-white px-0 sm:text-[16px] text-[13px] text-gray-300"
       to="/event-report"
       variant="link"
     >
       Event Report
     </u-button>
+
+    <!-- Archives -->
+    <div class="mt-auto pt-3">
+      <div class="bg-white h-px mb-2 opacity-20" />
+    </div>
+    <div>
+      <u-popover
+        v-model:open="isShowingArchivesPopover"
+        :content="{ side: 'right', sideOffset: 28 }"
+        mode="click"
+      >
+        <u-button
+          :class="[
+            'cursor-pointer',
+            'flex',
+            'flex-row',
+            'items-center',
+            'not-sm:flex-col',
+            'not-sm:justify-center',
+            'not-sm:pl-1',
+            'not-sm:space-y-1',
+            'text-gray-200',
+            'hover:text-white',
+            'w-full',
+          ]"
+          variant="link"
+        >
+          <i class="fa-archive fas opacity-50" />
+          <span class="grow not-sm:text-[8px] sm:ml-2 text-left text-nowrap">Archives</span>
+          <i
+            v-if="isWide"
+            :class="['fas', isShowingArchivesPopover ? 'fa-chevron-left' : 'fa-chevron-right']"
+          />
+        </u-button>
+        <template #content>
+          <div class="p-3 space-y-2 w-64">
+            <ArchiveDropdown
+              ref="archiveDropdown"
+              :logged-in="auth.loggedIn"
+              :open="isShowingArchivesPopover"
+              @close="isShowingArchivesPopover = false"
+            />
+            <div v-if="auth.loggedIn && archiveFilter === 'event'">
+              <div class="-mx-3 bg-gray-200 h-px my-2" />
+              <div v-if="!showArchiveDialog" class="flex justify-center">
+                <u-button size="xs" variant="ghost" @click="showArchiveDialog = true">
+                  <i class="fa-plus fas mr-1 text-xs" />
+                  Create Event Archive
+                </u-button>
+              </div>
+              <div v-else class="space-y-2">
+                <u-input
+                  v-model="archiveName"
+                  class="text-xs w-full"
+                  placeholder="Event Name"
+                  size="xs"
+                  @keydown.enter="archiveName && triggerArchive()"
+                />
+                <div class="flex gap-1">
+                  <u-button
+                    block
+                    :disabled="!archiveName"
+                    :loading="archiving"
+                    size="xs"
+                    @click="triggerArchive"
+                  >
+                    Create Archive
+                  </u-button>
+                  <u-button size="xs" variant="ghost" @click="cancelArchiveDialog">
+                    Cancel
+                  </u-button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </u-popover>
+    </div>
+
+    <!-- Auth -->
+    <div class="bg-white h-px mb-2 mt-2 opacity-20" />
+    <div>
+      <template v-if="auth.loggedIn">
+        <u-popover
+          v-model:open="isShowingUserPopover"
+          :content="{ side: 'right', sideOffset: 28 }"
+          mode="click"
+        >
+          <u-button
+            :class="[
+              'cursor-pointer',
+              'flex',
+              'flex-row',
+              'items-center',
+              'not-sm:flex-col',
+              'not-sm:justify-center',
+              'not-sm:pl-1',
+              'not-sm:space-y-1',
+              'text-gray-200',
+              'hover:text-white',
+              'w-full',
+            ]"
+            variant="link"
+          >
+            <i class="fa-user fas opacity-50" />
+            <span class="grow not-sm:text-[8px] sm:ml-2 text-left text-nowrap">
+              {{ auth.user?.name }}
+            </span>
+            <i
+              v-if="isWide"
+              :class="['fas', isShowingUserPopover ? 'fa-chevron-left' : 'fa-chevron-right']"
+            />
+          </u-button>
+          <template #content>
+            <div class="py-1">
+              <NuxtLink class="block hover:bg-gray-100 px-4 py-1.5 text-sm" to="/users">
+                Manage Users
+              </NuxtLink>
+              <button
+                class="block hover:bg-gray-100 px-4 py-1.5 text-left text-sm w-full"
+                @click="auth.logout"
+              >
+                Log Out
+              </button>
+            </div>
+          </template>
+        </u-popover>
+      </template>
+      <u-button
+        v-else
+        :class="[
+          'cursor-pointer',
+          'flex',
+          'flex-row',
+          'items-center',
+          'not-sm:flex-col',
+          'not-sm:justify-center',
+          'not-sm:pl-1',
+          'not-sm:space-y-1',
+          'text-gray-200',
+          'hover:text-white',
+          'w-full',
+        ]"
+        to="/login"
+        variant="link"
+      >
+        <i class="fa-user fas opacity-50" />
+        <span class="not-sm:text-[8px] sm:ml-2 text-nowrap">Log In</span>
+      </u-button>
+    </div>
   </div>
 </template>
 

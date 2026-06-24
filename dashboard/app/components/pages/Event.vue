@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { computed, onMounted, watch } from 'vue'
-import JSZip from 'jszip'
-import { useDebounceFn } from '@vueuse/core'
 import { parseDate, type CalendarDate } from '@internationalized/date'
+import { useDebounceFn } from '@vueuse/core'
+import JSZip from 'jszip'
+import { computed, onMounted, watch } from 'vue'
 
 import { useStore } from '~/store'
 
@@ -566,13 +566,13 @@ function cancelDownload() {
     <!-- Page header (hidden when printing) -->
     <div class="mb-4 no-print">
       <div class="flex items-center justify-between mb-3">
-        <h1 class="font-bold text-3xl sm:text-4xl text-highlighted">Event Report</h1>
+        <h1 class="font-bold sm:text-4xl text-3xl text-highlighted">Event Report</h1>
         <div class="flex gap-2">
           <u-button
+            color="neutral"
             icon="i-lucide-rotate-ccw"
             size="lg"
             variant="outline"
-            color="neutral"
             @click="resetReport"
           >
             Reset
@@ -631,7 +631,7 @@ function cancelDownload() {
       <div class="flex gap-3 items-end justify-between">
         <div class="flex gap-3 items-end">
           <div class="flex flex-col gap-1 items-center">
-            <u-tooltip :content="{ side: 'top' }" :ui="{ text: 'font-bold' }" text="Tsunami">
+            <u-tooltip :content="{ side: 'top' }" text="Tsunami" :ui="{ text: 'font-bold' }">
               <u-button
                 class="text-4xl"
                 size="lg"
@@ -640,10 +640,10 @@ function cancelDownload() {
                 >🌊</u-button
               >
             </u-tooltip>
-            <span class="text-xs font-medium text-gray-600">Tsunami</span>
+            <span class="font-medium text-gray-600 text-xs">Tsunami</span>
           </div>
           <div class="flex flex-col gap-1 items-center">
-            <u-tooltip :content="{ side: 'top' }" :ui="{ text: 'font-bold' }" text="Earthquake">
+            <u-tooltip :content="{ side: 'top' }" text="Earthquake" :ui="{ text: 'font-bold' }">
               <u-button
                 class="text-4xl"
                 size="lg"
@@ -652,10 +652,10 @@ function cancelDownload() {
                 >🌍</u-button
               >
             </u-tooltip>
-            <span class="text-xs font-medium text-gray-600">Earthquake</span>
+            <span class="font-medium text-gray-600 text-xs">Earthquake</span>
           </div>
           <div class="flex flex-col gap-1 items-center">
-            <u-tooltip :content="{ side: 'top' }" :ui="{ text: 'font-bold' }" text="Eruption">
+            <u-tooltip :content="{ side: 'top' }" text="Eruption" :ui="{ text: 'font-bold' }">
               <u-button
                 class="text-4xl"
                 size="lg"
@@ -664,13 +664,13 @@ function cancelDownload() {
                 >🌋</u-button
               >
             </u-tooltip>
-            <span class="text-xs font-medium text-gray-600">Eruption</span>
+            <span class="font-medium text-gray-600 text-xs">Eruption</span>
           </div>
           <div class="flex flex-col gap-1 items-center">
             <u-tooltip
               :content="{ side: 'top' }"
-              :ui="{ text: 'font-bold' }"
               text="Marine Heatwave"
+              :ui="{ text: 'font-bold' }"
             >
               <u-button
                 class="text-4xl"
@@ -680,7 +680,7 @@ function cancelDownload() {
                 >🌡️</u-button
               >
             </u-tooltip>
-            <span class="text-xs font-medium text-gray-600">Marine Heatwave</span>
+            <span class="font-medium text-gray-600 text-xs">Marine Heatwave</span>
           </div>
           <div class="flex flex-col gap-1 items-center">
             <span class="text-gray-400 text-xs">Timespan</span>
@@ -703,7 +703,7 @@ function cancelDownload() {
           <div class="flex flex-col gap-1 items-center">
             <span class="text-gray-400 text-xs">UTC Date</span>
             <u-popover>
-              <u-button icon="i-lucide-calendar" size="sm" variant="outline" class="text-xs w-28">
+              <u-button class="text-xs w-28" icon="i-lucide-calendar" size="sm" variant="outline">
                 {{ eventDate || 'Pick date' }}
               </u-button>
               <template #content>
@@ -721,7 +721,7 @@ function cancelDownload() {
             />
           </div>
         </div>
-        <p class="max-w-sm pb-1 text-right text-sm text-gray-800">
+        <p class="max-w-sm pb-1 text-gray-800 text-right text-sm">
           Click an event emoji to load a preset collection of plots. Set a UTC date to populate
           acoustic instrument panels.
         </p>

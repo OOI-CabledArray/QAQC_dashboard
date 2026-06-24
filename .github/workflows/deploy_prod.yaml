@@ -10,6 +10,7 @@ on:
 
 env:
   NODE_VERSION: 24
+
 jobs:
   build_and_deploy:
     name: build-deploy
@@ -20,49 +21,55 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          role-duration-seconds: 900
+
       - uses: actions/cache@v4
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
+
       - name: Install Dependencies
         run: npm install
 
       - name: Run Linter
         run: npm run lint
 
-      - name: Generate Static Files
-        run: npm run generate
+      - name: Run Tests
+        run: npm test
 
-      - name: Deploy Dashboard to S3
-        run: |
-          aws s3 sync \
-            --acl public-read \
-            --exclude 'discrete/*' \
-            --exclude 'QAQC_plots/*' \
-            --exclude 'HITL_notes/*' \
-            --exclude 'spectrograms/*' \
-            --exclude 'echograms/*' \
-            --exclude 'archives/*' \
-            --exclude 'dev/*' \
-            --delete \
-            ./dist \
-            s3://ooi-rca-qaqc-prod
-      - name: Invalidate CDN
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.DASHBOARD_CDN_ID }} \
-            --paths '/*'
+      - name: Build
+        run: npm run build
+
+      - name: Transfer Build Output
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.CI_EC2_DEPLOY_HOST }}
+          username: ubuntu
+          key: ${{ secrets.CI_EC2_DEPLOY_KEY }}
+          source: dashboard/.output
+          target: ~/qaqc-dashboard
+          overwrite: true
+          tar_dereference: true
+
+      - name: Restart Service
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.CI_EC2_DEPLOY_HOST }}
+          username: ubuntu
+          key: ${{ secrets.CI_EC2_DEPLOY_KEY }}
+          envs: GITHUB_SHA
+          script: |
+            cd ~/qaqc-dashboard
+            git fetch origin
+            git reset --hard $GITHUB_SHA
+            cd dashboard
+            npm install --omit=dev
+            if systemctl is-active --quiet qaqc-dashboard; then
+              sudo systemctl restart qaqc-dashboard
+            fi
