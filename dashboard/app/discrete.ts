@@ -1,9 +1,11 @@
 import { parseAbsolute, type ZonedDateTime } from '@internationalized/date'
 import { orderBy, uniq } from 'lodash-es'
-import { parse } from 'papaparse'
+import pkg from 'papaparse'
 import { defineStore } from 'pinia'
 
 import { sleep } from '~/utilities'
+
+const { parse } = pkg
 
 type RawSample = Record<string, string>
 
