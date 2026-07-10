@@ -49,7 +49,4 @@ jobs:
       - name: Notes update
         run: |
           generate_hitl_tables --s3-sync --service-json-path ${{ secrets.SERVICE_JSON_PATH }}
-          echo "sleeping 60 seconds to avoid Google Sheets rate limit..."
-          sleep 60
-          generate_hitl_tables --s3-sync --service-json-path ${{ secrets.SERVICE_JSON_PATH }} --bucket ooi-rca-qaqc-test
-          
+
