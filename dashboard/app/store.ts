@@ -1,7 +1,11 @@
+import pkg from 'papaparse'
 import { defineStore } from 'pinia'
 import { reactive, toRefs } from 'vue'
 
+import { echogramsURL, echosounders, hydrophones, spectrogramsURL } from '~/instruments'
 import { usePersisted } from '~/persisted'
+
+const { parse } = pkg
 
 export type CSVFile = {
   name: string
@@ -11,25 +15,12 @@ export type CSVFile = {
 export const useStore = defineStore('store', () => {
   const base = ''
   const state = reactive({
-    // TODO: Move these out of the store. They don't change.
     hitlURL: `${base}/HITL_notes`,
-    spectrogramsURL: `${base}/spectrograms`,
-    echogramsURL: `${base}/echograms`,
-
-    hydrophones: [
-      'HYDBBA102',
-      'HYDBBA105',
-      'HYDBBA106',
-      'HYDBBA302',
-      'HYDBBA103',
-      'HYDBBA303',
-      'HYDLFA101',
-      'HYDLFA104',
-      'HYDLFA301',
-      'HYDLFA304',
-      'HYDLFA305',
-    ],
-    echosounders: ['ZPLSCB101', 'ZPLSCB102'],
+    // Sourced from ~/instruments (single source of truth) — kept on state for consumers.
+    spectrogramsURL,
+    echogramsURL,
+    hydrophones,
+    echosounders,
     plotList: [] as string[],
     hitlList: [] as string[],
     csvData: [] as CSVFile[],
@@ -373,10 +364,7 @@ export const useStore = defineStore('store', () => {
       const name = url.split('/').at(-1)?.replace('.csv', '') || 'unknown'
       const data = {
         name,
-        data: text
-          .trim()
-          .split('\n')
-          .map((line) => line.split(',')),
+        data: parse<string[]>(text.trim(), { skipEmptyLines: true }).data,
       }
 
       appendCSVData(data)

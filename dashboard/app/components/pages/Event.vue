@@ -2,9 +2,21 @@
 import { parseDate, type CalendarDate } from '@internationalized/date'
 import { useDebounceFn } from '@vueuse/core'
 import JSZip from 'jszip'
+import pkg from 'papaparse'
 import { computed, onMounted, watch } from 'vue'
 
+import {
+  acousticImagePath,
+  echogramsURL,
+  isAcoustic,
+  isEchosounder,
+  sensorId,
+  spectrogramsURL,
+} from '~/instruments'
+import { parsePlotFilename } from '~/plotFilename'
 import { useStore } from '~/store'
+
+const { parse } = pkg
 
 const store = useStore()
 
@@ -12,6 +24,8 @@ const store = useStore()
 const SITES_CSV_URL = 'https://raw.githubusercontent.com/OOI-CabledArray/rca-data-tools/main/rca_data_tools/qaqc/params/sitesDictionary.csv'
 // prettier-ignore
 const VARIABLE_MAP_URL = 'https://raw.githubusercontent.com/OOI-CabledArray/rca-data-tools/main/rca_data_tools/qaqc/params/variableMap.csv'
+// prettier-ignore
+const EVENT_PRESETS_URL = 'https://raw.githubusercontent.com/OOI-CabledArray/rca-data-tools/main/rca_data_tools/qaqc/params/eventPresets.csv'
 
 let instruments = $ref<{ key: string; label: string }[]>([])
 let parameters = $ref<{ key: string; label: string }[]>([])
@@ -21,33 +35,9 @@ const instrumentParams = new Map<string, string[]>()
 // parameter key -> list of variableNames from variableMap
 const parameterVariables = new Map<string, string[]>()
 
-/** RFC-4180-compatible CSV row parser (handles quoted fields with embedded commas/quotes). */
-function parseCSVRow(row: string): string[] {
-  const result: string[] = []
-  let current = ''
-  let inQuotes = false
-  let i = 0
-  while (i < row.length) {
-    const ch = row[i]
-    if (ch === '"') {
-      if (inQuotes && row[i + 1] === '"') {
-        current += '"'
-        i += 2
-      } else {
-        inQuotes = !inQuotes
-        i++
-      }
-    } else if (ch === ',' && !inQuotes) {
-      result.push(current.trim())
-      current = ''
-      i++
-    } else {
-      current += ch
-      i++
-    }
-  }
-  result.push(current.trim())
-  return result
+/** Parse a params CSV into header-keyed row objects. */
+function parseCSV(text: string): Record<string, string>[] {
+  return parse<Record<string, string>>(text, { header: true, skipEmptyLines: true }).data
 }
 
 // Strip a single layer of surrounding double-quotes if present (artifact of triple-quoting in CSV).
@@ -76,150 +66,12 @@ type Panel = {
 }
 
 // ── Presets ───────────────────────────────────────────────────────────────────
+// Loaded from rca-data-tools params/eventPresets.csv (preset,refDes,parameter,overlay)
+// so instrument collections can be updated without a dashboard deploy.
 type PresetEntry = Partial<Omit<Panel, 'description' | 'descriptionOpen'>> & { instrument: string }
 
-// prettier-ignore
-const PRESET_TSUNAMI: PresetEntry[] = [
-  { instrument: 'RS03AXBS-MJ03A-06-PRESTA301', parameter: 'seafloor_pressure',  overlay: 'none' },
-  { instrument: 'RS01SLBS-MJ01A-06-PRESTA101', parameter: 'seafloor_pressure',  overlay: 'none' },
-  { instrument: 'RS01SUM1-LJ01B-09-PRESTB102', parameter: 'seafloor_pressure',  overlay: 'none' },
-  { instrument: 'CE02SHBP-LJ01D-06-CTDBPN106', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'CE04OSBP-LJ01C-06-CTDBPO108', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'RS01SLBS-LJ01A-12-CTDPFB101', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'RS01SBPS-PC01A-4A-CTDPFA103', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'CE04OSPS-PC01B-4A-CTDPFA109', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_5m', overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_5m', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_5m', overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_5m', overlay: 'none' },
-]
-
-// prettier-ignore
-const PRESET_EARTHQUAKE: PresetEntry[] = [
-  // BOTPT — all params
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_10m', overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'mean_seafloor_depth', overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_10m', overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'mean_seafloor_depth', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_10m', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'mean_seafloor_depth', overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_10m', overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'mean_seafloor_depth', overlay: 'none' },
-  // OBSBB
-  { instrument: 'RS01SLBS-MJ01A-05-OBSBBA102', parameter: '', overlay: 'none' },
-  { instrument: 'RS01SUM1-LJ01B-05-OBSBBA101', parameter: '', overlay: 'none' },
-  { instrument: 'RS03AXBS-MJ03A-05-OBSBBA303', parameter: '', overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-06-OBSBBA301', parameter: '', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-09-OBSBBA302', parameter: '', overlay: 'none' },
-  // OBSSP
-  { instrument: 'RS01SUM1-LJ01B-06-OBSSPA103', parameter: '', overlay: 'none' },
-  { instrument: 'RS01SUM1-LJ01B-07-OBSSPA102', parameter: '', overlay: 'none' },
-  { instrument: 'RS01SUM1-LJ01B-08-OBSSPA101', parameter: '', overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-05-OBSSPA302', parameter: '', overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-06-OBSSPA301', parameter: '', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-05-OBSSPA303', parameter: '', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-08-OBSSPA304', parameter: '', overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-05-OBSSPA305', parameter: '', overlay: 'none' },
-]
-
-// prettier-ignore
-const PRESET_VOLCANO: PresetEntry[] = [
-  // BOTPT
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'mean_seafloor_depth',  overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-05-BOTPTA301', parameter: 'seafloor_uplift_10m',  overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'mean_seafloor_depth',  overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-06-BOTPTA302', parameter: 'seafloor_uplift_10m',  overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'mean_seafloor_depth',  overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-06-BOTPTA303', parameter: 'seafloor_uplift_10m',  overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'mean_seafloor_depth',  overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-09-BOTPTA304', parameter: 'seafloor_uplift_10m',  overlay: 'none' },
-  // OBSBB
-  { instrument: 'RS03CCAL-MJ03F-06-OBSBBA301', parameter: '', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-09-OBSBBA302', parameter: '', overlay: 'none' },
-  { instrument: 'RS03AXBS-MJ03A-05-OBSBBA303', parameter: '', overlay: 'none' },
-  // OBSSP
-  { instrument: 'RS03ASHS-MJ03B-06-OBSSPA301', parameter: '', overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-05-OBSSPA302', parameter: '', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-05-OBSSPA303', parameter: '', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-08-OBSSPA304', parameter: '', overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-05-OBSSPA305', parameter: '', overlay: 'none' },
-  // HYDLF
-  { instrument: 'RS03AXBS-MJ03A-05-HYDLFA301', parameter: '', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-09-HYDLFA304', parameter: '', overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-06-HYDLFA305', parameter: '', overlay: 'none' },
-  // HYDBB
-  { instrument: 'RS03AXBS-LJ03A-09-HYDBBA302', parameter: '', overlay: 'none' },
-  // TRHPH
-  { instrument: 'RS03INT1-MJ03C-10-TRHPHA301', parameter: 'vent_temperature', overlay: 'none' },
-  { instrument: 'RS03INT1-MJ03C-10-TRHPHA301', parameter: 'resistivity_5',          overlay: 'none' },
-  { instrument: 'RS03INT1-MJ03C-09-TRHPHA302', parameter: 'vent_temperature', overlay: 'none' },
-  { instrument: 'RS03INT1-MJ03C-09-TRHPHA302', parameter: 'resistivity_5',          overlay: 'none' },
-  // TMPSF
-  { instrument: 'RS03ASHS-MJ03B-07-TMPSFA301', parameter: 'temperature01',          overlay: 'none' },
-  // CTD — Chadwick (no oxygen)
-  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'temperature',       overlay: 'none' },
-  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'salinity',           overlay: 'none' },
-  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'density',            overlay: 'none' },
-  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'temperature',       overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'salinity',           overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'density',            overlay: 'none' },
-  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'temperature',       overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'salinity',           overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'density',            overlay: 'none' },
-  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'temperature',       overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'salinity',           overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'density',            overlay: 'none' },
-  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'sea_water_pressure', overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'temperature',       overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'salinity',           overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'density',            overlay: 'none' },
-  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'sea_water_pressure', overlay: 'none' },
-  // CTD — non-Chadwick (with oxygen)
-  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'temperature',        overlay: 'none' },
-  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'salinity',            overlay: 'none' },
-  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'density',             overlay: 'none' },
-  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'sea_water_pressure',  overlay: 'none' },
-  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'oxygen',    overlay: 'none' },
-  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'temperature',        overlay: 'none' },
-  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'salinity',            overlay: 'none' },
-  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'density',             overlay: 'none' },
-  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'sea_water_pressure',  overlay: 'none' },
-  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'oxygen',    overlay: 'none' },
-  // PREST
-  { instrument: 'RS03AXBS-MJ03A-06-PRESTA301', parameter: 'seafloor_pressure',  overlay: 'none' },
-]
-
-// prettier-ignore
-const PRESET_MARINE_HEATWAVE: PresetEntry[] = [
-  { instrument: 'CE02SHBP-LJ01D-06-CTDBPN106', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'CE04OSBP-LJ01C-06-CTDBPO108', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'RS01SLBS-LJ01A-12-CTDPFB101', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'RS03AXBS-LJ03A-12-CTDPFB301', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'RS03ASHS-MJ03B-10-CTDPFB304', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'RS03CCAL-MJ03F-12-CTDPFB305', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'RS03ECAL-MJ03E-12-CTDPFB306', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'RS03INT2-MJ03D-11-CTDPFB307', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'RS01SBPS-PC01A-4A-CTDPFA103', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'CE04OSPS-PC01B-4A-CTDPFA109', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'RS03AXPS-PC03A-4A-CTDPFA303', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'RS01SBPS-SF01A-2A-CTDPFA102', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'RS01SBPS-SF01A-2A-CTDPFA102', parameter: 'temperature', overlay: 'none' },
-  { instrument: 'CE04OSPS-SF01B-2A-CTDPFA107', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'CE04OSPS-SF01B-2A-CTDPFA107', parameter: 'temperature', overlay: 'none' },
-  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'temperature', overlay: 'clim' },
-  { instrument: 'RS03AXPS-SF03A-2A-CTDPFA302', parameter: 'temperature', overlay: 'none' },
-]
+const presets = $ref<Record<string, PresetEntry[]>>({})
 // ─────────────────────────────────────────────────────────────────────────────
-
 const presetTimespans = $ref<string>('week')
 let globalRange = $ref<string>('full')
 
@@ -275,23 +127,55 @@ const calendarDate = computed<CalendarDate | undefined>({
   },
 })
 
-function isAcoustic(instrument: string): boolean {
-  const id = instrument.split('-').pop() ?? ''
-  return id.startsWith('HYDBB') || id.startsWith('HYDLF') || id.startsWith('ZPLS')
-}
-
 function getAcousticUrl(instrument: string): string | null {
   if (!eventDate) return null
-  const id = instrument.split('-').pop() ?? ''
-  const dateStr = eventDate.replace(/-/g, '')
-  const year = eventDate.slice(0, 4)
-  const base = id.startsWith('ZPLS') ? store.echogramsURL : store.spectrogramsURL
-  return `${base}/${year}/${id}/${id}_${dateStr}.png`
+  const id = sensorId(instrument)
+  const base = isEchosounder(id) ? echogramsURL : spectrogramsURL
+  return acousticImagePath(base, id, eventDate.replace(/-/g, ''))
 }
 
 function hasVisibleImages(panel: Panel): boolean {
   const urls = getMatchingPlots(panel)
   return urls.length > 0 && urls.some((u) => !imageLoadErrors.includes(u))
+}
+
+// ── Data freshness ────────────────────────────────────────────────────────────
+// The S3 proxy forwards Last-Modified, so a lightweight HEAD tells us when a
+// plot last regenerated — useful right after a harvest rerun / express run,
+// when the question is always "did the new run actually land yet?"
+const freshnessCache = new Map<string, string | null>()
+let freshnessTick = $ref(0)
+
+async function ensureFreshness(url: string) {
+  if (freshnessCache.has(url)) return
+  freshnessCache.set(url, null) // mark in-flight so we don't double-fetch
+  try {
+    const res = await fetch(url, { method: 'HEAD' })
+    freshnessCache.set(url, res.headers.get('last-modified'))
+  } catch {
+    freshnessCache.set(url, null)
+  }
+  freshnessTick++
+}
+
+function formatRelativeTime(date: Date): string {
+  const diffHrs = (Date.now() - date.getTime()) / (1000 * 60 * 60)
+  if (diffHrs < 1) return 'just now'
+  if (diffHrs < 48) return `${Math.round(diffHrs)}h ago`
+  return `${Math.round(diffHrs / 24)}d ago`
+}
+
+/** Most recent Last-Modified across a panel's currently visible images, as display text. */
+function panelFreshness(panel: Panel): string | null {
+  const urls = getMatchingPlots(panel).filter((u) => !imageLoadErrors.includes(u))
+  for (const url of urls) void ensureFreshness(url)
+  void freshnessTick // reactive dependency: recompute once fetches resolve
+  const timestamps = urls
+    .map((u) => freshnessCache.get(u))
+    .filter((v): v is string => !!v)
+    .map((v) => new Date(v))
+  if (timestamps.length === 0) return null
+  return formatRelativeTime(new Date(Math.max(...timestamps.map((d) => d.getTime()))))
 }
 
 const panels = $ref<Panel[]>([
@@ -315,15 +199,10 @@ onMounted(async () => {
     fetch(SITES_CSV_URL)
       .then((r) => r.text())
       .then((text) => {
-        const lines = text.trim().split('\n')
-        const headers = parseCSVRow(lines[0] ?? '')
-        const refDesIdx = headers.indexOf('refDes')
-        const dataParamsIdx = headers.indexOf('dataParameters')
-        instruments = lines.slice(1).flatMap((row) => {
-          const cols = parseCSVRow(row)
-          const refDes = cols[refDesIdx]?.trim()
+        instruments = parseCSV(text).flatMap((cols) => {
+          const refDes = cols.refDes?.trim()
           if (!refDes) return []
-          const vars = stripQuotes(cols[dataParamsIdx]?.trim() ?? '')
+          const vars = stripQuotes(cols.dataParameters?.trim() ?? '')
             .split(',')
             .map((v) => v.trim())
             .filter(Boolean)
@@ -334,21 +213,30 @@ onMounted(async () => {
     fetch(VARIABLE_MAP_URL)
       .then((r) => r.text())
       .then((text) => {
-        const lines = text.trim().split('\n')
-        const headers = parseCSVRow(lines[0] ?? '')
-        const paramIdx = headers.indexOf('parameter')
-        const varNamesIdx = headers.indexOf('variableNames')
-        parameters = lines.slice(1).flatMap((row) => {
-          const cols = parseCSVRow(row)
-          const param = cols[paramIdx]?.trim()
+        parameters = parseCSV(text).flatMap((cols) => {
+          const param = cols.parameter?.trim()
           if (!param) return []
-          const vars = stripQuotes(cols[varNamesIdx]?.trim() ?? '')
+          const vars = stripQuotes(cols.variableNames?.trim() ?? '')
             .split(',')
             .map((v) => v.trim())
             .filter(Boolean)
           parameterVariables.set(param, vars)
           return [{ key: param, label: param }]
         })
+      }),
+    fetch(EVENT_PRESETS_URL)
+      .then((r) => r.text())
+      .then((text) => {
+        for (const cols of parseCSV(text)) {
+          const preset = cols.preset?.trim()
+          const instrument = cols.refDes?.trim()
+          if (!preset || !instrument) continue
+          ;(presets[preset] ??= []).push({
+            instrument,
+            parameter: cols.parameter?.trim() ?? '',
+            overlay: (cols.overlay?.trim() as Panel['overlay']) || 'none',
+          })
+        }
       }),
   ])
   isLoading = false
@@ -379,18 +267,21 @@ function getMatchingPlots(panel: Panel): string[] {
   if (!panel.timespan) return []
   return store.plotList
     .filter((plot) => {
-      if (
-        !plot.includes(panel.instrument) ||
-        !plot.includes(panel.timespan) ||
-        !plot.includes(panel.range) ||
-        !plot.endsWith('.png')
-      )
+      if (!plot.endsWith('.png')) return false
+      const info = parsePlotFilename(plot)
+      if (!info) return false
+      if (info.ref !== panel.instrument) return false
+      if (info.timeSpan !== panel.timespan) return false
+      if (info.dataRange !== panel.range) return false
+      if (info.depthString.endsWith('meters')) return false
+      // "Profile" overlay selects the raw (unannotated) plot at the profile marker depth.
+      const isProfilePlot = info.depthString.endsWith('profile')
+      if (isProfilePlot && panel.overlay !== 'profile') return false
+      if (panel.overlay === 'profile' && info.overlays !== 'none') return false
+      if (panel.parameter && info.variable !== panel.parameter) return false
+      if (panel.overlay && panel.overlay !== 'profile' && info.overlays !== panel.overlay) {
         return false
-      if (plot.includes('meters')) return false
-      if (plot.includes('profile') && panel.overlay !== 'profile') return false
-      if (panel.overlay === 'profile' && !plot.includes('none')) return false
-      if (panel.parameter && !plot.includes(panel.parameter)) return false
-      if (panel.overlay && !plot.includes(panel.overlay)) return false
+      }
       return true
     })
     .map((plot) => `${store.plotsURL}/${plot}`)
@@ -636,7 +527,7 @@ function cancelDownload() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_TSUNAMI, [presetTimespans], 'tsunami')"
+                @click="loadPreset(presets['tsunami'] ?? [], [presetTimespans], 'tsunami')"
                 >🌊</u-button
               >
             </u-tooltip>
@@ -648,7 +539,7 @@ function cancelDownload() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_EARTHQUAKE, [presetTimespans], 'earthquake')"
+                @click="loadPreset(presets['earthquake'] ?? [], [presetTimespans], 'earthquake')"
                 >🌍</u-button
               >
             </u-tooltip>
@@ -660,7 +551,7 @@ function cancelDownload() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_VOLCANO, [presetTimespans], 'volcano')"
+                @click="loadPreset(presets['volcano'] ?? [], [presetTimespans], 'volcano')"
                 >🌋</u-button
               >
             </u-tooltip>
@@ -676,7 +567,7 @@ function cancelDownload() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(PRESET_MARINE_HEATWAVE, [presetTimespans], 'marine-heatwave')"
+                @click="loadPreset(presets['marine-heatwave'] ?? [], [presetTimespans], 'marine-heatwave')"
                 >🌡️</u-button
               >
             </u-tooltip>
@@ -798,6 +689,9 @@ function cancelDownload() {
       <!-- Images -->
       <template v-if="panel.instrument">
         <template v-if="hasVisibleImages(panel)">
+          <p v-if="panelFreshness(panel)" class="mb-1 no-print text-gray-500 text-xs">
+            Updated {{ panelFreshness(panel) }}
+          </p>
           <img
             v-for="url in getMatchingPlots(panel)"
             :key="url"
@@ -809,7 +703,13 @@ function cancelDownload() {
           />
         </template>
         <div v-else class="bg-gray-100 no-print p-6 rounded text-center text-gray-500">
-          No images found for this selection.
+          <template v-if="getMatchingPlots(panel).length === 0">
+            No plots found for this instrument, timespan, and range combination.
+          </template>
+          <template v-else>
+            Plot listed in the index but not currently available — it may not have
+            regenerated yet.
+          </template>
         </div>
       </template>
       <div

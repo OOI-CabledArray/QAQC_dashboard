@@ -4,6 +4,8 @@ import { capitalize, forEach, groupBy, sortBy, toNumber, zipObject } from 'lodas
 import { watch } from 'vue'
 
 import { useBreakpoints } from '~/breakpoints'
+import { isEchosounder, isHydrophone } from '~/instruments'
+import { parsePlotFilename } from '~/plotFilename'
 import { useStore, type CSVFile } from '~/store'
 import { isPNG, isSVG } from '~/utilities'
 
@@ -108,21 +110,26 @@ const csvTables = $computed(() =>
   }),
 )
 
+// Filenames are parsed from the end (parsePlotFilename), not split positionally —
+// a `variable` field with underscores (e.g. spectral_irradiance_412nm) would
+// otherwise misalign every field after it.
 const binnedPlots: Record<string, Record<string, BinnedPlot[]>> = $computed(() => {
-  const binnedPlotLines = filteredPlotList.filter((plot) => plot.includes(depthUnit))
-  const binnedCollections = binnedPlotLines.map((line) => {
-    const names = (line.split('/').at(-1) as string).replace('.png', '').split('_')
-    const plot = zipObject(
-      ['ref', 'variable', 'depthString', 'timeSpan', 'overlays', 'dataRange'],
-      names,
-    ) as BinnedPlotDataValues
-
-    return {
-      ...plot,
-      url: getURL(line),
-      depth: parseDepth(plot.depthString),
-      depthUnit: depthUnit,
-    } satisfies BinnedPlot
+  const binnedCollections = filteredPlotList.flatMap((line) => {
+    const info = parsePlotFilename(line)
+    if (!info || !info.depthString.endsWith(depthUnit)) return []
+    return [
+      {
+        ref: info.ref,
+        variable: info.variable,
+        depthString: info.depthString,
+        timeSpan: info.timeSpan,
+        overlays: info.overlays,
+        dataRange: info.dataRange,
+        url: getURL(line),
+        depth: parseDepth(info.depthString),
+        depthUnit: depthUnit,
+      } satisfies BinnedPlot,
+    ]
   })
 
   const groupedByRef = groupBy(binnedCollections, (current) => current.ref)
@@ -135,12 +142,11 @@ const binnedPlots: Record<string, Record<string, BinnedPlot[]>> = $computed(() =
 })
 
 const profilePlots = $computed(() => {
-  const profilePlots = filteredPlotList.filter(
-    (plot) =>
-      (plot.endsWith('.png') || plot.endsWith('.svg')) &&
-      !plot.includes(depthUnit) &&
-      !plot.includes(profUnit),
-  )
+  const profilePlots = filteredPlotList.filter((plot) => {
+    if (!plot.endsWith('.png') && !plot.endsWith('.svg')) return false
+    const info = parsePlotFilename(plot)
+    return !!info && info.depthString === ''
+  })
 
   return createPlotURL(profilePlots).sort()
 })
@@ -148,20 +154,22 @@ const profilePlots = $computed(() => {
 const hasBinned = $computed(() => Object.keys(binnedPlots).length > 0)
 
 const profilerPlots: Record<string, Record<string, ProfilerPlot[]>> = $computed(() => {
-  const profilerPlots = filteredPlotList.filter((plot) => plot.includes(profUnit))
-  const profilerCollections = profilerPlots.map((line) => {
-    const names = (line.split('/').at(-1) as string).replace('.png', '').split('_')
-    const plot = zipObject(
-      ['ref', 'variable', 'profilerString', 'timeSpan', 'overlays', 'dataRange'],
-      names,
-    ) as ProfilerPlotDataValues
-
-    return {
-      ...plot,
-      url: getURL(line),
-      profile: parseProfile(plot.profilerString),
-      profUnit: profUnit,
-    } satisfies ProfilerPlot
+  const profilerCollections = filteredPlotList.flatMap((line) => {
+    const info = parsePlotFilename(line)
+    if (!info || !info.depthString.endsWith(profUnit)) return []
+    return [
+      {
+        ref: info.ref,
+        variable: info.variable,
+        profilerString: info.depthString,
+        timeSpan: info.timeSpan,
+        overlays: info.overlays,
+        dataRange: info.dataRange,
+        url: getURL(line),
+        profile: parseProfile(info.depthString),
+        profUnit: profUnit,
+      } satisfies ProfilerPlot,
+    ]
   })
 
   const groupedByRef = groupBy(profilerCollections, (current) => current.ref)
@@ -174,11 +182,9 @@ const profilerPlots: Record<string, Record<string, ProfilerPlot[]>> = $computed(
 })
 
 const hasProfiles = $computed(() => Object.keys(profilerPlots).length > 0)
-const isAcoustic = $computed(
-  () => keyword === 'HYDBB' || keyword === 'HYDLF' || keyword === 'ZPLSC',
-)
-const isHydrophone = $computed(() => keyword === 'HYDBB' || keyword === 'HYDLF')
-const isZpls = $computed(() => keyword === 'ZPLSC')
+const isHydro = $computed(() => isHydrophone(keyword))
+const isZpls = $computed(() => isEchosounder(keyword))
+const isAcoustic = $computed(() => isHydro || isZpls)
 
 function filterCSVs_status(csvs: CSVFile[]) {
   return csvs.filter((csv) => csv.name.includes('HITL_Status'))
@@ -250,7 +256,7 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeS
         </template>
         <template #spectrograms>
           <acoustic-viewer
-            v-if="isHydrophone"
+            v-if="isHydro"
             :base-path="store.spectrogramsURL"
             :instruments="store.hydrophones"
           />
