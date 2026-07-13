@@ -487,10 +487,10 @@ function cancelDownload() {
           </u-button>
           <u-button
             v-else
+            color="error"
             icon="i-lucide-x"
             size="lg"
             variant="outline"
-            color="error"
             @click="cancelDownload"
           >
             Cancel Download
@@ -501,12 +501,12 @@ function cancelDownload() {
                 <template #header>
                   <p class="font-semibold text-base">Download Images</p>
                 </template>
-                <p class="text-sm text-gray-700">
+                <p class="text-gray-700 text-sm">
                   Download {{ totalPlotCount }} plot{{ totalPlotCount === 1 ? '' : 's' }}
                   as a ZIP file? This may take a moment.
                 </p>
                 <template #footer>
-                  <div class="flex justify-end gap-2">
+                  <div class="flex gap-2 justify-end">
                     <u-button variant="ghost" @click="showDownloadConfirm = false">Cancel</u-button>
                     <u-button icon="i-lucide-images" @click="downloadImages">Download</u-button>
                   </div>
@@ -567,7 +567,9 @@ function cancelDownload() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(presets['marine-heatwave'] ?? [], [presetTimespans], 'marine-heatwave')"
+                @click="
+                  loadPreset(presets['marine-heatwave'] ?? [], [presetTimespans], 'marine-heatwave')
+                "
                 >🌡️</u-button
               >
             </u-tooltip>
@@ -707,8 +709,7 @@ function cancelDownload() {
             No plots found for this instrument, timespan, and range combination.
           </template>
           <template v-else>
-            Plot listed in the index but not currently available — it may not have
-            regenerated yet.
+            Plot listed in the index but not currently available — it may not have regenerated yet.
           </template>
         </div>
       </template>
