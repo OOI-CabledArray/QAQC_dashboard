@@ -109,8 +109,13 @@ let isDownloadingZip = $ref(false)
 let showDownloadConfirm = $ref(false)
 let downloadController: AbortController | null = null
 
+// Memoized once per panels/plotList change instead of re-derived on every
+// template read — getMatchingPlots scans the full plot list, and the template
+// reads it several times per panel (image list, empty-state check, freshness).
+const matchedPlotsByPanel = $computed(() => panels.map((panel) => getMatchingPlots(panel)))
+
 const totalPlotCount = computed(() =>
-  panels.reduce((sum, panel) => sum + getMatchingPlots(panel).length, 0),
+  matchedPlotsByPanel.reduce((sum, urls) => sum + urls.length, 0),
 )
 
 const calendarDate = computed<CalendarDate | undefined>({
@@ -134,48 +139,8 @@ function getAcousticUrl(instrument: string): string | null {
   return acousticImagePath(base, id, eventDate.replace(/-/g, ''))
 }
 
-function hasVisibleImages(panel: Panel): boolean {
-  const urls = getMatchingPlots(panel)
-  return urls.length > 0 && urls.some((u) => !imageLoadErrors.includes(u))
-}
-
-// ── Data freshness ────────────────────────────────────────────────────────────
-// The S3 proxy forwards Last-Modified, so a lightweight HEAD tells us when a
-// plot last regenerated — useful right after a harvest rerun / express run,
-// when the question is always "did the new run actually land yet?"
-const freshnessCache = new Map<string, string | null>()
-let freshnessTick = $ref(0)
-
-async function ensureFreshness(url: string) {
-  if (freshnessCache.has(url)) return
-  freshnessCache.set(url, null) // mark in-flight so we don't double-fetch
-  try {
-    const res = await fetch(url, { method: 'HEAD' })
-    freshnessCache.set(url, res.headers.get('last-modified'))
-  } catch {
-    freshnessCache.set(url, null)
-  }
-  freshnessTick++
-}
-
-function formatRelativeTime(date: Date): string {
-  const diffHrs = (Date.now() - date.getTime()) / (1000 * 60 * 60)
-  if (diffHrs < 1) return 'just now'
-  if (diffHrs < 48) return `${Math.round(diffHrs)}h ago`
-  return `${Math.round(diffHrs / 24)}d ago`
-}
-
-/** Most recent Last-Modified across a panel's currently visible images, as display text. */
-function panelFreshness(panel: Panel): string | null {
-  const urls = getMatchingPlots(panel).filter((u) => !imageLoadErrors.includes(u))
-  for (const url of urls) void ensureFreshness(url)
-  void freshnessTick // reactive dependency: recompute once fetches resolve
-  const timestamps = urls
-    .map((u) => freshnessCache.get(u))
-    .filter((v): v is string => !!v)
-    .map((v) => new Date(v))
-  if (timestamps.length === 0) return null
-  return formatRelativeTime(new Date(Math.max(...timestamps.map((d) => d.getTime()))))
+function hasVisibleImages(urls: string[] | undefined): boolean {
+  return !!urls && urls.length > 0 && urls.some((u) => !imageLoadErrors.includes(u))
 }
 
 const panels = $ref<Panel[]>([
@@ -690,12 +655,9 @@ function cancelDownload() {
 
       <!-- Images -->
       <template v-if="panel.instrument">
-        <template v-if="hasVisibleImages(panel)">
-          <p v-if="panelFreshness(panel)" class="mb-1 no-print text-gray-500 text-xs">
-            Updated {{ panelFreshness(panel) }}
-          </p>
+        <template v-if="hasVisibleImages(matchedPlotsByPanel[i])">
           <img
-            v-for="url in getMatchingPlots(panel)"
+            v-for="url in matchedPlotsByPanel[i]"
             :key="url"
             alt="Plot"
             class="h-auto max-w-full mb-4 rounded"
@@ -705,7 +667,7 @@ function cancelDownload() {
           />
         </template>
         <div v-else class="bg-gray-100 no-print p-6 rounded text-center text-gray-500">
-          <template v-if="getMatchingPlots(panel).length === 0">
+          <template v-if="!matchedPlotsByPanel[i]?.length">
             No plots found for this instrument, timespan, and range combination.
           </template>
           <template v-else>
