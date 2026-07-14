@@ -71,6 +71,9 @@ type Panel = {
 type PresetEntry = Partial<Omit<Panel, 'description' | 'descriptionOpen'>> & { instrument: string }
 
 const presets = $ref<Record<string, PresetEntry[]>>({})
+// Per-preset default timespan (falls back to 'week'). Heatwaves persist for
+// months, so a longer default is more informative against the clim overlay.
+const presetDefaultTimespan: Record<string, string> = { 'marine-heatwave': 'month' }
 // ─────────────────────────────────────────────────────────────────────────────
 const presetTimespans = $ref<string>('week')
 let globalRange = $ref<string>('full')
@@ -258,6 +261,11 @@ function instrumentLabel(key: string): string {
 
 function timespanLabel(key: string): string {
   return timeSpans.find((t) => t.key === key)?.label ?? key
+}
+
+function selectPreset(name: string) {
+  presetTimespans = presetDefaultTimespan[name] ?? 'week'
+  loadPreset(presets[name] ?? [], [presetTimespans], name)
 }
 
 function loadPreset(preset: PresetEntry[], timespans: string[], name = '') {
@@ -492,7 +500,7 @@ function cancelDownload() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(presets['tsunami'] ?? [], [presetTimespans], 'tsunami')"
+                @click="selectPreset('tsunami')"
                 >🌊</u-button
               >
             </u-tooltip>
@@ -504,7 +512,7 @@ function cancelDownload() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(presets['earthquake'] ?? [], [presetTimespans], 'earthquake')"
+                @click="selectPreset('earthquake')"
                 >🌍</u-button
               >
             </u-tooltip>
@@ -516,7 +524,7 @@ function cancelDownload() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="loadPreset(presets['volcano'] ?? [], [presetTimespans], 'volcano')"
+                @click="selectPreset('volcano')"
                 >🌋</u-button
               >
             </u-tooltip>
@@ -532,9 +540,7 @@ function cancelDownload() {
                 class="text-4xl"
                 size="lg"
                 variant="ghost"
-                @click="
-                  loadPreset(presets['marine-heatwave'] ?? [], [presetTimespans], 'marine-heatwave')
-                "
+                @click="selectPreset('marine-heatwave')"
                 >🌡️</u-button
               >
             </u-tooltip>
