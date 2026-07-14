@@ -75,7 +75,7 @@ const presets = $ref<Record<string, PresetEntry[]>>({})
 // months, so a longer default is more informative against the clim overlay.
 const presetDefaultTimespan: Record<string, string> = { 'marine-heatwave': 'month' }
 // ─────────────────────────────────────────────────────────────────────────────
-const presetTimespans = $ref<string>('week')
+let presetTimespans = $ref<string>('week')
 let globalRange = $ref<string>('full')
 
 watch($$(globalRange), (val) => {
@@ -454,7 +454,11 @@ function cancelDownload() {
             icon="i-lucide-images"
             size="lg"
             variant="outline"
-            @click="showDownloadConfirm = true"
+            @click="
+              () => {
+                showDownloadConfirm = true
+              }
+            "
           >
             Download Images
           </u-button>
@@ -480,7 +484,15 @@ function cancelDownload() {
                 </p>
                 <template #footer>
                   <div class="flex gap-2 justify-end">
-                    <u-button variant="ghost" @click="showDownloadConfirm = false">Cancel</u-button>
+                    <u-button
+                      variant="ghost"
+                      @click="
+                        () => {
+                          showDownloadConfirm = false
+                        }
+                      "
+                      >Cancel</u-button
+                    >
                     <u-button icon="i-lucide-images" @click="downloadImages">Download</u-button>
                   </div>
                 </template>
@@ -496,11 +508,7 @@ function cancelDownload() {
         <div class="flex gap-3 items-end">
           <div class="flex flex-col gap-1 items-center">
             <u-tooltip :content="{ side: 'top' }" text="Tsunami" :ui="{ text: 'font-bold' }">
-              <u-button
-                class="text-4xl"
-                size="lg"
-                variant="ghost"
-                @click="selectPreset('tsunami')"
+              <u-button class="text-4xl" size="lg" variant="ghost" @click="selectPreset('tsunami')"
                 >🌊</u-button
               >
             </u-tooltip>
@@ -520,11 +528,7 @@ function cancelDownload() {
           </div>
           <div class="flex flex-col gap-1 items-center">
             <u-tooltip :content="{ side: 'top' }" text="Eruption" :ui="{ text: 'font-bold' }">
-              <u-button
-                class="text-4xl"
-                size="lg"
-                variant="ghost"
-                @click="selectPreset('volcano')"
+              <u-button class="text-4xl" size="lg" variant="ghost" @click="selectPreset('volcano')"
                 >🌋</u-button
               >
             </u-tooltip>
