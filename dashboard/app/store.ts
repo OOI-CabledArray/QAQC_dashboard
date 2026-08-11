@@ -90,6 +90,7 @@ export const useStore = defineStore('store', () => {
             key: 'ADCP',
             value: 'ADCP',
             groups: [
+              { key: '_vectors', value: 'Current Vectors' },
               { key: '_velocity_east', value: 'Velocity, East' },
               { key: '_velocity_north', value: 'Velocity, North' },
               { key: '_velocity_up', value: 'Velocity, Up' },
