@@ -1,9 +1,7 @@
 <script lang="ts" setup>
-import { CalendarDate, DateFormatter, parseDate, today } from '@internationalized/date'
-import { computed, onMounted, watch } from 'vue'
+import { onMounted, watch } from 'vue'
 
 import { acousticImagePath, sensorId } from '~/instruments'
-import { usePersisted } from '~/persisted'
 
 const {
   instruments,
@@ -17,128 +15,19 @@ const {
   kind?: string
 }>()
 
-// Images are published per UTC day, so every date here is a CalendarDate — a
-// plain calendar date with no timezone. A local-time Date would land on the
-// wrong file for anyone not on UTC.
-const FIRST_YEAR = 2014
-const MIN_DATE = new CalendarDate(FIRST_YEAR, 1, 1)
-// Today's images are not published until the day completes.
-const MAX_DATE = today('UTC').subtract({ days: 1 })
+const currentDate = new Date()
+const currentYear = currentDate.getFullYear()
 
-const dateFormatter = new DateFormatter('en-US', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  timeZone: 'UTC',
-})
-
-function dayOfYear(date: CalendarDate): number {
-  const ms = Date.UTC(date.year, date.month - 1, date.day) - Date.UTC(date.year, 0, 1)
-  return Math.round(ms / 86_400_000) + 1
-}
-
-function dateFromDayOfYear(year: number, day: number): CalendarDate {
-  return new CalendarDate(year, 1, 1).add({ days: day - 1 })
-}
-
-/** Last selectable day of a year: Dec 31, or the newest published day this year. */
-function maxDayOfYear(year: number): number {
-  return dayOfYear(year === MAX_DATE.year ? MAX_DATE : new CalendarDate(year, 12, 31))
-}
-
-function formatDate(date: CalendarDate): string {
-  return dateFormatter.format(date.toDate('UTC'))
-}
-
-// Shareable state: ?date=YYYY-MM-DD is the master date every panel starts on.
-const persisted = usePersisted({
-  schema: ({ object, string }) => object({ date: string().optional() }),
-  methods: [{ type: 'url' }],
-})
-
-function parsePersistedDate(): CalendarDate {
-  if (persisted.date) {
-    try {
-      return parseDate(persisted.date)
-    } catch {
-      // malformed ?date= — fall back to the newest published day
-    }
-  }
-  return MAX_DATE
-}
-
-let selectedYear = $ref(parsePersistedDate().year)
-// Day-of-year per instrument. Each panel keeps its own slider so you can scrub
-// one instrument while watching it; the master date resets them all in step.
 const currentDays = $ref<Record<string, number>>({})
 const imageExists = $ref<Record<string, boolean>>({})
 const imageCache = $ref<Record<string, boolean>>({})
-
-const availableYears = Array.from(
-  { length: MAX_DATE.year - FIRST_YEAR + 1 },
-  (_, i) => FIRST_YEAR + i,
+const selectedYear = $ref(currentYear)
+const availableYears = $ref(
+  Array.from({ length: currentYear - 2014 + 1 }, (_, i) => currentYear - i).sort(),
 )
+let maxDaysInRange = $ref(calculateMaxDays(currentYear))
 
-const maxDaysInRange = $computed(() => maxDayOfYear(selectedYear))
-
-/** Set the master date and move every panel to it. */
-function applyToAll(date: CalendarDate) {
-  persisted.date = date.toString()
-  selectedYear = date.year
-  const day = dayOfYear(date)
-  for (const instrument of instruments) {
-    currentDays[instrument] = day
-  }
-}
-
-const masterDate = computed<CalendarDate>({
-  get: () => parsePersistedDate(),
-  set: (value) => applyToAll(value ?? MAX_DATE),
-})
-
-/** True once any panel has been scrubbed away from the master date. */
-const outOfSync = $computed(() => {
-  const day = dayOfYear(masterDate.value)
-  return (
-    selectedYear !== masterDate.value.year ||
-    instruments.some((instrument) => currentDays[instrument] !== day)
-  )
-})
-
-function dateFor(instrument: string): CalendarDate {
-  return dateFromDayOfYear(selectedYear, currentDays[instrument] ?? 1)
-}
-
-function getSpectrogramUrl(instrument: string): string {
-  const yyyymmdd = dateFor(instrument).toString().replace(/-/g, '')
-  return acousticImagePath(basePath, sensorId(instrument), yyyymmdd)
-}
-
-function onYearChange() {
-  // Keep the day-of-year across the jump rather than snapping back to Jan 1.
-  const day = Math.min(dayOfYear(masterDate.value), maxDayOfYear(selectedYear))
-  applyToAll(dateFromDayOfYear(selectedYear, day))
-}
-
-function checkImageExists(instrument: string) {
-  const url = getSpectrogramUrl(instrument)
-
-  if (imageCache[url] !== undefined) {
-    imageExists[instrument] = imageCache[url]
-    return
-  }
-
-  const img = new Image()
-  img.onload = () => {
-    imageExists[instrument] = true
-    imageCache[url] = true
-  }
-  img.onerror = () => {
-    imageExists[instrument] = false
-    imageCache[url] = false
-  }
-  img.src = url
-}
+const isCurrentYear = $computed(() => selectedYear === new Date().getFullYear())
 
 watch(
   () => currentDays,
@@ -150,54 +39,124 @@ watch(
   { deep: true },
 )
 
+watch(
+  () => selectedYear,
+  () => {
+    for (const instrument of instruments) {
+      checkImageExists(instrument)
+    }
+  },
+)
+
 onMounted(() => {
-  applyToAll(parsePersistedDate())
   for (const instrument of instruments) {
+    currentDays[instrument] = maxDaysInRange
     imageExists[instrument] = false
     checkImageExists(instrument)
   }
 })
+
+function calculateMaxDays(year: number) {
+  const currentYear = new Date().getFullYear()
+
+  if (year === currentYear) {
+    // For current year, calculcate days from Jan 1 to yesterday.
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const startOfYear = new Date(year, 0, 1)
+    return Math.floor((yesterday.valueOf() - startOfYear.valueOf()) / (1000 * 60 * 60 * 24)) + 1
+  }
+
+  // For previous years, calculate days between Jan 1 and Dec 31.
+  const startDate = new Date(year, 0, 1)
+  const endDate = new Date(year, 11, 31)
+  return Math.floor((endDate.valueOf() - startDate.valueOf()) / (1000 * 60 * 60 * 24)) + 1
+}
+
+function onYearChange() {
+  maxDaysInRange = calculateMaxDays(selectedYear)
+
+  // Reset all instruments to the first day of the selected year
+  instruments.forEach((instrument) => {
+    currentDays[instrument] = 1
+    checkImageExists(instrument)
+  })
+}
+function getStartDate() {
+  return new Date(selectedYear, 0, 1) // January 1st of selected year
+}
+
+function getEndDate() {
+  if (isCurrentYear) {
+    // Yesterday for current year
+    return new Date(new Date().setDate(new Date().getDate() - 1))
+  }
+
+  // December 31st for previous years
+  return new Date(selectedYear, 11, 31)
+}
+
+function getDayForInstrument(instrument: string) {
+  const startDate = new Date(selectedYear, 0, 1)
+  const dayOffset = (currentDays[instrument] || 1) - 1
+  const resultDate = new Date(startDate)
+  resultDate.setDate(startDate.getDate() + dayOffset)
+  return resultDate
+}
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+function formatDateForUrl(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}${month}${day}`
+}
+
+function getSpectrogramUrl(instrument: string) {
+  const dateStr = formatDateForUrl(getDayForInstrument(instrument))
+  return acousticImagePath(basePath, sensorId(instrument), dateStr)
+}
+
+function checkImageExists(instrument: string) {
+  const url = getSpectrogramUrl(instrument)
+
+  // Check cache first.
+  const cacheKey = `${instrument}_${url}`
+  if (imageCache[cacheKey] !== undefined) {
+    imageExists[instrument] = imageCache[cacheKey]
+    return
+  }
+
+  const img = new Image()
+
+  img.onload = () => {
+    imageExists[instrument] = true
+    imageCache[cacheKey] = true
+  }
+
+  img.onerror = () => {
+    imageExists[instrument] = false
+    imageCache[cacheKey] = false
+  }
+
+  img.src = url
+}
 </script>
 
 <template>
   <div class="m-0 max-w-300 w-full">
-    <!-- Master controls: set every panel at once -->
-    <div class="flex flex-wrap gap-4 items-end mb-6">
-      <div class="flex flex-col gap-1">
-        <span class="text-gray-500 text-xs">Date (UTC)</span>
-        <u-popover>
-          <u-button class="w-52" icon="i-lucide-calendar" size="sm" variant="outline">
-            {{ formatDate(masterDate) }}
-          </u-button>
-          <template #content>
-            <u-calendar v-model="masterDate" :max-value="MAX_DATE" :min-value="MIN_DATE" />
-          </template>
-        </u-popover>
-      </div>
-      <div class="flex flex-col gap-1">
-        <span class="text-gray-500 text-xs">Year</span>
-        <u-select
-          id="year-select"
-          v-model="selectedYear"
-          class="w-28"
-          :items="availableYears"
-          size="sm"
-          @change="onYearChange"
-        />
-      </div>
-      <u-button
-        v-if="outOfSync"
-        icon="i-lucide-refresh-cw"
-        size="sm"
-        variant="outline"
-        @click="applyToAll(masterDate)"
-      >
-        Sync all to {{ formatDate(masterDate) }}
-      </u-button>
-      <p class="max-w-sm ml-auto pb-1 text-gray-500 text-right text-xs">
-        Pick a date to move every instrument together, or drag a single slider (arrow keys work once
-        focused) to scrub one instrument on its own.
-      </p>
+    <!-- Year Selector -->
+    <div class="flex flex-row items-center mb-4 space-x-1">
+      <label class="font-bold text-md" for="year-select">Select Year:</label>
+      <u-select
+        id="year-select"
+        v-model="selectedYear"
+        :items="availableYears"
+        @change="onYearChange"
+      />
     </div>
 
     <!-- Instruments -->
@@ -212,7 +171,7 @@ onMounted(() => {
 
       <div v-if="imageExists[instrument]" class="mb-4">
         <img
-          :alt="`${kind} for ${instrument} on ${formatDate(dateFor(instrument))} UTC`"
+          :alt="`${kind} for ${instrument} on ${formatDate(getDayForInstrument(instrument))}`"
           class="h-auto w-full"
           loading="lazy"
           :src="getSpectrogramUrl(instrument)"
@@ -225,26 +184,23 @@ onMounted(() => {
       >
         <p>
           No {{ kind.toLowerCase() }} found for {{ instrument }} on
-          {{ formatDate(dateFor(instrument)) }} UTC
+          {{ formatDate(getDayForInstrument(instrument)) }}
         </p>
       </div>
 
       <!-- Individual slider controls for each instrument -->
       <div class="flex flex-nowrap flex-row items-center space-x-4 text-nowrap">
-        <span class="text-xs">{{ formatDate(dateFromDayOfYear(selectedYear, 1)) }}</span>
+        <span class="text-xs">{{ formatDate(getStartDate()) }}</span>
         <u-slider
           v-model="currentDays[instrument]"
-          :aria-label="`Date for ${instrument}`"
           class="grow"
           :max="maxDaysInRange"
           :min="1"
           size="sm"
         />
-        <span class="text-xs">
-          {{ formatDate(dateFromDayOfYear(selectedYear, maxDaysInRange)) }}
-        </span>
+        <span class="text-xs">{{ formatDate(getEndDate()) }}</span>
         <p class="font-bold ml-4 mr-8 text-[16px] text-center w-35">
-          {{ formatDate(dateFor(instrument)) }}
+          {{ formatDate(getDayForInstrument(instrument)) }}
         </p>
       </div>
     </div>
