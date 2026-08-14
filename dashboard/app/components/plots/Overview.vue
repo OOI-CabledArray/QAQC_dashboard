@@ -67,7 +67,7 @@ const tabs = $computed(() => {
   if (isAcoustic) {
     tabs.push({
       slot: 'spectrograms' as const,
-      label: 'Spectrogram Viewer', // TODO dynamically label this spectrogram/echogram
+      label: isZpls ? 'Echogram Viewer' : 'Spectrogram Viewer',
     })
   } else {
     tabs.push({
@@ -259,11 +259,13 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeS
             v-if="isHydro"
             :base-path="store.spectrogramsURL"
             :instruments="store.hydrophones"
+            kind="Spectrogram"
           />
           <acoustic-viewer
             v-else-if="isZpls"
             :base-path="store.echogramsURL"
             :instruments="store.echosounders"
+            kind="Echogram"
           />
           <div v-else>No instruments selected for this viewer.</div>
         </template>

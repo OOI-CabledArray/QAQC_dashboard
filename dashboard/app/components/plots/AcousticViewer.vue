@@ -1,9 +1,18 @@
 <script lang="ts" setup>
 import { onMounted, watch } from 'vue'
 
-const { instruments, basePath } = defineProps<{
+import { acousticImagePath, sensorId } from '~/instruments'
+
+const {
+  instruments,
+  basePath,
+  kind = 'Spectrogram',
+} = defineProps<{
+  /** Full reference designators; image paths use the trailing sensor id. */
   instruments: string[]
   basePath: string
+  /** Image type, for labels and alt text. */
+  kind?: string
 }>()
 
 const currentDate = new Date()
@@ -107,9 +116,8 @@ function formatDateForUrl(date: Date) {
 }
 
 function getSpectrogramUrl(instrument: string) {
-  const date = getDayForInstrument(instrument)
-  const dateStr = formatDateForUrl(date)
-  return `${basePath}/${selectedYear}/${instrument}/${instrument}_${dateStr}.png`
+  const dateStr = formatDateForUrl(getDayForInstrument(instrument))
+  return acousticImagePath(basePath, sensorId(instrument), dateStr)
 }
 
 function checkImageExists(instrument: string) {
@@ -157,14 +165,15 @@ function checkImageExists(instrument: string) {
       :key="instrument"
       class="border-b border-b-[#eee] last:border-b-transparent mb-10 pb-5 w-full"
     >
-      <h3 class="font-bold mb-2.5 text-[#333] text-[1.2rem]">
+      <h3 class="font-bold font-mono mb-2.5 text-[#333] text-[1.2rem]">
         {{ instrument }}
       </h3>
 
       <div v-if="imageExists[instrument]" class="mb-4">
         <img
-          alt="Spectrogram"
+          :alt="`${kind} for ${instrument} on ${formatDate(getDayForInstrument(instrument))}`"
           class="h-auto w-full"
+          loading="lazy"
           :src="getSpectrogramUrl(instrument)"
           style="border: 1px solid #ccc; border-radius: 4px"
         />
@@ -174,7 +183,7 @@ function checkImageExists(instrument: string) {
         class="aspect-2/1 bg-[#f5f5f5] flex items-center justify-center mb-4 rounded-[4px]"
       >
         <p>
-          No spectrogram found for {{ instrument }} on
+          No {{ kind.toLowerCase() }} found for {{ instrument }} on
           {{ formatDate(getDayForInstrument(instrument)) }}
         </p>
       </div>
