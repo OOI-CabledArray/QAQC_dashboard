@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { CalendarDate, DateFormatter, parseDate, today } from '@internationalized/date'
+import { useDebounceFn } from '@vueuse/core'
 import { computed, onMounted, watch } from 'vue'
 
 import { acousticImagePath, sensorId } from '~/instruments'
@@ -71,7 +72,15 @@ let selectedYear = $ref(parsePersistedDate().year)
 // Day-of-year per instrument. Each panel keeps its own slider so you can scrub
 // one instrument while watching it; the master date resets them all in step.
 const currentDays = $ref<Record<string, number>>({})
-const imageExists = $ref<Record<string, boolean>>({})
+// Scrubbing a slider emits a value per day crossed. Fetching on each one would
+// pull every intermediate date (hundreds of MB over a ship link), so the image
+// URL follows this debounced copy while the slider and its label stay live.
+const loadDays = $ref<Record<string, number>>({})
+const SCRUB_DEBOUNCE_MS = 350
+
+type LoadState = 'loading' | 'loaded' | 'missing'
+const loadState = $ref<Record<string, LoadState>>({})
+/** Per-URL memory of what resolved, so revisiting a date doesn't re-show a spinner. */
 const imageCache = $ref<Record<string, boolean>>({})
 
 const availableYears = Array.from(
@@ -88,6 +97,7 @@ function applyToAll(date: CalendarDate) {
   const day = dayOfYear(date)
   for (const instrument of instruments) {
     currentDays[instrument] = day
+    requestDay(instrument, day)
   }
 }
 
@@ -105,13 +115,30 @@ const outOfSync = $computed(() => {
   )
 })
 
+/** Date the slider is on right now — updates live while scrubbing. */
 function dateFor(instrument: string): CalendarDate {
   return dateFromDayOfYear(selectedYear, currentDays[instrument] ?? 1)
 }
 
+/** Date actually being fetched/shown — lags the slider by the scrub debounce. */
+function loadedDateFor(instrument: string): CalendarDate {
+  return dateFromDayOfYear(selectedYear, loadDays[instrument] ?? currentDays[instrument] ?? 1)
+}
+
 function getSpectrogramUrl(instrument: string): string {
-  const yyyymmdd = dateFor(instrument).toString().replace(/-/g, '')
+  const yyyymmdd = loadedDateFor(instrument).toString().replace(/-/g, '')
   return acousticImagePath(basePath, sensorId(instrument), yyyymmdd)
+}
+
+/** True while the slider has moved but the image for that date hasn't been requested yet. */
+function isPending(instrument: string): boolean {
+  return currentDays[instrument] !== undefined && currentDays[instrument] !== loadDays[instrument]
+}
+
+/** What the panel should show: a spinner, the image, or an honest "not found". */
+function displayState(instrument: string): 'busy' | 'loaded' | 'missing' {
+  if (isPending(instrument) || loadState[instrument] === 'loading') return 'busy'
+  return loadState[instrument] === 'missing' ? 'missing' : 'loaded'
 }
 
 function onYearChange() {
@@ -120,43 +147,41 @@ function onYearChange() {
   applyToAll(dateFromDayOfYear(selectedYear, day))
 }
 
-function checkImageExists(instrument: string) {
-  const url = getSpectrogramUrl(instrument)
-
-  if (imageCache[url] !== undefined) {
-    imageExists[instrument] = imageCache[url]
-    return
-  }
-
-  const img = new Image()
-  img.onload = () => {
-    imageExists[instrument] = true
-    imageCache[url] = true
-  }
-  img.onerror = () => {
-    imageExists[instrument] = false
-    imageCache[url] = false
-  }
-  img.src = url
+/** Point an instrument's image at a day. The rendered <img> does the fetching. */
+function requestDay(instrument: string, day: number) {
+  if (loadDays[instrument] === day) return
+  loadDays[instrument] = day
+  const cached = imageCache[getSpectrogramUrl(instrument)]
+  loadState[instrument] = cached === undefined ? 'loading' : cached ? 'loaded' : 'missing'
 }
 
-watch(
-  () => currentDays,
-  () => {
-    for (const instrument of Object.keys(currentDays)) {
-      checkImageExists(instrument)
-    }
-  },
-  { deep: true },
-)
-
-onMounted(() => {
-  applyToAll(parsePersistedDate())
+/** Fetch whatever the sliders currently show. */
+function requestVisibleDays() {
   for (const instrument of instruments) {
-    imageExists[instrument] = false
-    checkImageExists(instrument)
+    const day = currentDays[instrument]
+    if (day !== undefined) requestDay(instrument, day)
   }
-})
+}
+
+// Only fires once scrubbing settles, so a drag costs one request, not one per day.
+const commitScrub = useDebounceFn(requestVisibleDays, SCRUB_DEBOUNCE_MS)
+
+function onImageLoad(instrument: string, url: string) {
+  imageCache[url] = true
+  // Ignore a late event from a date we've already scrubbed away from.
+  if (getSpectrogramUrl(instrument) === url) loadState[instrument] = 'loaded'
+}
+
+function onImageError(instrument: string, url: string) {
+  imageCache[url] = false
+  if (getSpectrogramUrl(instrument) === url) loadState[instrument] = 'missing'
+}
+
+watch(() => currentDays, commitScrub, { deep: true })
+
+// A deliberate pick (mount, calendar, year, sync) loads at once via applyToAll;
+// only slider scrubbing goes through the debounce.
+onMounted(() => applyToAll(parsePersistedDate()))
 </script>
 
 <template>
@@ -210,23 +235,41 @@ onMounted(() => {
         {{ instrument }}
       </h3>
 
-      <div v-if="imageExists[instrument]" class="mb-4">
+      <div
+        class="mb-4 min-h-40 relative"
+        :class="displayState(instrument) !== 'loaded' ? 'bg-[#f5f5f5] rounded-[4px]' : ''"
+      >
+        <!-- Kept in the layout (not v-if'd) so loading="lazy" still applies and the
+             previous image stays put instead of the panel collapsing mid-scrub. -->
         <img
-          :alt="`${kind} for ${instrument} on ${formatDate(dateFor(instrument))} UTC`"
+          :alt="`${kind} for ${instrument} on ${formatDate(loadedDateFor(instrument))} UTC`"
           class="h-auto w-full"
+          :class="{
+            'opacity-30': displayState(instrument) === 'busy',
+            invisible: displayState(instrument) === 'missing',
+          }"
           loading="lazy"
           :src="getSpectrogramUrl(instrument)"
           style="border: 1px solid #ccc; border-radius: 4px"
+          @error="onImageError(instrument, getSpectrogramUrl(instrument))"
+          @load="onImageLoad(instrument, getSpectrogramUrl(instrument))"
         />
-      </div>
-      <div
-        v-else
-        class="aspect-2/1 bg-[#f5f5f5] flex items-center justify-center mb-4 rounded-[4px]"
-      >
-        <p>
-          No {{ kind.toLowerCase() }} found for {{ instrument }} on
-          {{ formatDate(dateFor(instrument)) }} UTC
-        </p>
+        <div
+          v-if="displayState(instrument) === 'busy'"
+          class="absolute flex gap-2 inset-0 items-center justify-center text-gray-600"
+        >
+          <u-icon class="animate-spin" name="i-lucide-loader-circle" />
+          <p>Loading {{ kind.toLowerCase() }} for {{ formatDate(dateFor(instrument)) }} UTC…</p>
+        </div>
+        <div
+          v-else-if="displayState(instrument) === 'missing'"
+          class="absolute flex inset-0 items-center justify-center px-4 text-center"
+        >
+          <p>
+            No {{ kind.toLowerCase() }} found for {{ instrument }} on
+            {{ formatDate(loadedDateFor(instrument)) }} UTC
+          </p>
+        </div>
       </div>
 
       <!-- Individual slider controls for each instrument -->
