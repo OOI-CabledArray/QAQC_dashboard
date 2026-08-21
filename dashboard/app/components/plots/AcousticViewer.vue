@@ -72,14 +72,15 @@ let selectedYear = $ref(parsePersistedDate().year)
 // Day-of-year per instrument. Each panel keeps its own slider so you can scrub
 // one instrument while watching it; the master date resets them all in step.
 const currentDays = $ref<Record<string, number>>({})
-// Scrubbing a slider emits a value per day crossed. Fetching on each one would
-// pull every intermediate date (hundreds of MB over a ship link), so the image
-// URL follows this debounced copy while the slider and its label stay live.
+// Sliders emit per day crossed, so the image URL follows this debounced copy
+// instead of fetching every intermediate date. Slider and label stay live.
 const loadDays = $ref<Record<string, number>>({})
 const SCRUB_DEBOUNCE_MS = 350
 
 type LoadState = 'loading' | 'loaded' | 'missing'
 const loadState = $ref<Record<string, LoadState>>({})
+/** Distinguishes first paint from a swap. */
+const hasLoadedOnce = $ref<Record<string, boolean>>({})
 /** Per-URL memory of what resolved, so revisiting a date doesn't re-show a spinner. */
 const imageCache = $ref<Record<string, boolean>>({})
 
@@ -135,9 +136,11 @@ function isPending(instrument: string): boolean {
   return currentDays[instrument] !== undefined && currentDays[instrument] !== loadDays[instrument]
 }
 
-/** What the panel should show: a spinner, the image, or an honest "not found". */
-function displayState(instrument: string): 'busy' | 'loaded' | 'missing' {
-  if (isPending(instrument) || loadState[instrument] === 'loading') return 'busy'
+/** Only a swap gets a spinner; a first paint would flash one on every lazy panel. */
+function displayState(instrument: string): 'first-load' | 'replacing' | 'loaded' | 'missing' {
+  if (isPending(instrument) || loadState[instrument] === 'loading') {
+    return hasLoadedOnce[instrument] ? 'replacing' : 'first-load'
+  }
   return loadState[instrument] === 'missing' ? 'missing' : 'loaded'
 }
 
@@ -169,7 +172,10 @@ const commitScrub = useDebounceFn(requestVisibleDays, SCRUB_DEBOUNCE_MS)
 function onImageLoad(instrument: string, url: string) {
   imageCache[url] = true
   // Ignore a late event from a date we've already scrubbed away from.
-  if (getSpectrogramUrl(instrument) === url) loadState[instrument] = 'loaded'
+  if (getSpectrogramUrl(instrument) === url) {
+    loadState[instrument] = 'loaded'
+    hasLoadedOnce[instrument] = true
+  }
 }
 
 function onImageError(instrument: string, url: string) {
@@ -179,8 +185,7 @@ function onImageError(instrument: string, url: string) {
 
 watch(() => currentDays, commitScrub, { deep: true })
 
-// A deliberate pick (mount, calendar, year, sync) loads at once via applyToAll;
-// only slider scrubbing goes through the debounce.
+// applyToAll loads at once; only scrubbing debounces.
 onMounted(() => applyToAll(parsePersistedDate()))
 </script>
 
@@ -239,14 +244,14 @@ onMounted(() => applyToAll(parsePersistedDate()))
         class="mb-4 min-h-40 relative"
         :class="displayState(instrument) !== 'loaded' ? 'bg-[#f5f5f5] rounded-[4px]' : ''"
       >
-        <!-- Kept in the layout (not v-if'd) so loading="lazy" still applies and the
-             previous image stays put instead of the panel collapsing mid-scrub. -->
+        <!-- Never v-if'd: display:none would disable loading="lazy". -->
         <img
           :alt="`${kind} for ${instrument} on ${formatDate(loadedDateFor(instrument))} UTC`"
           class="h-auto w-full"
           :class="{
-            'opacity-30': displayState(instrument) === 'busy',
-            invisible: displayState(instrument) === 'missing',
+            'opacity-30': displayState(instrument) === 'replacing',
+            invisible:
+              displayState(instrument) === 'missing' || displayState(instrument) === 'first-load',
           }"
           loading="lazy"
           :src="getSpectrogramUrl(instrument)"
@@ -254,9 +259,20 @@ onMounted(() => applyToAll(parsePersistedDate()))
           @error="onImageError(instrument, getSpectrogramUrl(instrument))"
           @load="onImageLoad(instrument, getSpectrogramUrl(instrument))"
         />
+        <!-- First paint: no spinner. -->
         <div
-          v-if="displayState(instrument) === 'busy'"
-          class="absolute flex gap-2 inset-0 items-center justify-center text-gray-600"
+          v-if="displayState(instrument) === 'first-load'"
+          class="absolute flex inset-0 items-center justify-center text-gray-400 text-sm"
+        >
+          {{ formatDate(loadedDateFor(instrument)) }} UTC
+        </div>
+        <!-- Swap: spinner, fade-in delayed so quick swaps never flash it. -->
+        <div
+          v-else-if="displayState(instrument) === 'replacing'"
+          :class="[
+            '-delayed-spinner absolute flex gap-2 inset-0 items-center justify-center',
+            'text-gray-600',
+          ]"
         >
           <u-icon class="animate-spin" name="i-lucide-loader-circle" />
           <p>Loading {{ kind.toLowerCase() }} for {{ formatDate(dateFor(instrument)) }} UTC…</p>
@@ -293,3 +309,23 @@ onMounted(() => applyToAll(parsePersistedDate()))
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Invisible for 400ms: a load that finishes first unmounts this unpainted. */
+.-delayed-spinner {
+  opacity: 0;
+  animation: delayed-spinner-in 120ms ease-out 400ms forwards;
+}
+
+@keyframes delayed-spinner-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .-delayed-spinner {
+    animation-duration: 1ms;
+  }
+}
+</style>
