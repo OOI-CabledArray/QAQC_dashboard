@@ -136,7 +136,7 @@ function isPending(instrument: string): boolean {
   return currentDays[instrument] !== undefined && currentDays[instrument] !== loadDays[instrument]
 }
 
-/** Only a swap gets a spinner; a first paint would flash one on every lazy panel. */
+/** Only a swap gets a spinner; a first paint would flash one on every panel at once. */
 function displayState(instrument: string): 'first-load' | 'replacing' | 'loaded' | 'missing' {
   if (isPending(instrument) || loadState[instrument] === 'loading') {
     return hasLoadedOnce[instrument] ? 'replacing' : 'first-load'
@@ -240,29 +240,29 @@ onMounted(() => applyToAll(parsePersistedDate()))
         {{ instrument }}
       </h3>
 
-      <div
-        class="mb-4 min-h-40 relative"
-        :class="displayState(instrument) !== 'loaded' ? 'bg-[#f5f5f5] rounded-[4px]' : ''"
-      >
-        <!-- Never v-if'd: display:none would disable loading="lazy". -->
+      <!-- Background is constant so it can't flash on state change. -->
+      <div class="bg-[#f5f5f5] mb-4 min-h-40 relative rounded-[4px]">
+        <!-- Prefetched up front rather than lazily so scrolling is seamless. Never v-if'd. -->
         <img
           :alt="`${kind} for ${instrument} on ${formatDate(loadedDateFor(instrument))} UTC`"
-          class="h-auto w-full"
+          class="duration-200 h-auto transition-opacity w-full"
           :class="{
             'opacity-30': displayState(instrument) === 'replacing',
-            invisible:
+            'opacity-0':
               displayState(instrument) === 'missing' || displayState(instrument) === 'first-load',
           }"
-          loading="lazy"
           :src="getSpectrogramUrl(instrument)"
           style="border: 1px solid #ccc; border-radius: 4px"
           @error="onImageError(instrument, getSpectrogramUrl(instrument))"
           @load="onImageLoad(instrument, getSpectrogramUrl(instrument))"
         />
-        <!-- First paint: no spinner. -->
+        <!-- First paint: no spinner, and delayed so a quick load never shows it. -->
         <div
           v-if="displayState(instrument) === 'first-load'"
-          class="absolute flex inset-0 items-center justify-center text-gray-400 text-sm"
+          :class="[
+            '-delayed absolute flex inset-0 items-center justify-center',
+            'text-gray-400 text-sm',
+          ]"
         >
           {{ formatDate(loadedDateFor(instrument)) }} UTC
         </div>
@@ -270,7 +270,7 @@ onMounted(() => applyToAll(parsePersistedDate()))
         <div
           v-else-if="displayState(instrument) === 'replacing'"
           :class="[
-            '-delayed-spinner absolute flex gap-2 inset-0 items-center justify-center',
+            '-delayed absolute flex gap-2 inset-0 items-center justify-center',
             'text-gray-600',
           ]"
         >
@@ -312,19 +312,19 @@ onMounted(() => applyToAll(parsePersistedDate()))
 
 <style scoped>
 /* Invisible for 400ms: a load that finishes first unmounts this unpainted. */
-.-delayed-spinner {
+.-delayed {
   opacity: 0;
-  animation: delayed-spinner-in 120ms ease-out 400ms forwards;
+  animation: delayed-in 120ms ease-out 400ms forwards;
 }
 
-@keyframes delayed-spinner-in {
+@keyframes delayed-in {
   to {
     opacity: 1;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .-delayed-spinner {
+  .-delayed {
     animation-duration: 1ms;
   }
 }
