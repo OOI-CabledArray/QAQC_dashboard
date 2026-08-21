@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { CalendarDate, DateFormatter, parseDate, today } from '@internationalized/date'
-import { useDebounceFn } from '@vueuse/core'
-import { computed, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 
 import { acousticImagePath, sensorId } from '~/instruments'
 import { usePersisted } from '~/persisted'
@@ -72,16 +71,7 @@ let selectedYear = $ref(parsePersistedDate().year)
 // Day-of-year per instrument. Each panel keeps its own slider so you can scrub
 // one instrument while watching it; the master date resets them all in step.
 const currentDays = $ref<Record<string, number>>({})
-// Sliders emit per day crossed, so the image URL follows this debounced copy
-// instead of fetching every intermediate date. Slider and label stay live.
-const loadDays = $ref<Record<string, number>>({})
-const SCRUB_DEBOUNCE_MS = 350
-
-type LoadState = 'loading' | 'loaded' | 'missing'
-const loadState = $ref<Record<string, LoadState>>({})
-/** Distinguishes first paint from a swap. */
-const hasLoadedOnce = $ref<Record<string, boolean>>({})
-/** Per-URL memory of what resolved, so revisiting a date doesn't re-show a spinner. */
+const imageExists = $ref<Record<string, boolean>>({})
 const imageCache = $ref<Record<string, boolean>>({})
 
 const availableYears = Array.from(
@@ -98,7 +88,6 @@ function applyToAll(date: CalendarDate) {
   const day = dayOfYear(date)
   for (const instrument of instruments) {
     currentDays[instrument] = day
-    requestDay(instrument, day)
   }
 }
 
@@ -116,32 +105,13 @@ const outOfSync = $computed(() => {
   )
 })
 
-/** Date the slider is on right now — updates live while scrubbing. */
 function dateFor(instrument: string): CalendarDate {
   return dateFromDayOfYear(selectedYear, currentDays[instrument] ?? 1)
 }
 
-/** Date actually being fetched/shown — lags the slider by the scrub debounce. */
-function loadedDateFor(instrument: string): CalendarDate {
-  return dateFromDayOfYear(selectedYear, loadDays[instrument] ?? currentDays[instrument] ?? 1)
-}
-
 function getSpectrogramUrl(instrument: string): string {
-  const yyyymmdd = loadedDateFor(instrument).toString().replace(/-/g, '')
+  const yyyymmdd = dateFor(instrument).toString().replace(/-/g, '')
   return acousticImagePath(basePath, sensorId(instrument), yyyymmdd)
-}
-
-/** True while the slider has moved but the image for that date hasn't been requested yet. */
-function isPending(instrument: string): boolean {
-  return currentDays[instrument] !== undefined && currentDays[instrument] !== loadDays[instrument]
-}
-
-/** Only a swap gets a spinner; a first paint would flash one on every panel at once. */
-function displayState(instrument: string): 'first-load' | 'replacing' | 'loaded' | 'missing' {
-  if (isPending(instrument) || loadState[instrument] === 'loading') {
-    return hasLoadedOnce[instrument] ? 'replacing' : 'first-load'
-  }
-  return loadState[instrument] === 'missing' ? 'missing' : 'loaded'
 }
 
 function onYearChange() {
@@ -150,45 +120,43 @@ function onYearChange() {
   applyToAll(dateFromDayOfYear(selectedYear, day))
 }
 
-/** Point an instrument's image at a day. The rendered <img> does the fetching. */
-function requestDay(instrument: string, day: number) {
-  if (loadDays[instrument] === day) return
-  loadDays[instrument] = day
-  const cached = imageCache[getSpectrogramUrl(instrument)]
-  loadState[instrument] = cached === undefined ? 'loading' : cached ? 'loaded' : 'missing'
+function checkImageExists(instrument: string) {
+  const url = getSpectrogramUrl(instrument)
+
+  if (imageCache[url] !== undefined) {
+    imageExists[instrument] = imageCache[url]
+    return
+  }
+
+  const img = new Image()
+  img.onload = () => {
+    imageExists[instrument] = true
+    imageCache[url] = true
+  }
+  img.onerror = () => {
+    imageExists[instrument] = false
+    imageCache[url] = false
+  }
+  img.src = url
 }
 
-/** Fetch whatever the sliders currently show. */
-function requestVisibleDays() {
+watch(
+  () => currentDays,
+  () => {
+    for (const instrument of Object.keys(currentDays)) {
+      checkImageExists(instrument)
+    }
+  },
+  { deep: true },
+)
+
+onMounted(() => {
+  applyToAll(parsePersistedDate())
   for (const instrument of instruments) {
-    const day = currentDays[instrument]
-    if (day !== undefined) requestDay(instrument, day)
+    imageExists[instrument] = false
+    checkImageExists(instrument)
   }
-}
-
-// Only fires once scrubbing settles, so a drag costs one request, not one per day.
-const commitScrub = useDebounceFn(requestVisibleDays, SCRUB_DEBOUNCE_MS)
-
-function onImageLoad(instrument: string, url: string) {
-  imageCache[url] = true
-  // Ignore a late event from a date we've already scrubbed away from.
-  if (getSpectrogramUrl(instrument) === url) {
-    loadState[instrument] = 'loaded'
-    hasLoadedOnce[instrument] = true
-  }
-}
-
-function onImageError(instrument: string, url: string) {
-  imageCache[url] = false
-  if (getSpectrogramUrl(instrument) === url) loadState[instrument] = 'missing'
-}
-
-watch(() => currentDays, commitScrub, { deep: true })
-
-// Runs in setup, not onMounted: the first render must already know the date, or
-// every panel briefly points at Jan 1 — wasting a request, and making the switch
-// to the real date look like a swap (spinner + dimmed image).
-applyToAll(parsePersistedDate())
+})
 </script>
 
 <template>
@@ -242,52 +210,23 @@ applyToAll(parsePersistedDate())
         {{ instrument }}
       </h3>
 
-      <!-- Background is constant so it can't flash on state change. -->
-      <div class="bg-[#f5f5f5] mb-4 min-h-40 relative rounded-[4px]">
-        <!-- Prefetched up front rather than lazily so scrolling is seamless. Never v-if'd. -->
+      <div v-if="imageExists[instrument]" class="mb-4">
         <img
-          :alt="`${kind} for ${instrument} on ${formatDate(loadedDateFor(instrument))} UTC`"
-          class="duration-200 h-auto transition-opacity w-full"
-          :class="{
-            'opacity-30': displayState(instrument) === 'replacing',
-            'opacity-0':
-              displayState(instrument) === 'missing' || displayState(instrument) === 'first-load',
-          }"
+          :alt="`${kind} for ${instrument} on ${formatDate(dateFor(instrument))} UTC`"
+          class="h-auto w-full"
+          loading="lazy"
           :src="getSpectrogramUrl(instrument)"
           style="border: 1px solid #ccc; border-radius: 4px"
-          @error="onImageError(instrument, getSpectrogramUrl(instrument))"
-          @load="onImageLoad(instrument, getSpectrogramUrl(instrument))"
         />
-        <!-- First paint: no spinner, and delayed so a quick load never shows it. -->
-        <div
-          v-if="displayState(instrument) === 'first-load'"
-          :class="[
-            '-delayed absolute flex inset-0 items-center justify-center',
-            'text-gray-400 text-sm',
-          ]"
-        >
-          {{ formatDate(loadedDateFor(instrument)) }} UTC
-        </div>
-        <!-- Swap: spinner, fade-in delayed so quick swaps never flash it. -->
-        <div
-          v-else-if="displayState(instrument) === 'replacing'"
-          :class="[
-            '-delayed absolute flex gap-2 inset-0 items-center justify-center',
-            'text-gray-600',
-          ]"
-        >
-          <u-icon class="animate-spin" name="i-lucide-loader-circle" />
-          <p>Loading {{ kind.toLowerCase() }} for {{ formatDate(dateFor(instrument)) }} UTC…</p>
-        </div>
-        <div
-          v-else-if="displayState(instrument) === 'missing'"
-          class="absolute flex inset-0 items-center justify-center px-4 text-center"
-        >
-          <p>
-            No {{ kind.toLowerCase() }} found for {{ instrument }} on
-            {{ formatDate(loadedDateFor(instrument)) }} UTC
-          </p>
-        </div>
+      </div>
+      <div
+        v-else
+        class="aspect-2/1 bg-[#f5f5f5] flex items-center justify-center mb-4 rounded-[4px]"
+      >
+        <p>
+          No {{ kind.toLowerCase() }} found for {{ instrument }} on
+          {{ formatDate(dateFor(instrument)) }} UTC
+        </p>
       </div>
 
       <!-- Individual slider controls for each instrument -->
@@ -311,23 +250,3 @@ applyToAll(parsePersistedDate())
     </div>
   </div>
 </template>
-
-<style scoped>
-/* Invisible for 400ms: a load that finishes first unmounts this unpainted. */
-.-delayed {
-  opacity: 0;
-  animation: delayed-in 120ms ease-out 400ms forwards;
-}
-
-@keyframes delayed-in {
-  to {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .-delayed {
-    animation-duration: 1ms;
-  }
-}
-</style>
