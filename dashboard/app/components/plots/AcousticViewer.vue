@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { CalendarDate, DateFormatter, parseDate, today } from '@internationalized/date'
 import { useDebounceFn } from '@vueuse/core'
-import { computed, onMounted, watch } from 'vue'
+import { computed, watch } from 'vue'
 
 import { acousticImagePath, sensorId } from '~/instruments'
 import { usePersisted } from '~/persisted'
@@ -185,8 +185,10 @@ function onImageError(instrument: string, url: string) {
 
 watch(() => currentDays, commitScrub, { deep: true })
 
-// applyToAll loads at once; only scrubbing debounces.
-onMounted(() => applyToAll(parsePersistedDate()))
+// Runs in setup, not onMounted: the first render must already know the date, or
+// every panel briefly points at Jan 1 — wasting a request, and making the switch
+// to the real date look like a swap (spinner + dimmed image).
+applyToAll(parsePersistedDate())
 </script>
 
 <template>
