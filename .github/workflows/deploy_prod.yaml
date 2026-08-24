@@ -65,11 +65,26 @@ jobs:
           key: ${{ secrets.CI_EC2_DEPLOY_KEY }}
           envs: GITHUB_SHA
           script: |
+            set -e
             cd ~/qaqc-dashboard
             git fetch origin
             git reset --hard $GITHUB_SHA
             cd dashboard
             npm install --omit=dev
-            if systemctl is-active --quiet qaqc-dashboard; then
-              sudo systemctl restart qaqc-dashboard
-            fi
+            # enable so the service survives a reboot; restart starts it whether
+            # or not it was running. Previously a dead service was skipped, so an
+            # outage could sit behind a green deploy.
+            sudo systemctl enable qaqc-dashboard
+            sudo systemctl restart qaqc-dashboard
+            # Fail the deploy if the app isn't actually serving.
+            for i in $(seq 1 15); do
+              if curl -fsS -o /dev/null http://127.0.0.1:3000/api/health; then
+                echo "healthy"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "qaqc-dashboard failed to become healthy:"
+            systemctl status qaqc-dashboard --no-pager -l | head -20
+            journalctl -u qaqc-dashboard -n 50 --no-pager
+            exit 1
