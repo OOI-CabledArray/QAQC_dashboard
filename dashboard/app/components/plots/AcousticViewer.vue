@@ -195,7 +195,8 @@ onMounted(() => {
         Sync all to {{ formatDate(masterDate) }}
       </u-button>
       <p class="max-w-sm ml-auto pb-1 text-gray-500 text-right text-xs">
-        Pick a date to move every instrument together, or drag a single slider to cycle through days.
+        Pick a date to move every instrument together, or drag a single slider to cycle through
+        days.
       </p>
     </div>
 
