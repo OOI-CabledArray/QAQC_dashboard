@@ -72,8 +72,7 @@ jobs:
             cd dashboard
             npm install --omit=dev
             # enable so the service survives a reboot; restart starts it whether
-            # or not it was running. Previously a dead service was skipped, so an
-            # outage could sit behind a green deploy.
+            # or not it was running.
             sudo systemctl enable qaqc-dashboard
             sudo systemctl restart qaqc-dashboard
             # Fail the deploy if the app isn't actually serving.
