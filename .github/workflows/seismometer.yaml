@@ -63,6 +63,6 @@ jobs:
             acoustic-pipeline \
                 --hyd-refdes ${{ matrix.refdes }} \
                 --flag obs \
-                --s3-sync true \
+                --s3-sync spectrogram \
                 --obs-run-type daily \
                 --runner prefect
