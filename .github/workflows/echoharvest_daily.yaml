@@ -1,7 +1,7 @@
 name: Echosounder Raw Data Harvest
 on:
-  schedule:
-  - cron: "0 10 * * *" #every day at 10:00 UTC (3:00 AM PST)
+  # Scheduling handled by Prefect (rca-data-tools prefect.yaml, trigger-* deployments).
+  # GitHub cron dropped: it ran hours late. Previous cadence: every day 10:00 UTC (Prefect chains echogram after this completes).
   workflow_dispatch:
 
 jobs:

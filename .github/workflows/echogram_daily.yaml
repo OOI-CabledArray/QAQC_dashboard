@@ -1,7 +1,7 @@
 name: Echogram Plotting
 on:
-  schedule:
-  - cron: "7 11 * * *" #every day at 11:07 UTC (4:07 AM PST)
+  # Scheduling handled by Prefect (rca-data-tools prefect.yaml, trigger-* deployments).
+  # GitHub cron dropped: it ran hours late. Previous cadence: runs after echoharvest completes (was every day 11:07 UTC).
   workflow_dispatch:
 
 jobs:
