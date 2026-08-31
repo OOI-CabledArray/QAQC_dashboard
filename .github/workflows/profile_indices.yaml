@@ -1,8 +1,8 @@
 name: Index Profiles (Daily)
 # generate new profile indices and push to the remote indices repo
 on:
-  schedule:
-  - cron: "30 10 * * *" 
+  # Scheduling handled by Prefect (rca-data-tools prefect.yaml, trigger-* deployments).
+  # GitHub cron dropped: it ran hours late. Previous cadence: every day 10:30 UTC.
   workflow_dispatch:
 
 env:
