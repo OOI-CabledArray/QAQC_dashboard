@@ -38,29 +38,23 @@ jobs:
             name: "RS01SUM1-LJ01B-05-OBSBBA101"
           - refdes: "RS01SLBS-MJ01A-05-OBSBBA102"
             name: "RS01SLBS-MJ01A-05-OBSBBA102"
-    defaults:
-      run:
-        shell: bash -l {0}
-    container:
-      image: public.ecr.aws/p0l4c7i2/ooi-hyd-tools:latest
     steps:
+      # dispatch only needs prefect, not the full image - see ooi-hyd-tools ci/requirements-dispatch.txt
       - uses: actions/checkout@v5
         with:
-          token: ${{ secrets.GH_PAT }}
+          repository: ooi-data/ooi-hyd-tools
+      - uses: astral-sh/setup-uv@v6
+      - name: Install dispatch env
+        run: uv venv --python 3.11 && uv pip install -r ci/requirements-dispatch.txt
       - name: Run seismometer waveform plots
         env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-          TASK_ROLE_ARN: ${{ secrets.TASK_ROLE_ARN }}
-          EXECUTION_ROLE_ARN: ${{ secrets.EXECUTION_ROLE_ARN }}
           PREFECT_WORKSPACE: jdupreyuwedu/ooi-rca-prefect2
           PREFECT_KEY: ${{ secrets.PREFECT_KEY }}
-          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-            cd /tmp/ooi-hyd-tools
+            source .venv/bin/activate
             prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
 
-            acoustic-pipeline \
+            python -m ooi_hyd_tools.pipeline \
                 --hyd-refdes ${{ matrix.refdes }} \
                 --flag obs \
                 --s3-sync spectrogram \
