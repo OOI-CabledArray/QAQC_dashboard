@@ -38,20 +38,23 @@ jobs:
             name: "RS01SUM1-LJ01B-05-OBSBBA101"
           - refdes: "RS01SLBS-MJ01A-05-OBSBBA102"
             name: "RS01SLBS-MJ01A-05-OBSBBA102"
+    defaults:
+      run:
+        shell: bash -el {0} # login shell so the conda env is active
     steps:
-      # dispatch only needs prefect, not the full image - see ooi-hyd-tools requirements-dispatch.txt
+      # dispatch only needs prefect, not the full image - see ooi-hyd-tools ci/dispatch_env.yml
       - uses: actions/checkout@v5
         with:
           repository: ooi-data/ooi-hyd-tools
-      - uses: astral-sh/setup-uv@v6
-      - name: Install dispatch env
-        run: uv venv --python 3.11 && uv pip install -r requirements-dispatch.txt
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: ci/dispatch_env.yml
+          cache-environment: true
       - name: Run seismometer waveform plots
         env:
           PREFECT_WORKSPACE: jdupreyuwedu/ooi-rca-prefect2
           PREFECT_KEY: ${{ secrets.PREFECT_KEY }}
         run: |
-            source .venv/bin/activate
             prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
 
             python -m ooi_hyd_tools.pipeline \
