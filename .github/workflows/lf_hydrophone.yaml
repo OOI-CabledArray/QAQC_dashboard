@@ -22,23 +22,20 @@ jobs:
             name: 'RS03ECAL-MJ03E-09-HYDLFA304'
           - refdes: 'RS03CCAL-MJ03F-06-HYDLFA305'
             name: 'RS03CCAL-MJ03F-06-HYDLFA305'
-    defaults:
-      run:
-        shell: bash -el {0} # login shell so the conda env is active
     steps:
-      # dispatch only needs prefect, not the full image - see ooi-hyd-tools ci/dispatch_env.yml
+      # dispatch only needs prefect, not the full image - see ooi-hyd-tools ci/requirements-dispatch.txt
       - uses: actions/checkout@v5
         with:
           repository: ooi-data/ooi-hyd-tools
-      - uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-file: ci/dispatch_env.yml
-          cache-environment: true
+      - uses: astral-sh/setup-uv@v6
+      - name: Install dispatch env
+        run: uv venv --python 3.11 && uv pip install -r ci/requirements-dispatch.txt
       - name: Run acoustic pipeline mseed -> spectrograms
         env:
           PREFECT_WORKSPACE: jdupreyuwedu/ooi-rca-prefect2
           PREFECT_KEY: ${{ secrets.PREFECT_KEY }}
         run: |
+          source .venv/bin/activate
           # Authenticate with prefect2 cloud 
           prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
           # Run full acoustic pipeline with LF flag ooipy -> spectrograms
