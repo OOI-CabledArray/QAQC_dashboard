@@ -6,7 +6,6 @@ on:
   workflow_dispatch:
 
 env:
-  PYTHON_VERSION: 3.11
   THRESHOLD: 5000000
 
 jobs:
@@ -25,31 +24,19 @@ jobs:
             name: 'Monthly'
           - span: '365'
             name: 'Yearly'
-    defaults:
-      run:
-        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v5
         with:
           token: ${{ secrets.GH_PAT }}
-      - name: Setup python
-        uses: actions/setup-python@v5
+      - name: Checkout rca-data-tools (its uv.lock defines the env)
+        uses: actions/checkout@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Setup miniconda
-        uses: conda-incubator/setup-miniconda@v3
+          repository: OOI-CabledArray/rca-data-tools
+          path: rca-data-tools
+      - uses: astral-sh/setup-uv@v6
         with:
-          auto-activate-base: false
-          activate-environment: rca-data-env
-          channel-priority: strict
-          environment-file: .ci/environment.yaml
-          use-only-tar-bz2: true
-      - name: Print conda env
-        run: |
-          conda info
-          conda list
-      - name: Install package
-        run: pip install git+https://github.com/OOI-CabledArray/rca-data-tools.git@main
+          enable-cache: true
+          cache-dependency-glob: rca-data-tools/uv.lock
       - name: Run pipeline plot creation
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
@@ -61,6 +48,6 @@ jobs:
           AWS_SECRET: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           # Authenticate with prefect2 cloud 
-          prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
+          uv run --locked --project rca-data-tools prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
           # Run flow
-          qaqc_pipeline --stage1 --stage2 --stage3 --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }}
+          uv run --locked --project rca-data-tools qaqc_pipeline --stage1 --stage2 --stage3 --cloud --s3-sync --span ${{ matrix.span }} --run --threshold ${{ env.THRESHOLD }}
