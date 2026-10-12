@@ -16,26 +16,20 @@ jobs:
             name: 'CE04OSPS-PC01B-05-ZPLSCB102'
           - refdes: 'CE02SHBP-MJ01C-07-ZPLSCB101'
             name: 'CE02SHBP-MJ01C-07-ZPLSCB101'
-    defaults:
-      run:
-        shell: bash -l {0}
-    container:
-      image: public.ecr.aws/p0l4c7i2/rca-echo-tools:latest
     steps:
+      # dispatch only needs prefect, not the full image - see rca-echo-tools ci/requirements-dispatch.txt
       - uses: actions/checkout@v5
         with:
-          token: ${{ secrets.GH_PAT }}
+          repository: ooi-data/rca-echo-tools
+      - uses: astral-sh/setup-uv@v6
+      - name: Install dispatch env
+        run: uv venv --python 3.11 && uv pip install -r ci/requirements-dispatch.txt && uv pip install --no-deps .
       - name: Run raw echo data harvest
         env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-          TASK_ROLE_ARN: ${{ secrets.TASK_ROLE_ARN }}
-          EXECUTION_ROLE_ARN: ${{ secrets.EXECUTION_ROLE_ARN }}
           PREFECT_WORKSPACE: jdupreyuwedu/ooi-rca-prefect2
           PREFECT_KEY: ${{ secrets.PREFECT_KEY }}
-          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          cd /tmp/ooi-echo-tools
+          source .venv/bin/activate
           # Authenticate with prefect2 cloud 
           prefect cloud login --key "${{ env.PREFECT_KEY }}" --workspace "${{ env.PREFECT_WORKSPACE }}"
           # Run echosounder raw data harvest
