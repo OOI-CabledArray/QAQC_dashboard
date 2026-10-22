@@ -25,6 +25,10 @@ export const useStore = defineStore('store', () => {
     hitlList: [] as string[],
     csvData: [] as CSVFile[],
 
+    /** Whether the plot index has been fetched, and why it failed if it did. */
+    plotsStatus: 'idle' as 'idle' | 'loading' | 'ready' | 'error',
+    plotsError: '',
+
     hitlStatus: '',
 
     DataRange: '', // TODO new state properties
@@ -331,15 +335,26 @@ export const useStore = defineStore('store', () => {
     state.csvData.push(data)
   }
 
-  async function getPlots() {
-    const plotsIndex = `${plotsURL}/index.json`
+  /**
+   * Fetch the plot index. Pass force to refetch after the archive changes;
+   * otherwise an index already in memory is reused rather than re-downloaded.
+   */
+  async function getPlots(force = false) {
+    if (!force && state.plotsStatus === 'ready') return
+    state.plotsStatus = 'loading'
+    state.plotsError = ''
     try {
-      const response = await fetch(plotsIndex)
+      const response = await fetch(`${plotsURL}/index.json`)
+      // Without this an error body parses as JSON and lands in plotList.
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
       const plots = await response.json()
+      if (!Array.isArray(plots)) throw new Error('Plot index was not a list.')
       storePlots(plots)
-      console.log(`Got ${plots.length} plot images.`)
+      state.plotsStatus = 'ready'
     } catch (error) {
-      console.log(error)
+      state.plotsStatus = 'error'
+      state.plotsError = error instanceof Error ? error.message : String(error)
+      console.error('Failed to load plot index.', error)
     }
   }
 
@@ -397,12 +412,13 @@ export const useStore = defineStore('store', () => {
 
   async function enterArchiveMode(key: string) {
     persisted.archive = key
-    await getPlots()
+    // Different archive, different index — must refetch.
+    await getPlots(true)
   }
 
   async function exitArchiveMode() {
     persisted.archive = undefined
-    await getPlots()
+    await getPlots(true)
   }
 
   return {

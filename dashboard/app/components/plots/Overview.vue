@@ -240,7 +240,26 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeS
 
 <template>
   <div class="text-left">
-    <h1 v-if="filteredPlots.length === 0 && !isAcoustic">No plots found.</h1>
+    <!-- 'idle' counts as busy: the first render happens before onMounted starts the
+         fetch, and "No plots found." must never be shown for an index we haven't
+         tried to load. Fade is delayed so a fast (cached/compressed) load, which is
+         well under the delay, never paints a spinner at all. -->
+    <div
+      v-if="store.plotsStatus === 'idle' || store.plotsStatus === 'loading'"
+      class="-delayed flex gap-2 items-center py-8 text-gray-500"
+    >
+      <u-icon class="animate-spin" name="i-lucide-loader-circle" />
+      Loading plot index…
+    </div>
+    <u-alert
+      v-else-if="store.plotsStatus === 'error'"
+      color="error"
+      :description="`${store.plotsError}. Check your connection and reload.`"
+      icon="i-lucide-triangle-alert"
+      title="Could not load the plot index"
+      variant="subtle"
+    />
+    <h1 v-else-if="filteredPlots.length === 0 && !isAcoustic">No plots found.</h1>
     <u-card v-if="filteredPlots.length > 0 || isAcoustic">
       <u-tabs :items="tabs" :size="isWide ? 'md' : 'xs'">
         <template #fixed>
@@ -323,3 +342,23 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeS
     </u-card>
   </div>
 </template>
+
+<style scoped>
+/* Invisible for 400ms: a load that finishes first unmounts this unpainted. */
+.-delayed {
+  opacity: 0;
+  animation: delayed-in 120ms ease-out 400ms forwards;
+}
+
+@keyframes delayed-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .-delayed {
+    animation-duration: 1ms;
+  }
+}
+</style>

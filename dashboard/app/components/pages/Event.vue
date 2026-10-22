@@ -163,7 +163,7 @@ onMounted(async () => {
   restoreFromUrl()
   isLoading = true
   await Promise.all([
-    store.plotList.length === 0 ? store.getPlots() : Promise.resolve(),
+    store.getPlots(),
     fetch(SITES_CSV_URL)
       .then((r) => r.text())
       .then((text) => {

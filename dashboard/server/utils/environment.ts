@@ -25,3 +25,8 @@ export const QAQC_AWS_S3_CACHE_MAX_AGE =
   process.env.QAQC_AWS_S3_CACHE_MAX_AGE !== undefined
     ? Number(process.env.QAQC_AWS_S3_CACHE_MAX_AGE)
     : 15
+/** Applied to spectrograms/echograms, which are keyed by date rather than rolling. */
+export const QAQC_AWS_S3_LONG_CACHE_MAX_AGE =
+  process.env.QAQC_AWS_S3_LONG_CACHE_MAX_AGE !== undefined
+    ? Number(process.env.QAQC_AWS_S3_LONG_CACHE_MAX_AGE)
+    : 300
