@@ -257,6 +257,11 @@ export const useStore = defineStore('store', () => {
     ],
     aplSites: [
       {
+        title: 'Neptunea (RCA Interactive Dashboard)',
+        route: 'https://neptunea.ooi-rca.net/neptunea',
+        external: true,
+      },
+      {
         title: 'Nereus',
         route: 'https://nereus.ooirsn.uw.edu/',
         external: true,
@@ -267,11 +272,6 @@ export const useStore = defineStore('store', () => {
         external: true,
       },
       {
-        title: 'Nereus M2M Plots',
-        route: 'https://nereus.ooirsn.uw.edu/m2m-data-plots',
-        external: true,
-      },
-      {
         title: 'APL Eng dashboard',
         route: 'http://eng.ooirsn.uw.edu/',
         external: true,
@@ -279,11 +279,6 @@ export const useStore = defineStore('store', () => {
       {
         title: 'APL RealTime Dashboard',
         route: 'http://rtime.ooirsn.uw.edu:8888/',
-        external: true,
-      },
-      {
-        title: 'APL PP-Up',
-        route: 'http://sea.ooirsn.uw.edu/power/graphs.html',
         external: true,
       },
       {
