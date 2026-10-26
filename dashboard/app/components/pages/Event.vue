@@ -235,7 +235,8 @@ function getMatchingPlots(panel: Panel): string[] {
   if (!panel.timespan) return []
   return store.plotList
     .filter((plot) => {
-      if (!plot.endsWith('.png')) return false
+      // annotation views are SVG; <img> shows them statically (hover text stays hidden)
+      if (!plot.endsWith('.png') && !plot.endsWith('.svg')) return false
       const info = parsePlotFilename(plot)
       if (!info) return false
       if (info.ref !== panel.instrument) return false
