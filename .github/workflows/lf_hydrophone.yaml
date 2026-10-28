@@ -5,23 +5,18 @@ on:
   workflow_dispatch:
 
 jobs:
+  instruments:
+    uses: ./.github/workflows/instruments.yaml
+    with:
+      sensor: HYDLFA
   run-acoustic-pipeline:
-    name: ${{matrix.name}} spectrograms
+    needs: instruments
+    name: ${{ matrix.refdes }} spectrograms
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - refdes: 'RS01SLBS-MJ01A-05-HYDLFA101'
-            name: 'RS01SLBS-MJ01A-05-HYDLFA101'
-          - refdes: 'RS01SUM1-LJ01B-05-HYDLFA104'
-            name: 'RS01SUM1-LJ01B-05-HYDLFA104'
-          - refdes: 'RS03AXBS-MJ03A-05-HYDLFA301'
-            name: 'RS03AXBS-MJ03A-05-HYDLFA301'
-          - refdes: 'RS03ECAL-MJ03E-09-HYDLFA304'
-            name: 'RS03ECAL-MJ03E-09-HYDLFA304'
-          - refdes: 'RS03CCAL-MJ03F-06-HYDLFA305'
-            name: 'RS03CCAL-MJ03F-06-HYDLFA305'
+        refdes: ${{ fromJSON(needs.instruments.outputs.refdes) }}
     steps:
       # dispatch only needs prefect, not the full image - see ooi-hyd-tools ci/requirements-dispatch.txt
       - uses: actions/checkout@v5

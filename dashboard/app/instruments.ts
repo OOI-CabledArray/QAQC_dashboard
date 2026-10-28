@@ -10,24 +10,11 @@
 export const spectrogramsURL = '/spectrograms'
 export const echogramsURL = '/echograms'
 
-// Full reference designators (sitesDictionary.csv stage 9; ZPLSC from the
-// echogram workflow). Image paths use only the trailing sensor id — derive it
-// with sensorId() rather than storing the bare ids.
-export const hydrophones = [
-  'RS01SLBS-LJ01A-09-HYDBBA102',
-  'CE04OSBP-LJ01C-11-HYDBBA105',
-  'CE02SHBP-LJ01D-11-HYDBBA106',
-  'RS03AXBS-LJ03A-09-HYDBBA302',
-  'RS01SBPS-PC01A-08-HYDBBA103',
-  'RS03AXPS-PC03A-08-HYDBBA303',
-  'RS01SLBS-MJ01A-05-HYDLFA101',
-  'RS01SUM1-LJ01B-05-HYDLFA104',
-  'RS03AXBS-MJ03A-05-HYDLFA301',
-  'RS03ECAL-MJ03E-09-HYDLFA304',
-  'RS03CCAL-MJ03F-06-HYDLFA305',
-]
-
-export const echosounders = ['CE02SHBP-MJ01C-07-ZPLSCB101', 'CE04OSPS-PC01B-05-ZPLSCB102']
+// The rca-data-tools instrument registry. The store loads hydrophones and
+// echosounders from its stage 9 rows as full reference designators; image
+// paths use only the trailing sensor id (sensorId()).
+// prettier-ignore
+export const SITES_CSV_URL = 'https://raw.githubusercontent.com/OOI-CabledArray/rca-data-tools/main/rca_data_tools/qaqc/params/sitesDictionary.csv'
 
 /** Last dash-segment of a refDes ('RS03AXBS-LJ03A-09-HYDBBA302' -> 'HYDBBA302').
  *  Bare sensor ids and nav keywords ('HYDBB', 'ZPLSC') pass through unchanged. */

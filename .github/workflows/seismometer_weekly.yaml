@@ -5,39 +5,18 @@ on:
   workflow_dispatch:
 
 jobs:
+  instruments:
+    uses: ./.github/workflows/instruments.yaml
+    with:
+      sensor: OBS
   run-acoustic-pipeline:
-    name: ${{matrix.name}} waveform plots
+    needs: instruments
+    name: ${{ matrix.refdes }} waveform plots
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - refdes: "RS03ASHS-MJ03B-06-OBSSPA301"
-            name: "RS03ASHS-MJ03B-06-OBSSPA301"
-          - refdes: "RS03ASHS-MJ03B-05-OBSSPA302"
-            name: "RS03ASHS-MJ03B-05-OBSSPA302"
-          - refdes: "RS03AXBS-MJ03A-05-OBSBBA303"
-            name: "RS03AXBS-MJ03A-05-OBSBBA303"
-          - refdes: "RS03CCAL-MJ03F-06-OBSBBA301"
-            name: "RS03CCAL-MJ03F-06-OBSBBA301"
-          - refdes: "RS03ECAL-MJ03E-05-OBSSPA303"
-            name: "RS03ECAL-MJ03E-05-OBSSPA303"
-          - refdes: "RS03ECAL-MJ03E-09-OBSBBA302"
-            name: "RS03ECAL-MJ03E-09-OBSBBA302"
-          - refdes: "RS03ECAL-MJ03E-08-OBSSPA304"
-            name: "RS03ECAL-MJ03E-08-OBSSPA304"
-          - refdes: "RS03INT2-MJ03D-05-OBSSPA305"
-            name: "RS03INT2-MJ03D-05-OBSSPA305"
-          - refdes: "RS01SUM1-LJ01B-08-OBSSPA101"
-            name: "RS01SUM1-LJ01B-08-OBSSPA101"
-          - refdes: "RS01SUM1-LJ01B-07-OBSSPA102"
-            name: "RS01SUM1-LJ01B-07-OBSSPA102"
-          - refdes: "RS01SUM1-LJ01B-06-OBSSPA103"
-            name: "RS01SUM1-LJ01B-06-OBSSPA103"
-          - refdes: "RS01SUM1-LJ01B-05-OBSBBA101"
-            name: "RS01SUM1-LJ01B-05-OBSBBA101"
-          - refdes: "RS01SLBS-MJ01A-05-OBSBBA102"
-            name: "RS01SLBS-MJ01A-05-OBSBBA102"
+        refdes: ${{ fromJSON(needs.instruments.outputs.refdes) }}
     steps:
       # dispatch only needs prefect, not the full image - see ooi-hyd-tools ci/requirements-dispatch.txt
       - uses: actions/checkout@v5

@@ -32,6 +32,11 @@ See the [documentation](https://github.com/OOI-CabledArray/rca-data-tools/blob/m
 - [`rca-data-tools`](https://github.com/OOI-CabledArray/rca-data-tools): contains the majority of the code to perform the creation of png plots and csv plots for the dashboard.
 - [`QAQC_dashboard`](https://github.com/OOI-CabledArray/QAQC_dashboard): contains the dashboard application (Nuxt SSR with SQLite auth and S3 archive system).
 
+Instruments come from the rca-data-tools registry ([`sitesDictionary.csv`](https://github.com/OOI-CabledArray/rca-data-tools/blob/main/rca_data_tools/qaqc/params/sitesDictionary.csv)).
+The hydrophone, seismometer and echosounder workflows build their matrices from its stage 9 rows
+(`.github/workflows/instruments.yaml`), and the spectrogram and echogram viewers load them at runtime.
+Add or retire an instrument there, not here.
+
 ## Setup
 
 1. Install [`uv`](https://docs.astral.sh/uv/getting-started/installation) and a modern version of NodeJS, with version 24 or higher being recommended.

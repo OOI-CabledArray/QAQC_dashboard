@@ -5,17 +5,18 @@ on:
   workflow_dispatch:
 
 jobs:
+  instruments:
+    uses: ./.github/workflows/instruments.yaml
+    with:
+      sensor: ZPLSC
   run-echogram_plotting:
-    name: ${{matrix.name}} echogram plotting
+    needs: instruments
+    name: ${{ matrix.refdes }} echogram plotting
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - refdes: 'CE04OSPS-PC01B-05-ZPLSCB102'
-            name: 'CE04OSPS-PC01B-05-ZPLSCB102'
-          - refdes: 'CE02SHBP-MJ01C-07-ZPLSCB101'
-            name: 'CE02SHBP-MJ01C-07-ZPLSCB101'
+        refdes: ${{ fromJSON(needs.instruments.outputs.refdes) }}
     steps:
       # dispatch only needs prefect, not the full image - see rca-echo-tools ci/requirements-dispatch.txt
       - uses: actions/checkout@v5

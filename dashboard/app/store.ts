@@ -2,7 +2,13 @@ import pkg from 'papaparse'
 import { defineStore } from 'pinia'
 import { reactive, toRefs } from 'vue'
 
-import { echogramsURL, echosounders, hydrophones, spectrogramsURL } from '~/instruments'
+import {
+  echogramsURL,
+  isEchosounder,
+  isHydrophone,
+  SITES_CSV_URL,
+  spectrogramsURL,
+} from '~/instruments'
 import { usePersisted } from '~/persisted'
 
 const { parse } = pkg
@@ -16,11 +22,11 @@ export const useStore = defineStore('store', () => {
   const base = ''
   const state = reactive({
     hitlURL: `${base}/HITL_notes`,
-    // Sourced from ~/instruments (single source of truth) — kept on state for consumers.
     spectrogramsURL,
     echogramsURL,
-    hydrophones,
-    echosounders,
+    // Stage 9 rows of the instrument registry, loaded by getInstruments().
+    hydrophones: [] as string[],
+    echosounders: [] as string[],
     plotList: [] as string[],
     hitlList: [] as string[],
     csvData: [] as CSVFile[],
@@ -358,6 +364,24 @@ export const useStore = defineStore('store', () => {
     }
   }
 
+  /** Load hydrophones and echosounders from the registry's stage 9 rows. */
+  async function getInstruments() {
+    if (state.hydrophones.length) return
+    try {
+      const response = await fetch(SITES_CSV_URL)
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
+      const rows = parse<Record<string, string>>(await response.text(), {
+        header: true,
+        skipEmptyLines: true,
+      }).data
+      const acoustic = rows.flatMap((r) => (r.stage === '9' && r.refDes ? [r.refDes] : []))
+      state.hydrophones = acoustic.filter(isHydrophone)
+      state.echosounders = acoustic.filter(isEchosounder)
+    } catch (error) {
+      console.error('Failed to load the instrument registry.', error)
+    }
+  }
+
   async function getHITLNotes() {
     const hitlIndex = `${state.hitlURL}/index.json`
     try {
@@ -430,6 +454,7 @@ export const useStore = defineStore('store', () => {
     storeHITLStatus,
     appendCSVData,
     getPlots,
+    getInstruments,
     getHITLNotes,
     getIndexes,
     loadCSVs,

@@ -92,7 +92,7 @@ const tabs = $computed(() => {
 })
 
 onMounted(async () => {
-  await store.getPlots()
+  await Promise.all([store.getPlots(), store.getInstruments()])
   filterPlotList()
 })
 
@@ -274,8 +274,10 @@ watch([() => keyword, () => subkey, () => overlays, () => dataRange, () => timeS
           </template>
         </template>
         <template #spectrograms>
+          <!-- the viewer sets up its panels on mount, so wait for the instrument lists -->
+          <div v-if="(isHydro || isZpls) && !store.hydrophones.length">Loading instruments...</div>
           <acoustic-viewer
-            v-if="isHydro"
+            v-else-if="isHydro"
             :base-path="store.spectrogramsURL"
             :instruments="store.hydrophones"
             kind="Spectrogram"

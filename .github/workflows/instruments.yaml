@@ -1,0 +1,26 @@
+name: Instrument List
+# Matrix input for the acoustic workflows: stage 9 refDes from the rca-data-tools registry
+on:
+  workflow_call:
+    inputs:
+      sensor:
+        description: sensor prefix to match, e.g. HYDBBA, HYDLFA, OBS, ZPLSC
+        required: true
+        type: string
+    outputs:
+      refdes:
+        description: JSON list of matching refDes
+        value: ${{ jobs.list.outputs.refdes }}
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    outputs:
+      refdes: ${{ steps.list.outputs.refdes }}
+    steps:
+      - id: list
+        shell: bash
+        run: |
+          curl -sfL https://raw.githubusercontent.com/OOI-CabledArray/rca-data-tools/main/rca_data_tools/qaqc/params/sitesDictionary.csv \
+            | awk -F, -v s="-${{ inputs.sensor }}" '$2 == 9 && index($1, s) {print $1}' \
+            | jq -Rnc '[inputs]' | sed 's/^/refdes=/' | tee -a "$GITHUB_OUTPUT"
