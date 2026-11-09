@@ -37,10 +37,6 @@ export const useStore = defineStore('store', () => {
 
     hitlStatus: '',
 
-    DataRange: '', // TODO new state properties
-    TimeSpan: '', // hopefully we can use these to filter
-    Overlay: '', // instead of the props in each file
-
     mainNav: [
       {
         title: 'Data: by Site',

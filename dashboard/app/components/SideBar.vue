@@ -56,6 +56,37 @@ if (import.meta.client) {
 
 type Item = (typeof store.mainNav)[number]
 
+// Nav links differ only by query string, and vue-router ignores query when
+// matching, so router-link-active would light up every link at once.
+function isCurrent(key: string, subkey: string): boolean {
+  if (route.path !== '/plots') return false
+  return route.query.keyword === key && (route.query.subkey ?? '-') === subkey
+}
+
+let navFilter = $ref('')
+
+/** mainNav narrowed to entries matching the filter; groups keep matching children. */
+const filteredNav = $computed(() => {
+  const term = navFilter.trim().toLowerCase()
+  if (!term) return store.mainNav
+
+  const matches = (text: string) => text.toLowerCase().includes(term)
+
+  return store.mainNav.flatMap((item) => {
+    const groups = item.groups.flatMap((group) => {
+      // A matching group keeps all its children; otherwise keep matching children.
+      if (matches(group.value) || matches(group.key)) return [group]
+      const subgroups = (group.groups ?? []).filter(
+        (subgroup) => matches(subgroup.value) || matches(subgroup.key),
+      )
+      return subgroups.length > 0 ? [{ ...group, groups: subgroups }] : []
+    })
+    return groups.length > 0 ? [{ ...item, groups }] : []
+  })
+})
+
+const noNavMatches = $computed(() => navFilter.trim() !== '' && filteredNav.length === 0)
+
 const [DefineLinksTemplate, LinksTemplate] = createReusableTemplate({
   props: {
     item: {
@@ -66,7 +97,7 @@ const [DefineLinksTemplate, LinksTemplate] = createReusableTemplate({
 })
 
 const accordionItems = $computed(() => {
-  return store.mainNav.map(
+  return filteredNav.map(
     (item) =>
       ({
         item,
@@ -131,12 +162,36 @@ const accordionItems = $computed(() => {
     <div class="bg-white h-px mb-4 mt-2 opacity-20" />
     <span class="font-bold mb-1 not-sm:text-center opacity-50 text-xs uppercase">Views</span>
 
+    <!-- Narrows the nav to matching instruments; 100+ entries is a lot to scan. -->
+    <u-input
+      v-if="isWide"
+      v-model="navFilter"
+      class="mb-2 mt-1"
+      icon="i-lucide-search"
+      placeholder="Filter instruments…"
+      size="xs"
+      :ui="{ trailing: 'pe-1' }"
+    >
+      <template v-if="navFilter" #trailing>
+        <u-button
+          aria-label="Clear filter"
+          icon="i-lucide-x"
+          size="xs"
+          variant="link"
+          @click="navFilter = ''"
+        />
+      </template>
+    </u-input>
+    <p v-if="noNavMatches" class="mb-2 opacity-60 text-xs">No instruments match.</p>
+
     <define-links-template v-slot="{ item }">
       <div class="bg-white rounded-lg" :options="item.groups">
         <template v-for="(group, index) in item.groups" :key="index">
           <template v-if="!group.groups">
             <nuxt-link
+              :aria-current="isCurrent(group.key, '-') ? 'page' : undefined"
               class="block px-4 py-1 text-[17px] text-center text-primary-800"
+              :class="isCurrent(group.key, '-') ? 'bg-primary-100 font-semibold' : ''"
               :to="`/plots?keyword=${group.key}&subkey=-`"
             >
               {{ group.value }}
@@ -151,7 +206,11 @@ const accordionItems = $computed(() => {
               <template #content="{ close }">
                 <div v-for="subgroup in group.groups ?? []" :key="subgroup.key" class="mb-2 px-4">
                   <nuxt-link
+                    :aria-current="isCurrent(group.key, subgroup.key) ? 'page' : undefined"
                     class="block py-1 text-center text-sm"
+                    :class="
+                      isCurrent(group.key, subgroup.key) ? 'bg-primary-100 font-semibold' : ''
+                    "
                     :to="`/plots?keyword=${group.key}&subkey=${subgroup.key}`"
                     @click="close"
                   >
@@ -188,7 +247,7 @@ const accordionItems = $computed(() => {
 
     <!-- Otherwise, use popover menus. -->
     <template v-else>
-      <div v-for="(item, i) in store.mainNav" :key="i" class="mb-4">
+      <div v-for="(item, i) in filteredNav" :key="i" class="mb-4">
         <u-popover
           :key="route.fullPath"
           :content="{ side: 'right', align: 'start', sideOffset: 28, alignOffset: 8 }"

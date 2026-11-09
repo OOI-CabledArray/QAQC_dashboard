@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "nuxi dev",
     "build": "nuxi build",
-    "generate": "nuxi generate",
     "serve": "nuxi preview",
     "postinstall": "nuxi prepare",
     "lint": "nuxi typecheck && eslint . && prettier --check .",

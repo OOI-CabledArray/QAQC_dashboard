@@ -73,6 +73,8 @@ let selectedYear = $ref(parsePersistedDate().year)
 const currentDays = $ref<Record<string, number>>({})
 const imageExists = $ref<Record<string, boolean>>({})
 const imageCache = $ref<Record<string, boolean>>({})
+/** True while the probe for the current date is still in flight. */
+const probing = $ref<Record<string, boolean>>({})
 
 const availableYears = Array.from(
   { length: MAX_DATE.year - FIRST_YEAR + 1 },
@@ -125,18 +127,23 @@ function checkImageExists(instrument: string) {
 
   if (imageCache[url] !== undefined) {
     imageExists[instrument] = imageCache[url]
+    probing[instrument] = false
     return
   }
 
+  probing[instrument] = true
+
+  function settle(found: boolean) {
+    imageCache[url] = found
+    // Ignore a probe for a date we have since scrubbed away from.
+    if (getSpectrogramUrl(instrument) !== url) return
+    imageExists[instrument] = found
+    probing[instrument] = false
+  }
+
   const img = new Image()
-  img.onload = () => {
-    imageExists[instrument] = true
-    imageCache[url] = true
-  }
-  img.onerror = () => {
-    imageExists[instrument] = false
-    imageCache[url] = false
-  }
+  img.onload = () => settle(true)
+  img.onerror = () => settle(false)
   img.src = url
 }
 
@@ -219,6 +226,18 @@ onMounted(() => {
           style="border: 1px solid #ccc; border-radius: 4px"
         />
       </div>
+      <!-- Only claim "not found" once the probe has actually resolved. The fade is
+           delayed, so a cached or fast image never flashes a spinner. -->
+      <div
+        v-else-if="probing[instrument]"
+        :class="[
+          '-delayed aspect-2/1 bg-[#f5f5f5] flex gap-2 items-center justify-center',
+          'mb-4 rounded-[4px] text-gray-500',
+        ]"
+      >
+        <u-icon class="animate-spin" name="i-lucide-loader-circle" />
+        <p>Loading {{ kind.toLowerCase() }} for {{ formatDate(dateFor(instrument)) }} UTC…</p>
+      </div>
       <div
         v-else
         class="aspect-2/1 bg-[#f5f5f5] flex items-center justify-center mb-4 rounded-[4px]"
@@ -250,3 +269,23 @@ onMounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Invisible for 400ms: a probe that resolves first unmounts this unpainted. */
+.-delayed {
+  animation: delayed-in 120ms ease-out 400ms forwards;
+  opacity: 0;
+}
+
+@keyframes delayed-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .-delayed {
+    animation-duration: 1ms;
+  }
+}
+</style>
