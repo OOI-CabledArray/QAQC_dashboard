@@ -71,10 +71,8 @@ let selectedYear = $ref(parsePersistedDate().year)
 // Day-of-year per instrument. Each panel keeps its own slider so you can scrub
 // one instrument while watching it; the master date resets them all in step.
 const currentDays = $ref<Record<string, number>>({})
-const imageExists = $ref<Record<string, boolean>>({})
-const imageCache = $ref<Record<string, boolean>>({})
-/** True while the probe for the current date is still in flight. */
-const probing = $ref<Record<string, boolean>>({})
+/** URLs whose <img> actually failed, despite coverage listing the day. */
+const loadFailed = $ref<Record<string, boolean>>({})
 
 const availableYears = Array.from(
   { length: MAX_DATE.year - FIRST_YEAR + 1 },
@@ -122,47 +120,81 @@ function onYearChange() {
   applyToAll(dateFromDayOfYear(selectedYear, day))
 }
 
-function checkImageExists(instrument: string) {
-  const url = getSpectrogramUrl(instrument)
+// ── Coverage ─────────────────────────────────────────────────────────────────
+type Coverage = { year: number; images: number[]; raw: number[]; rawKnown: boolean }
+const coverage = $ref<Record<string, Coverage>>({})
+const rawLoaded = $ref<Record<string, boolean>>({})
 
-  if (imageCache[url] !== undefined) {
-    imageExists[instrument] = imageCache[url]
-    probing[instrument] = false
-    return
+const coverageKind = $computed(() => (kind === 'Echogram' ? 'echograms' : 'spectrograms'))
+
+/**
+ * Images first so the rail paints immediately, then the raw-archive pass, which
+ * costs a request per gap month and only changes how gaps are shaded.
+ */
+async function loadCoverage(instrument: string, year: number) {
+  const key = `${instrument}:${year}`
+  const params = { kind: coverageKind, refDes: instrument, year }
+  try {
+    coverage[key] = await $fetch<Coverage>('/api/acoustic-coverage', { query: params })
+    const enriched = await $fetch<Coverage>('/api/acoustic-coverage', {
+      query: { ...params, raw: '1' },
+    })
+    coverage[key] = enriched
+    // False for instruments the raw archive does not cover, so their gaps stay
+    // "unknown" instead of being reported as genuine outages.
+    rawLoaded[key] = enriched.rawKnown
+  } catch (error) {
+    console.error('Failed to load coverage.', error)
   }
-
-  probing[instrument] = true
-
-  function settle(found: boolean) {
-    imageCache[url] = found
-    // Ignore a probe for a date we have since scrubbed away from.
-    if (getSpectrogramUrl(instrument) !== url) return
-    imageExists[instrument] = found
-    probing[instrument] = false
-  }
-
-  const img = new Image()
-  img.onload = () => settle(true)
-  img.onerror = () => settle(false)
-  img.src = url
 }
 
-watch(
-  () => currentDays,
-  () => {
-    for (const instrument of Object.keys(currentDays)) {
-      checkImageExists(instrument)
-    }
-  },
-  { deep: true },
-)
+function coverageFor(instrument: string) {
+  return coverage[`${instrument}:${selectedYear}`]
+}
+
+function coverageRawLoaded(instrument: string) {
+  return rawLoaded[`${instrument}:${selectedYear}`] === true
+}
+
+/** Published days as sets, so panel lookups are O(1) rather than scanning. */
+const imageDays = $computed(() => {
+  const result: Record<string, Set<number>> = {}
+  for (const instrument of instruments) {
+    const found = coverage[`${instrument}:${selectedYear}`]
+    if (found) result[instrument] = new Set(found.images)
+  }
+  return result
+})
+
+/**
+ * Coverage already says which days were published, so a panel never has to
+ * request an image to find out whether one exists. 'failed' is reserved for an
+ * image that coverage listed but which would not actually load.
+ */
+function panelState(instrument: string): 'pending' | 'present' | 'absent' | 'failed' {
+  const days = imageDays[instrument]
+  const day = currentDays[instrument]
+  if (!days || day === undefined) return 'pending'
+  if (!days.has(day)) return 'absent'
+  return loadFailed[getSpectrogramUrl(instrument)] ? 'failed' : 'present'
+}
+
+/** Day-of-year to a readable date, for rail tooltips. */
+function labelDay(day: number): string {
+  return formatDate(dateFromDayOfYear(selectedYear, day))
+}
+
+function refreshCoverage() {
+  for (const instrument of instruments) {
+    if (!coverage[`${instrument}:${selectedYear}`]) void loadCoverage(instrument, selectedYear)
+  }
+}
+
+watch(() => selectedYear, refreshCoverage)
 
 onMounted(() => {
   applyToAll(parsePersistedDate())
-  for (const instrument of instruments) {
-    imageExists[instrument] = false
-    checkImageExists(instrument)
-  }
+  refreshCoverage()
 })
 </script>
 
@@ -217,26 +249,36 @@ onMounted(() => {
         {{ instrument }}
       </h3>
 
-      <div v-if="imageExists[instrument]" class="mb-4">
+      <div v-if="panelState(instrument) === 'present'" class="mb-4">
         <img
           :alt="`${kind} for ${instrument} on ${formatDate(dateFor(instrument))} UTC`"
           class="h-auto w-full"
           loading="lazy"
           :src="getSpectrogramUrl(instrument)"
           style="border: 1px solid #ccc; border-radius: 4px"
+          @error="loadFailed[getSpectrogramUrl(instrument)] = true"
         />
       </div>
-      <!-- Only claim "not found" once the probe has actually resolved. The fade is
-           delayed, so a cached or fast image never flashes a spinner. -->
+      <!-- Only before coverage arrives is the answer unknown; the fade is delayed
+           so a fast coverage fetch never flashes a spinner. -->
       <div
-        v-else-if="probing[instrument]"
+        v-else-if="panelState(instrument) === 'pending'"
         :class="[
           '-delayed aspect-2/1 bg-[#f5f5f5] flex gap-2 items-center justify-center',
           'mb-4 rounded-[4px] text-gray-500',
         ]"
       >
         <u-icon class="animate-spin" name="i-lucide-loader-circle" />
-        <p>Loading {{ kind.toLowerCase() }} for {{ formatDate(dateFor(instrument)) }} UTC…</p>
+        <p>Loading {{ kind.toLowerCase() }} coverage…</p>
+      </div>
+      <div
+        v-else-if="panelState(instrument) === 'failed'"
+        class="aspect-2/1 bg-[#f5f5f5] flex items-center justify-center mb-4 px-4 rounded-[4px]"
+      >
+        <p>
+          {{ kind }} for {{ formatDate(dateFor(instrument)) }} UTC is published but failed to load —
+          check your connection.
+        </p>
       </div>
       <div
         v-else
@@ -265,6 +307,24 @@ onMounted(() => {
         <p class="font-bold ml-4 mr-8 text-[16px] text-center w-35">
           {{ formatDate(dateFor(instrument)) }}
         </p>
+      </div>
+
+      <!-- Aligned to the slider track above: same row insets, so the rail and
+           the thumb share an axis. -->
+      <div v-if="coverageFor(instrument)" class="flex flex-row items-start space-x-4">
+        <span class="invisible text-xs">{{ formatDate(dateFromDayOfYear(selectedYear, 1)) }}</span>
+        <coverage-rail
+          class="grow"
+          :days="maxDaysInRange"
+          :images="coverageFor(instrument)!.images"
+          :label="labelDay"
+          :raw="coverageFor(instrument)!.raw"
+          :raw-loaded="coverageRawLoaded(instrument)"
+        />
+        <span class="invisible text-xs">
+          {{ formatDate(dateFromDayOfYear(selectedYear, maxDaysInRange)) }}
+        </span>
+        <p class="invisible ml-4 mr-8 w-35" />
       </div>
     </div>
   </div>
